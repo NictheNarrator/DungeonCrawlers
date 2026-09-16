@@ -2,6 +2,12 @@
 
 A complete small browser dungeon: five connected rooms, original pixel-style canvas art, touch and keyboard controls, turn-based combat, dialogue choices, inventory, achievements, loot boxes, and browser saves.
 
+## Play on your phone
+
+Open [DungeonCrawlers](https://nicthenarrator.github.io/DungeonCrawlers/) in Safari. The game uses one full-height screen with a following camera, hold-to-move direction pad, contextual interaction/combat dock, and in-game pack, notes, and pause panels. No page scrolling is needed to play. Portrait is the primary layout; phone landscape puts the controls beside the dungeon.
+
+For a standalone window, use Safari’s Share menu to add the game to your Home Screen. A manifest, app icon, and iOS standalone metadata are included. Internet is still required to load the game; offline caching is not implemented. Existing saves are compatible.
+
 ## Run
 
 Requires Node.js 16 or later. There are no package dependencies to install.
@@ -14,13 +20,13 @@ npm run dev
 
 Open `http://localhost:4173` on the computer running the server. A localhost address will not open this computer’s game on a remote phone. To play on an iPhone, host the contents of `dist/` with a static hosting provider, or use the computer’s LAN address while both devices are on the same network. The server is for local development, not production hosting.
 
-`npm run build` copies the four runtime files into `dist/`. All asset links are relative so subdirectory hosting works. No backend, paid service, gameplay API, or build dependency is needed. Google Fonts are optional; system fallback fonts work offline. The game uses native browser canvas and JavaScript modules instead of Phaser/TypeScript to keep this initial version portable and installation-free.
+`npm run build` copies the runtime files and Home Screen assets into `dist/`. All asset links are relative so subdirectory hosting works. No backend, paid service, gameplay API, or build dependency is needed. Google Fonts are optional; system fallback fonts work offline. The game uses native browser canvas and JavaScript modules instead of Phaser/TypeScript to keep this initial version portable and installation-free.
 
 ## Play
 
 - Move with WASD, arrow keys, the on-screen direction buttons, or by tapping an adjacent empty tile.
 - Doorways are centered on the west/east walls. Walk through to the next room.
-- Stand beside a prop or character. Choose an action in Nearby / Actions; use E or Interact to focus the nearby object. All placed props support Inspect.
+- Stand beside a prop or character. Choose an action in Nearby / Actions; tap Interact to open its action dock. All placed props support Inspect.
 - Intake’s recovery station heals you completely. Lost Property contains coins, a potion, cheese, and a memo.
 - Talk to Mara and befriend her, trade, threaten, steal, fight, or take a free spare key from her emergency locker. Hostility begins combat immediately; after fleeing, re-engagement is manual. Essential keys remain available after Mara dies.
 - Offer the ratman cheese, sneak past, walk around, or fight. Search the loose pipe for a secret.
@@ -37,7 +43,8 @@ Autosaves occur after movement and successful interactions outside combat; manua
 ## Files
 
 - `src/engine.mjs`: rules, inventory, NPC interactions, combat, save validation.
-- `src/app.mjs`: UI, original canvas sprites, controls, persistence.
+- `src/app.mjs`: mobile UI, following camera, original canvas sprites, persistence.
+- `src/controls.mjs`: pointer ownership, held movement, release/cancel handling.
 - `style.css`, `index.html`: responsive presentation and accessible HTML controls.
 - `tests.mjs`: deterministic gameplay and save-integrity checks.
 - `server.mjs`: dependency-free local preview server.
