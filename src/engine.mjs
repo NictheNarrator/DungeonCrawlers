@@ -8,21 +8,55 @@ export const props=[
  [{id:'rat',name:'Ratman custodian',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6}],
  [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}]
 ];
-export function fresh(){return {version:2,room:0,x:3,y:5,hp:30,maxHp:30,potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:0,npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
+export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),hp:30,maxHp:30,potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:0,npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
 export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);s.boxes++;say(s,`Achievement: ${id}. One loot box added to your pack.`);}
-export function blocked(s,x,y){return x<1||x>11||y<1||y>7||props[s.room].some(p=>p.x===x&&p.y===y);}
+export function blocked(s,x,y){if(x<1||x>11||y<1||y>7)return true;
+ if(props[s.room].some(p=>p.x===x&&p.y===y&&!NPCS[p.id]))return true;
+ return Object.keys(NPCS).filter(id=>!isWith(s,id)).some(id=>{const place=placeOf(s,id);return place.room===s.room&&place.x===x&&place.y===y;});}
+// Where a character is right now. Recruited characters are wherever the player
+// is; everyone else stands where they last moved to, saved in s.places.
+export function placeOf(s,id){if(isWith(s,id))return {room:s.room,x:s.x,y:s.y};return s.places[id]||{room:NPCS[id].home,x:0,y:0};}
+export function roomOf(s,id){return placeOf(s,id).room;}
+export function setPlace(s,id,room,x,y){s.places[id]={room,x,y};}
+export function startingPlaces(){const places={};for(const room of props)for(const prop of room)if(NPCS[prop.id])places[prop.id]={room:props.indexOf(room),x:prop.x,y:prop.y};return places;}
+function normalisePlaces(places){const defaults=startingPlaces(),out={};
+ for(const id of Object.keys(defaults)){const place=dictionary(places)?places[id]:null;
+  const ok=dictionary(place)&&Number.isInteger(place.room)&&place.room>=0&&place.room<=4&&Number.isInteger(place.x)&&place.x>=1&&place.x<=11&&Number.isInteger(place.y)&&place.y>=1&&place.y<=7;
+  out[id]=ok?{room:place.room,x:place.x,y:place.y}:{...defaults[id]};}
+ return out;}
 // Recruited characters travel with the player, so they stand beside them in
 // whichever room the player is in rather than staying where they were found.
 export function roomProps(s){const followers=withPlayer(s).filter(id=>s.npcs[id]?.condition==='conscious');
- const list=props[s.room].filter(p=>!followers.includes(p.id)),used=new Set(list.map(p=>p.x+','+p.y));
+ const list=props[s.room].filter(p=>!NPCS[p.id]),used=new Set(list.map(p=>p.x+','+p.y));
+ for(const id of Object.keys(NPCS)){if(followers.includes(id))continue;const place=placeOf(s,id);
+  if(place.room===s.room){used.add(place.x+','+place.y);list.push({id,name:NPCS[id].name,x:place.x,y:place.y,npc:true});}}
  for(const id of followers){const spots=[[s.x+1,s.y],[s.x-1,s.y],[s.x,s.y+1],[s.x,s.y-1],[s.x,s.y]];
   const spot=spots.find(([x,y])=>x>=1&&x<=11&&y>=1&&y<=7&&!blocked(s,x,y)&&!used.has(x+','+y))||[s.x,s.y];
   used.add(spot[0]+','+spot[1]);list.push({id,name:NPCS[id].name,x:spot[0],y:spot[1],follower:true});}
  return list;}
+// A world turn: characters act when the player changes room or violence breaks
+// out. Nobody walks into the room the player is standing in, which keeps the
+// world deterministic and stops bystanders drifting into the player's fights.
+function moveTo(s,id,room,say){const from=roomOf(s,id);if(room===from||room<0||room>4||room===s.room)return false;
+ setPlace(s,id,room,room<from?10:2,4);
+ if(s.room===from||s.room===room)say(s,`${NPCS[id].name} ${room<from?'slips west into':'moves east into'} ${rooms[room]}.`);
+ return true;}
+function bodyIn(s,room,except){return Object.keys(NPCS).some(id=>id!==except&&roomOf(s,id)===room&&s.npcs[id].condition!=='conscious');}
+function awayFromPlayer(s,room){return [room-1,room+1].filter(candidate=>candidate>=0&&candidate<=4&&candidate!==s.room).sort((a,b)=>Math.abs(b-s.room)-Math.abs(a-s.room))[0];}
+export function worldTurn(s){for(const id of Object.keys(NPCS)){const n=s.npcs[id];if(n.condition!=='conscious'||isWith(s,id)||s.combat?.enemy===id)continue;const d=NPCS[id],room=roomOf(s,id);
+ const fighting=!!s.combat&&s.room===room,noise=!!s.combat&&Math.abs(room-s.room)<=2,body=bodyIn(s,room,id),wounded=n.hp<=Math.ceil(d.hp/3);
+ if(body&&!n.memory.sawBody){n.memory.sawBody=true;say(s,`${NPCS[id].name} finds a body in ${rooms[room]} and keeps clear of it.`);}
+ const nervous=d.routine==='shelter'||d.routine==='scavenge';
+ if(((fighting||wounded)&&nervous)||(body&&d.routine==='shelter')){const away=awayFromPlayer(s,room);if(away!==undefined&&moveTo(s,id,away,say))n.memory.fled=true;continue;}
+ if(noise)n.memory.heardViolence=true;
+ if(s.room===room)continue;   // they hold still while the player is in the room
+ if(d.routine==='shelter'&&noise){const away=awayFromPlayer(s,room);if(away!==undefined)moveTo(s,id,away,say);continue;}
+ if(d.routine==='patrol'){if(noise||n.attitude==='hostile')moveTo(s,id,room+Math.sign(s.room-room),say);else moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);continue;}
+ if(d.routine==='scavenge')moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);}}
 export function move(s,dx,dy){if(s.combat||s.dead||s.complete||!Number.isInteger(dx)||!Number.isInteger(dy)||Math.abs(dx)+Math.abs(dy)!==1)return false;const x=s.x+dx,y=s.y+dy;
  const exit=y===4&&((x===12&&s.room<4)||(x===0&&s.room>0));
- if(exit){discoverThefts(s,props[s.room].filter(p=>PEOPLE.includes(p.id)).map(p=>p.id),say);s.room+=x===12?1:-1;s.x=x===12?1:11;s.y=4;say(s,`Entered ${rooms[s.room]}.`);return true;}
+ if(exit){discoverThefts(s,PEOPLE.filter(id=>roomOf(s,id)===s.room),say);s.room+=x===12?1:-1;s.x=x===12?1:11;s.y=4;say(s,`Entered ${rooms[s.room]}.`);worldTurn(s);return true;}
  if(blocked(s,x,y))return false;s.x=x;s.y=y;return true;
 }
 export function nearby(s){return roomProps(s).filter(p=>Math.abs(p.x-s.x)+Math.abs(p.y-s.y)<=1);}
@@ -45,7 +79,7 @@ export function ownedTake(s,id,text,keys){const prop=props[s.room].find(p=>p.id=
  if(!seer&&!watchers.length){say(s,'Nobody is watching.');return;}
  if(seer)confront(s,owner,say,startCombat);
  recordWitness(s,watchers,'theft',say);}
-function startCombat(s,id,intent='lethal'){const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';leaveParty(s,id,say,'was attacked by you');s.combat={enemy:id,turn:'player',intent};say(s,`${NPCS[id].name} fights back. ${intent==='nonlethal'?'Nonlethal strikes will knock them unconscious.':'Lethal attacks can kill them.'} You can change intent during combat.`);witnessed(s,'attack',id);}
+function startCombat(s,id,intent='lethal'){const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';leaveParty(s,id,say,'was attacked by you');s.combat={enemy:id,turn:'player',intent};say(s,`${NPCS[id].name} fights back. ${intent==='nonlethal'?'Nonlethal strikes will knock them unconscious.':'Lethal attacks can kill them.'} You can change intent during combat.`);witnessed(s,'attack',id);worldTurn(s);}
 // A recruited character fights in their own body with their own damage, and a
 // temporary ally spends one encounter of their agreement each time combat ends.
 function closeCombat(s){if(!s.combat)return;s.combat=null;for(const id of Object.keys(s.allies||{})){s.allies[id]-=1;if(s.allies[id]<=0){delete s.allies[id];say(s,`${NPCS[id].name} has done what they promised and steps away. The temporary alliance is over.`);}}}
@@ -104,7 +138,7 @@ export function encode(s){if(s.dead||s.combat)return null;return JSON.stringify(
 // The bridge between a saved character and the d20 rules: pass the result as
 // check({actor:character(s), skill:'stealth', dc:12}).
 export function character(s,id='player'){if(id==='player')return {name:'Crawler 01',level:s.level,abilities:s.abilities,skills:s.skills,saves:s.saves};const d=NPCS[id];return {name:d.name,level:d.level||1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
-function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!dictionary(s.stolen))s.stolen={};if(!Array.isArray(s.party))s.party=[];if(!dictionary(s.allies))s.allies={};if(!Number.isInteger(s.level))s.level=1;return s;}
+function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!dictionary(s.stolen))s.stolen={};s.places=normalisePlaces(s.places);if(!Array.isArray(s.party))s.party=[];if(!dictionary(s.allies))s.allies={};if(!Number.isInteger(s.level))s.level=1;return s;}
 function dictionary(v){return v&&typeof v==='object'&&!Array.isArray(v);}
 function bools(v){return dictionary(v)&&Object.values(v).every(x=>typeof x==='boolean');}
 function count(v){return Number.isInteger(v)&&v>=0&&v<=100000;}
