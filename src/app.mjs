@@ -263,7 +263,17 @@ rat:{fur:'#6d6a62',skin:'#6d6a62',coat:'#5d7f7a',trim:'#b0a184'},
  stranger1:{skin:'#b0a184',coat:'#6d6a62',trim:'#9a978c'},
  stranger2:{skin:'#b0a184',coat:'#8a5a34',trim:'#9a978c'}
 };
+// Special locations get a marked floor: a colour-coded band at the base of the
+// tile, so a recovery station, the exit stairs, a safe-room threshold and the
+// stairwell entrance read as places rather than just props. Drawn first, so it
+// always sits under the sprite.
+const FLOOR_MARKS={fountain:['#8ba79d','#a8d3c4'],stairs:['#e8c14a','#8a5a34'],breakdoor:['#4b8fd0','#8fc4ef'],stairwell:['#4fc4d8','#2a6f7d']};
+function floorMark(id,x,y){const band=FLOOR_MARKS[id];if(!band)return;const px=x*64,py=y*64;
+ rect(px+5,py+55,54,6,band[0]);
+ if(id==='stairs'){for(let i=0;i<4;i++)rect(px+9+i*13,py+55,6,6,band[1]);}
+ else rect(px+13,py+56,38,4,band[1]);}
 function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64;
+ floorMark(type,x,y);
  rect(px+13,py+47,40,8,'#1b1f21');
  if(condition==='dead'||condition==='unconscious'){rect(px+14,py+38,38,13,'#4a453f');rect(px+17,py+40,32,5,'#6d6a62');rect(px+44,py+34,11,9,'#b0a184');
   ctx.font='13px monospace';ctx.fillStyle=condition==='dead'?'#a8332e':'#4fc4d8';ctx.fillText(condition==='dead'?'×':'Zz',px+24,py+26);return;}
