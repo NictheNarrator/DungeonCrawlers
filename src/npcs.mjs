@@ -82,8 +82,8 @@ function talk(s,id,say){const n=s.npcs[id],m=n.memory;m.met=true;
   vex:m.befriended?'Vex: “I wanted a rival. The producers wanted a corpse. Stay alive and we both get to disappoint somebody.”':m.helped?'Vex: “Useful information beats loud confidence. You brought something useful. That puts you ahead of most of this room.”':'Vex rests a blade across one knee. “Don’t mistake a shared exit for a team. Read the maintenance memo in Lost Property and tell me what it says. Or spare a potion. Then we’ll see.”'
  };say(s,lines[id]);
 }
-export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()=>{},bonus=()=>0,rng=Math.random}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
- if(action==='Inspect'){say(s,describeNPC(s,id));return true;}
+export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()=>{},bonus=()=>0,note=()=>'',standing=()=>{},rng=Math.random}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
+ if(action==='Inspect'){const note=note(id);say(s,describeNPC(s,id)+(note?' '+note:''));return true;}
  if(action==='Loot'){const got=takeAll(s,n,id);m.looted=true;if(got!=='nothing'&&n.condition==='unconscious'){betray(n);m.robbed=true;n.attitude='hostile';}say(s,got==='nothing'?`${d.name} has nothing left. Possessions do not respawn.`:`You take ${got} from ${d.name}. ${n.condition==='unconscious'?'They remain alive and unconscious.':'They remain dead.'}`);return true;}
  if(action==='Wake up'){n.condition='conscious';n.hp=Math.max(1,Math.ceil(d.hp/4));m.woken=true;n.attitude='hostile';say(s,`${d.name} wakes at ${n.hp} HP. They remember the attack${m.looted?' and the missing possessions':''}. Waking them does not restore their inventory or trust.`);return true;}
   if(action==='Kill'&&n.condition==='unconscious'){betray(n);n.condition='dead';n.hp=0;m.killed=true;n.attitude='hostile';say(s,`${d.name} is dead. Their remaining possessions can be looted. ANNEX: “One fewer unresolved relationship.”`);witness('kill',id);return true;}
@@ -103,7 +103,7 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()
   if(id==='tobin'){if(s.items.repairKits){s.items.repairKits--;cost='a repair kit';}else if(s.gold>=2){s.gold-=2;cost='2 coins for repairs';}}
   if(id==='vex'){if(s.flags.memo)cost='the maintenance memo’s warning';else if(s.potions){s.potions--;cost='a healing potion';}}
   if(!cost){say(s,`To help ${d.name}, you need ${d.help.toLowerCase()}.`);return true;}
-  deed('help');m.helped=true;if(n.attitude!=='hostile'&&!m.betrayed)n.attitude=id==='mara'?'friendly':'neutral';say(s,`You give ${d.name} ${cost}. ${n.attitude==='hostile'?'They accept the help, but do not forgive what happened.':'They remember the help. Talk, then Befriend to build an alliance.'}`);witness(n.hp<=Math.ceil(d.hp/4)?'rescue':'help',id);return true;
+  deed('help');standing(id,-1,'you helped one of them');m.helped=true;if(n.attitude!=='hostile'&&!m.betrayed)n.attitude=id==='mara'?'friendly':'neutral';say(s,`You give ${d.name} ${cost}. ${n.attitude==='hostile'?'They accept the help, but do not forgive what happened.':'They remember the help. Talk, then Befriend to build an alliance.'}`);witness(n.hp<=Math.ceil(d.hp/4)?'rescue':'help',id);return true;
  }
  if(action==='Befriend'){
    if(n.attitude==='hostile'||m.betrayed||m.lieExposed){say(s,`${d.name} refuses. Help does not erase betrayal or violence.`);return true;}
@@ -163,7 +163,7 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()
   const line=`Sleight of hand ${result.total} (d20 ${result.rawRoll}${spread} + ${result.abilityModifier} dexterity${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${odds}) against DC ${dc}. ${result.success?'Success.':'Failure.'}`;
   if(!result.success){award(s,'Sticky Fingers');betray(n);m.theftAttempt=true;n.attitude='hostile';say(s,`${line} ${d.name} catches your hand. They are now hostile.`);witness('theft',id);return true;}
   const key=[d.pick,'potions','gold',...ITEM_KEYS,'key'].find(k=>n.inventory[k]>0&&!(d.equipped||[]).includes(k));if(!key){say(s,`${d.name} has nothing to steal.`);return true;}
-  const got=transfer(s,n,key,key==='gold'?2:1);s.stolen[key]=id;deed('theft');award(s,'Five-Finger Discount');betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
+  const got=transfer(s,n,key,key==='gold'?2:1);s.stolen[key]=id;deed('theft');standing(id,1,'you stole from one of them');award(s,'Five-Finger Discount');betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
  }
  if(action==='Threaten'){
   deed('intimidation');betray(n);m.threatened=true;n.attitude=n.attitude==='friendly'?'suspicious':'hostile';say(s,`${d.name} remembers your threat. ${id==='vex'?'Vex draws a weapon rather than backing down.':'They pull their belongings close. Open robbery would take them, but end any chance of trust.'}`);if(id==='vex')startCombat(s,id,'lethal');return true;

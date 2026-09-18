@@ -1,4 +1,4 @@
-import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,itemOf,equipItem,unequipItem,rarityOf} from './engine.mjs?v=npc1';
+import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,itemOf,equipItem,unequipItem,rarityOf,SLOTS,FACTIONS,standingOf,questState,questCarried} from './engine.mjs?v=npc1';
 import {PEOPLE,NPCS,tradePrice,itemName,memoryText,stockText,withPlayer} from './npcs.mjs';
 import {bindHoldControls} from './controls.mjs';
 const $=id=>document.getElementById(id),canvas=$('game'),screen=canvas.getContext('2d'),world=document.createElement('canvas');world.width=832;world.height=576;const ctx=world.getContext('2d'),STORAGE='dungeoncrawlers.floor1.v1';
@@ -15,7 +15,9 @@ function aiSay(message){$('toast').textContent='DUNGEON AI: '+message;$('toast')
 // Opening a box rolls its table, consumes it and answers with the AI line.
 function openBox(tier){const result=openRewardBox(state,tier);
  if(!result.ok){$('pack-feedback').textContent=result.reason==='unsafe'?'That box only opens in a safe room.':result.reason==='empty'?'That box is already empty.':'Not now.';return;}
- save();render();$('pack-feedback').textContent=`${tier} box: ${result.rarity?result.rarity+' ':''}${result.reward}`;aiSay(result.message);}
+ save();render();
+ $('pack-feedback').textContent=`${tier} box: ${result.rarity?result.rarity+' ':''}${result.reward}`+(result.traitName?` — Trait ${result.traitName}: ${result.traitText}`:'');
+ aiSay(result.message+(result.traitName?` Trait ${result.traitName}: ${result.traitText}`:''));}
 // The Dungeon AI popup. Several unlocks can land at once, so they queue and
 // each gets its own moment in the banner.
 let awardQueue=[],awardTimer=null;
@@ -55,17 +57,25 @@ function render(){
  $('achievements').replaceChildren(...(state.achievements.length?state.achievements.map(name=>{const entry=achievementFor(name),row=document.createElement('article'),title=document.createElement('strong'),line=document.createElement('p');
   title.textContent='◇ '+name;line.textContent=(entry?entry.description:'Logged by the dungeon.')+(entry?` (${entry.reward})`:'');row.append(title,line);return row;}):[Object.assign(document.createElement('p'),{textContent:'Nothing yet. Try doing something regrettable.'})]));
  $('packcount').textContent=state.potions+state.cheese+BOX_TIERS.reduce((sum,tier)=>sum+state.boxes[tier],0)+Object.values(state.items).reduce((a,b)=>a+b,0);
- // Equipment: rarity is part of the label, and gear can be swapped in the pack.
- $('gear').replaceChildren(...[...(state.accessories||[]).map(name=>({name,worn:true})),...(state.gear||[]).map(name=>({name,worn:false}))].map(({name,worn})=>{
-  const item=itemOf(name),row=document.createElement('span');row.textContent=`${worn?'◈':'◇'} ${item.rarity} ${name} — ${item.traitText?item.traitText:item.description}`;
+ // Equipment: three named slots, then the pack. Traits are spelled out.
+ function gearRow(name,worn,slot){const item=itemOf(name)||{rarity:'common',description:'',traitName:null},row=document.createElement('article'),title=document.createElement('strong'),line=document.createElement('p');
+  title.textContent=`${worn?'◈':'◇'} ${slot?slot.toUpperCase()+': ':''}${name} · ${item.rarity}`;
+  line.textContent=item.traitName?`Trait ${item.traitName}: ${item.traitText}`:item.description;
   const button=document.createElement('button');button.textContent=worn?'Stow':'Equip';button.onclick=()=>{worn?unequipItem(state,name):equipItem(state,name);save();render();};
-  row.append(' ',button);return row;}));
+  row.append(title,line,button);return row;}
+ $('gear').replaceChildren(...SLOTS.map(slot=>{const name=state.equipped[slot];return name?gearRow(name,true,slot):Object.assign(document.createElement('article'),{textContent:`${slot.toUpperCase()}: empty`});}),...(state.gear||[]).map(name=>gearRow(name,false,null)));
  const stopped=!!(state.combat||state.dead||state.complete);$('potion').disabled=stopped||!state.potions||state.hp===state.maxHp;$('bandage').disabled=stopped||!state.items.bandages||state.hp===state.maxHp;$('sharpen').disabled=stopped||!state.items.whetstones;$('save').disabled=stopped;$('load').disabled=!saved();document.querySelectorAll('[data-move]').forEach(b=>b.disabled=stopped);
  const safe=isSafeRoom(state)&&!stopped;
  $('boxes').replaceChildren(...BOX_TIERS.map(tier=>{const b=document.createElement('button');b.textContent=`Open ${tier} box`;b.disabled=!safe||!state.boxes[tier];b.onclick=()=>openBox(tier);return b;}));
  if(!safe)$('boxes').append(Object.assign(document.createElement('small'),{textContent:'Reward boxes only open in a safe room.'}));
  else if(!BOX_TIERS.some(tier=>state.boxes[tier]>0))$('boxes').append(Object.assign(document.createElement('small'),{textContent:'No unopened boxes.'}));
- $('relationships').replaceChildren(...PEOPLE.map(id=>{const n=state.npcs[id],card=document.createElement('article');const h=document.createElement('strong');h.textContent=NPCS[id].name+' · '+n.attitude+' · '+n.condition;const p=document.createElement('p');p.textContent=memoryText(n)+'. Remaining possessions: '+stockText(n)+'.';card.append(h,p);return card;}));
+ $('relationships').replaceChildren(...[factionCard(),questCard(),...PEOPLE.map(id=>{const n=state.npcs[id],card=document.createElement('article');const h=document.createElement('strong');h.textContent=NPCS[id].name+' · '+n.attitude+' · '+n.condition;const p=document.createElement('p');p.textContent=memoryText(n)+'. Remaining possessions: '+stockText(n)+'.';card.append(h,p);return card;})]);
+ function factionCard(){const card=document.createElement('article'),h=document.createElement('strong'),p=document.createElement('p');
+  h.textContent='FACTIONS';p.textContent=Object.keys(FACTIONS).map(name=>`${FACTIONS[name].name}: ${standingOf(state,name)}`).join(' · ');card.append(h,p);return card;}
+ function questCard(){const card=document.createElement('article'),h=document.createElement('strong'),p=document.createElement('p');
+  const done=questState(state),live=done==='open';h.textContent='THE SUPPLY CACHE';
+  p.textContent=live?(questCarried(state)?'You are carrying the cache. Two factions expect it.':'The abandoned chest in Lost Property is still untouched.'):done==='kept'?'You kept the cache. Both sides noticed.':`Delivered to the ${FACTIONS[done].name}.`;
+  card.append(h,p);return card;}
  $('log').replaceChildren(...state.log.map(t=>{const el=document.createElement('li');el.textContent=t;return el;}));
  const near=nearby(state);if(!near.some(p=>p.id===target))target=null;if(!target&&near.length===1)target=near[0].id;
  $('interact').disabled=stopped||!near.length;$('nearby-label').textContent=near.length?'✦ '+near.map(p=>p.name).join(' / '):'Explore the room';$('shell').classList.toggle('combat',!!state.combat);document.querySelector('.west').hidden=state.room===0;document.querySelector('.east').hidden=state.room===4;
