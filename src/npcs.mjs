@@ -11,20 +11,38 @@ export const CONDITIONS = ['conscious','unconscious','dead'];
 export const ITEM_KEYS = ['bandages','repairKits','smokeBombs','whetstones'];
 export const STOCK_KEYS = ['gold','potions','key',...ITEM_KEYS];
 export const NPCS = {
- mara:{name:'Mara',role:'Cautious survivor',hp:20,damage:[4,6],attitude:'neutral',trade:'potions',price:3,pick:'key',help:'1 bandage or potion',stock:{gold:3,potions:2,key:1},abilities:{strength:14,dexterity:12,constitution:14,intelligence:12,wisdom:15,charisma:13},skills:['medicine','insight'],saves:['wisdom','constitution']},
- tobin:{name:'Tobin',role:'Suspicious scavenger',hp:16,damage:[2,4],attitude:'suspicious',trade:'smokeBombs',price:4,pick:'smokeBombs',help:'1 repair kit or 2 coins',stock:{gold:6,potions:2,smokeBombs:2},abilities:{strength:11,dexterity:15,constitution:12,intelligence:14,wisdom:13,charisma:12},skills:['sleight of hand','stealth','investigation'],saves:['dexterity','intelligence']},
- vex:{name:'Vex',role:'Dangerous rival',hp:28,damage:[5,7],attitude:'neutral',trade:'whetstones',price:4,pick:'whetstones',help:'Read the memo, or give 1 potion',stock:{gold:5,potions:1,whetstones:1},abilities:{strength:17,dexterity:16,constitution:15,intelligence:11,wisdom:12,charisma:14},skills:['athletics','intimidation','perception'],saves:['strength','constitution']},
- rat:{name:'Ratman custodian',role:'Unpaid sanitation',hp:12,damage:[2,3],attitude:'neutral',stock:{gold:2},abilities:{strength:8,dexterity:14,constitution:10,intelligence:8,wisdom:12,charisma:6},skills:['stealth','perception'],saves:['dexterity']}
+ mara:{name:'Mara',role:'Cautious survivor',hp:20,damage:[4,6],attitude:'neutral',trade:'potions',price:3,pick:'key',help:'1 bandage or potion',stock:{gold:3,potions:2,key:1},equipped:['bandages'],refuse:['key'],abilities:{strength:14,dexterity:12,constitution:14,intelligence:12,wisdom:15,charisma:13},skills:['medicine','insight'],saves:['wisdom','constitution']},
+ tobin:{name:'Tobin',role:'Suspicious scavenger',hp:16,damage:[2,4],attitude:'suspicious',trade:'smokeBombs',price:4,pick:'smokeBombs',help:'1 repair kit or 2 coins',stock:{gold:6,potions:2,smokeBombs:2},equipped:['repairKits'],refuse:[],abilities:{strength:11,dexterity:15,constitution:12,intelligence:14,wisdom:13,charisma:12},skills:['sleight of hand','stealth','investigation'],saves:['dexterity','intelligence']},
+ vex:{name:'Vex',role:'Dangerous rival',hp:28,damage:[5,7],attitude:'neutral',trade:'whetstones',price:4,pick:'whetstones',help:'Read the memo, or give 1 potion',stock:{gold:5,potions:1,whetstones:1},equipped:[],refuse:['potions'],abilities:{strength:17,dexterity:16,constitution:15,intelligence:11,wisdom:12,charisma:14},skills:['athletics','intimidation','perception'],saves:['strength','constitution']},
+ rat:{name:'Ratman custodian',role:'Unpaid sanitation',hp:12,damage:[2,3],attitude:'neutral',stock:{gold:2},equipped:[],refuse:['gold'],abilities:{strength:8,dexterity:14,constitution:10,intelligence:8,wisdom:12,charisma:6},skills:['stealth','perception'],saves:['dexterity']}
 };
 export const itemName={gold:'coins',potions:'healing potion',key:'exit key',bandages:'bandage',repairKits:'repair kit',smokeBombs:'smoke bomb',whetstones:'whetstone'};
 export function makeNPC(id){const d=NPCS[id];return {hp:d.hp,attitude:d.attitude,condition:'conscious',memory:{},inventory:Object.fromEntries(STOCK_KEYS.map(k=>[k,d.stock[k]||0]))};}
 export function memoryText(n){const names={helped:'helped',befriended:'befriended',recruited:'joined you',abandoned:'left the party',returned:'got their goods back',threatened:'threatened',lied:'lied to',lieExposed:'lie exposed',stolen:'pickpocketed',theftDetected:'theft discovered',robbed:'robbed',robberyAttempt:'robbery attempted',attacked:'attacked',knockedOut:'knocked unconscious',killed:'killed',looted:'looted',betrayed:'betrayed',woken:'woken up',sawAttack:'saw an attack',sawKill:'saw a killing',sawRob:'saw a robbery',sawTheft:'saw a theft',sawHelp:'saw you help someone',sawRescue:'saw you rescue someone'};return Object.entries(names).filter(([key])=>n.memory[key]).map(([,label])=>label).join(', ')||'No shared history yet';}
 export function stockText(n){return STOCK_KEYS.filter(k=>n.inventory[k]>0).map(k=>`${n.inventory[k]} ${itemName[k]}`).join(', ')||'nothing left';}
-export function tradePrice(s,id){const n=s.npcs[id];return Math.max(1,NPCS[id].price+(n.attitude==='suspicious'?1:0)-(n.attitude==='friendly'?1:0)-(n.memory.distracted?1:0));}
+// Prices are per item. An NPC's headline good uses their own price; anything
+// else uses the shared table. Friendly sellers knock a coin off, suspicious
+// ones add one, and a distracted seller is easier to bargain with.
+export const PRICES={potions:5,bandages:3,repairKits:4,smokeBombs:5,whetstones:5,key:8};
+export function priceOf(s,id,key){const n=s.npcs[id],d=NPCS[id];const base=key===d.trade?d.price:PRICES[key]||6;return Math.max(1,base+(n.attitude==='suspicious'?1:0)-(n.attitude==='friendly'?1:0)-(n.memory.distracted?1:0));}
+export function sellPriceOf(s,id,key){return Math.max(1,Math.floor(priceOf(s,id,key)/2)+(s.npcs[id].attitude==='friendly'?1:0));}
+export function tradePrice(s,id){return priceOf(s,id,NPCS[id].trade);}
+function kept(d,key){return (d.equipped||[]).includes(key)||(d.refuse||[]).includes(key);}
+export function sellableGoods(s,id){const n=s.npcs[id],d=NPCS[id];return STOCK_KEYS.filter(key=>key!=='gold'&&n.inventory[key]>0&&!(d.equipped||[]).includes(key)&&!(d.refuse||[]).includes(key));}
+export function wantedGoods(s,id){const d=NPCS[id];return STOCK_KEYS.filter(key=>key!=='gold'&&key!=='key'&&!(d.equipped||[]).includes(key)&&!(d.refuse||[]).includes(key));}
+export function goodsText(s,id){const n=s.npcs[id],d=NPCS[id];
+ const sells=sellableGoods(s,id).map(key=>`${itemName[key]} for ${priceOf(s,id,key)} coins`);
+ const buys=wantedGoods(s,id).map(key=>`${itemName[key]} for ${sellPriceOf(s,id,key)} coins`);
+ const keeps=[...(d.equipped||[]),...(d.refuse||[])].filter(key=>n.inventory[key]>0).map(key=>itemName[key]);
+ return `${d.name} sells: ${sells.join(', ')||'nothing right now'}. ${d.name} buys: ${buys.join(', ')}. ${keeps.length?`Never traded: ${keeps.join(', ')}.`:''}`;}
 export function describeNPC(s,id){const n=s.npcs[id],d=NPCS[id];return `${d.name} · ${n.attitude} · ${n.condition} · ${n.hp}/${d.hp} HP. Damage ${d.damage.join('–')}. Carries: ${stockText(n)}. Remembers: ${memoryText(n)}.`;}
-export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];const owed=Object.keys(s.stolen||{}).some(key=>s.stolen[key]===id);return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),'Threaten','Lie','Trade','Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
+export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];const owed=Object.keys(s.stolen||{}).some(key=>s.stolen[key]===id);
+ const trade=n.attitude==='hostile'?[]:['Ask about goods','Trade','Offer a fair swap',...wantedGoods(s,id).filter(key=>held(s,key)).slice(0,3).map(key=>`Sell 1 ${itemName[key]}`)];
+ return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),'Threaten','Lie',...trade,'Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
+function held(s,key){return (key==='gold'?s.gold:ITEM_KEYS.includes(key)?s.items[key]:s[key]||0)>0;}
+function refusesTrade(s,id){const n=s.npcs[id];return n.attitude==='hostile'||!!n.memory.lieExposed;}
 function transfer(s,n,key,count){const amount=Math.min(n.inventory[key],count);if(!amount)return 0;n.inventory[key]-=amount;if(key==='key')s.key=true;else if(ITEM_KEYS.includes(key))s.items[key]+=amount;else s[key]+=amount;return amount;}
-function takeAll(s,n,id){const got=[];for(const key of STOCK_KEYS){const amount=transfer(s,n,key,n.inventory[key]);if(amount){got.push(`${amount} ${itemName[key]}`);if(id)s.stolen[key]=id;}}return got.join(', ')||'nothing';}
+function takeAll(s,n,id){const got=[];for(const key of STOCK_KEYS){if(NPCS[id]?.equipped?.includes(key))continue;const amount=transfer(s,n,key,n.inventory[key]);if(amount){got.push(`${amount} ${itemName[key]}`);if(id)s.stolen[key]=id;}}return got.join(', ')||'nothing';}
 function betray(n){if(n.memory.helped||n.memory.befriended||n.attitude==='friendly')n.memory.betrayed=true;}
 export function discoverThefts(s,ids,say){for(const id of ids){const n=s.npcs[id];if(!n||n.condition!=='conscious'||!n.memory.stolen||n.memory.theftDetected)continue;n.memory.theftDetected=true;n.memory.distracted=false;n.attitude='hostile';say(s,`${NPCS[id].name} notices the missing belongings as you leave. The theft is remembered.`);}}
 // Witnessing. An NPC only learns about a major event by being in the room and
@@ -100,6 +118,32 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Mat
   m.distracted=true;say(s,`You claim a sponsor rescue team is coming and quote the memo’s slogan. ${d.name} checks the radio: one pickpocket opportunity and a 1-coin trade discount. Talking again will expose the lie.`);return true;
  }
  if(action==='Recruit'){recruit(s,id,say,rng);return true;}
+ if(action==='Ask about goods'){if(refusesTrade(s,id)){say(s,`${d.name} will not discuss goods with you.`);return true;}say(s,goodsText(s,id));return true;}
+ if(action.startsWith('Sell 1 ')){
+  if(refusesTrade(s,id)){say(s,`${d.name} will not trade with you.`);return true;}
+  const key=Object.keys(itemName).find(name=>`Sell 1 ${itemName[name]}`===action);
+  if(!key||!held(s,key)){say(s,'You have nothing like that to sell.');return true;}
+  if(!wantedGoods(s,id).includes(key)){say(s,`${d.name} has no use for your ${itemName[key]}.`);return true;}
+  const price=sellPriceOf(s,id,key);
+  if(n.inventory.gold<price){say(s,`${d.name} cannot cover ${price} coins for it.`);return true;}
+  if(key==='key')s.key=false;else if(ITEM_KEYS.includes(key))s.items[key]-=1;else s[key]-=1;
+  n.inventory[key]+=1;n.inventory.gold-=price;s.gold+=price;m.traded=true;
+  say(s,`Sold 1 ${itemName[key]} to ${d.name} for ${price} coins. It is part of their stock now, not yours.`);
+  return true;
+ }
+ if(action==='Offer a fair swap'){
+  if(refusesTrade(s,id)){say(s,`${d.name} will not trade with you.`);return true;}
+  if(n.attitude==='suspicious'){say(s,`${d.name} is not interested in swaps while they are suspicious of you.`);return true;}
+  const key=d.trade,ask=priceOf(s,id,key);
+  if(!n.inventory[key]){say(s,`${d.name} has nothing to swap.`);return true;}
+  const offer=wantedGoods(s,id).filter(candidate=>candidate!==key&&held(s,candidate)).sort((a,b)=>(PRICES[b]||0)-(PRICES[a]||0))[0];
+  if(!offer){say(s,`You are carrying nothing ${d.name} wants.`);return true;}
+  if((PRICES[offer]||0)<ask){say(s,`${d.name} values the ${itemName[key]} at ${ask} coins. Your ${itemName[offer]} is not enough.`);return true;}
+  if(ITEM_KEYS.includes(offer))s.items[offer]-=1;else s[offer]-=1;
+  transfer(s,n,key,1);n.inventory[offer]+=1;m.traded=true;
+  say(s,`Swapped your ${itemName[offer]} for ${d.name}’s ${itemName[key]}. Both sides counted twice.`);
+  return true;
+ }
  if(action==='Trade'){
   if(n.attitude==='hostile'||m.lieExposed){say(s,`${d.name} refuses to trade with you.`);return true;}
   const key=d.trade,price=tradePrice(s,id);if(!n.inventory[key]){say(s,`${d.name} is out of ${itemName[key]}s. Stock is finite.`);return true;}
@@ -116,7 +160,7 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Mat
   const spread=result.rolls.length>1?` from ${result.rolls.join(' and ')}`:'';
   const line=`Sleight of hand ${result.total} (d20 ${result.rawRoll}${spread} + ${result.abilityModifier} dexterity${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${odds}) against DC ${dc}. ${result.success?'Success.':'Failure.'}`;
   if(!result.success){betray(n);m.theftAttempt=true;n.attitude='hostile';say(s,`${line} ${d.name} catches your hand. They are now hostile.`);witness('theft',id);return true;}
-  const key=[d.pick,'potions','gold',...ITEM_KEYS,'key'].find(k=>n.inventory[k]>0);if(!key){say(s,`${d.name} has nothing to steal.`);return true;}
+  const key=[d.pick,'potions','gold',...ITEM_KEYS,'key'].find(k=>n.inventory[k]>0&&!(d.equipped||[]).includes(k));if(!key){say(s,`${d.name} has nothing to steal.`);return true;}
   const got=transfer(s,n,key,key==='gold'?2:1);s.stolen[key]=id;betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
  }
  if(action==='Threaten'){
