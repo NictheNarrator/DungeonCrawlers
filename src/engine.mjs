@@ -1,15 +1,35 @@
 import {PEOPLE,ATTITUDES,CONDITIONS,ITEM_KEYS,STOCK_KEYS,NPCS,makeNPC,npcActions,actNPC,describeNPC,discoverThefts,memoryText,WITNESS_RANGE,recordWitness,confront,withPlayer,isWith,leaveParty} from './npcs.mjs';
 import {ABILITIES,STARTING_ABILITIES,STARTING_SKILLS,STARTING_SAVES,modifier,proficiencyBonus,check as d20} from './rules.mjs';
 import {blankCompanion,companionOf,isCompanion,adjustApproval,bandFor,relationshipText,conversationFor,remember,reactionLine,COMPANIONS,clampApproval} from './companions.mjs';
-export const rooms=['Intake','Lost Property','The Holdout','Pest Control','Departures'];
+export const rooms=['Intake','Lost Property','The Holdout','Pest Control','Departures','Surface'];
+export const SURFACE=5;
+// The prologue: an ordinary street, seconds after everything stopped being ordinary.
+export const FLOOR_SECONDS=48*60*60;
+export const SURFACE_SECONDS=10*60;
 export const props=[
  [{id:'fountain',name:'Recovery station',x:4,y:3},{id:'terminal',name:'Welcome terminal',x:8,y:3}],
  [{id:'chest',name:'Abandoned chest',x:4,y:3},{id:'crate',name:'Cracked crate',x:8,y:6},{id:'note',name:'Folded memo',x:8,y:3},{id:'tobin',name:'Tobin, scavenger',x:6,y:6},{id:'satchel',name:'Tobin’s satchel',x:5,y:5,owner:'tobin'},{id:'skulker',name:'Ratman skulker',x:10,y:2}],
  [{id:'mara',name:'Mara, survivor',x:6,y:4},{id:'locker',name:'Emergency locker',x:9,y:3},{id:'brute',name:'Ratman brute',x:2,y:6}],
  [{id:'rat',name:'Ratman scrapper',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6},{id:'brazier',name:'Burning brazier',x:10,y:6,hazard:true}],
  [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}]
+ ,[{id:'wreck',name:'Wrecked car',x:3,y:3},{id:'awning',name:'Collapsed awning',x:7,y:3},{id:'stranger1',name:'Panicked man',x:5,y:6},{id:'stranger2',name:'Panicked woman',x:9,y:6},{id:'stairwell',name:'The stairwell',x:10,y:5}]
 ];
-export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},gear:[],equipped:emptyEquipped(),standing:Object.fromEntries(Object.keys(NPCS).map(id=>[id,'neutral'])),companions:{mara:blankCompanion('mara')},factionGifts:{survivors:false,ratmen:false},factions:{survivors:'neutral',ratmen:'neutral'},quests:{supplies:'open',carried:false,promised:null},npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
+// A brand new crawler starts upstairs, unregistered, with no idea what is coming.
+export function prologue(){const s=fresh();s.registered=false;s.room=SURFACE;s.x=2;s.y=5;s.timer=0;s.surfaceTime=SURFACE_SECONDS;return s;}
+export function clockText(seconds){const t=Math.max(0,Math.floor(seconds));
+ const h=String(Math.floor(t/3600)).padStart(2,"0"),m=String(Math.floor(t%3600/60)).padStart(2,"0"),sec=String(t%60).padStart(2,"0");
+ return h+":"+m+":"+sec;}
+export function register(s){if(s.registered)return false;
+ s.registered=true;s.collapsed=false;s.room=0;s.x=3;s.y=5;s.timer=FLOOR_SECONDS;s.surfaceTime=0;
+ say(s,"CRAWLER REGISTERED.");say(s,"Human. Alive. Mostly intact. Excellent start.");say(s,"FLOOR COLLAPSE: "+clockText(FLOOR_SECONDS));
+ return true;}
+// Only active play advances the clock; the app decides when the player is idle.
+export function advanceClock(s,seconds){if(s.dead||s.complete)return s.timer;
+ if(!s.registered){s.surfaceTime=Math.max(0,s.surfaceTime-seconds);if(s.surfaceTime===0)register(s);return 0;}
+ s.timer=Math.max(0,s.timer-seconds);
+ if(s.timer===0&&!s.collapsed){s.collapsed=true;s.dead=true;say(s,"FLOOR COLLAPSE. The Concourse folds in on itself. Anyone still inside is inventory now.");}
+ return s.timer;}
+export function fresh(){return {version:2,registered:true,collapsed:false,timer:FLOOR_SECONDS,surfaceTime:0,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},gear:[],equipped:emptyEquipped(),standing:Object.fromEntries(Object.keys(NPCS).map(id=>[id,'neutral'])),companions:{mara:blankCompanion('mara')},factionGifts:{survivors:false,ratmen:false},factions:{survivors:'neutral',ratmen:'neutral'},quests:{supplies:'open',carried:false,promised:null},npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
 export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);
  const entry=ACHIEVEMENTS[id]||{description:'',condition:'',reward:'box',message:'Logged. The dungeon saw that.'};
@@ -74,12 +94,15 @@ export function move(s,dx,dy){if(s.combat||s.dead||s.complete||!Number.isInteger
   worldTurn(s);return true;}
  if(blocked(s,x,y))return false;s.x=x;s.y=y;return true;
 }
-export function nearby(s){return roomProps(s).filter(p=>Math.abs(p.x-s.x)+Math.abs(p.y-s.y)<=1);}
+// The phone is carried rather than placed, so it only exists in the prologue.
+export function nearby(s){const found=roomProps(s).filter(p=>Math.abs(p.x-s.x)+Math.abs(p.y-s.y)<=1);
+ if(!s.registered&&s.room===SURFACE)found.push({id:'phone',name:'Your phone',x:s.x,y:s.y});return found;}
 function baseActions(s,id){if(s.dead||s.complete||s.combat)return [];if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return npcActions(s,id);
  if(NPCS[id]?.archetype&&id!=='rat')return ['Inspect','Fight',...(s.cheese?['Offer cheese']:[])];
  switch(id){
  case 'fountain':return ['Inspect','Heal'];case 'terminal':return ['Inspect'];
  case 'chest':return ['Inspect',...(s.flags.chest?[]:['Open']),...(questCarried(s)&&questOpen(s)?['Keep the supplies']:[])];case 'crate':return ['Inspect',...(s.flags.crate?[]:['Break'])];
+ case 'wreck':case 'awning':case 'phone':return ['Inspect'];case 'stranger1':case 'stranger2':return ['Inspect','Talk'];case 'stairwell':return ['Inspect','Enter the stairwell'];
  case 'note':return ['Inspect','Read'];case 'locker':return ['Inspect',...(s.flags.locker?[]:['Open'])];
  case 'rat':return ['Inspect','Talk','Offer cheese','Sneak past','Fight'];
  case 'pipe':return ['Inspect','Search'];
@@ -126,7 +149,10 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   if(companionOf(s,id)&&companionAction(s,id,action))return true;
   if(action==='Keep the supplies')return keepSupplies(s);
   if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id]){const handled=actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind)+(kind==='persuasion'?companionRespect(s):0),note:(who)=>factionOf(who)?factionLine(s,who):'',standing:(who,steps,reason)=>shiftMember(s,who,steps,reason),approve:(who,delta,reason)=>witnessedApproval(s,'act',who,delta,reason),rng});if(action==='Recruit'&&handled&&s.party.includes(id)&&companionOf(s,id)&&!companionOf(s,id).recruited){companionOf(s,id).recruited=true;say(s,`name is travelling with you now.`);}return handled;}
- if(action==='Inspect'){say(s,s.npcs[id]?describeNPC(s,id)+(factionOf(id)?' '+factionLine(s,id):''):({fountain:'Free full healing. The plaque says “A healthy contestant is a renewable resource.”',terminal:'ANNEX: “The exit requires a key, not a body count.” Tobin scavenges in Lost Property; Mara shelters in The Holdout; Vex waits in Departures. Mara’s locker has a free spare key. Talk, help, deceive, steal, or fight. People remember.',chest:'An abandoned chest. Coins, medical supplies, and something useful for a broken satchel.',crate:'The label says “artisan survival accompaniment.” It smells like cheese committing a crime.',note:'A sponsor memo. Its slogan could support a convincing lie; its safety warning would interest Vex.',locker:'An emergency exit key. Accessible even if every other survivor dies.',pipe:'A loose pipe hides a cache. Tobin may know more.',brazier:'A barrel of burning fuel. Kick it over and something will catch fire.',satchel:'Tobin’s satchel, packed and counted. He watches it the way other people watch doors.',whetstone:'Vex’s whetstone, left within reach. Taking it is a statement.',stairs:'The exit accepts any exit key. No NPC is required to finish.',plaque:'ANNEX: “No exit survey today. Your behavior was the survey.”'}[id]||id));return true;}
+  if(id==='stairwell'&&action==='Inspect'){say(s,'A staircase that was not here this morning. Above it a bright sign counts down: '+clockText(s.surfaceTime)+' until the doors close. People are drifting towards it because it is the only sign with a number on it.');return true;}
+  if(id==='stairwell'&&action==='Enter the stairwell'){if(register(s))say(s,'You step over the threshold. The door comes down behind you like it was waiting for exactly that.');return true;}
+ if(action==='Inspect'){say(s,s.npcs[id]?describeNPC(s,id)+(factionOf(id)?' '+factionLine(s,id):''):({fountain:'Free full healing. The plaque says “A healthy contestant is a renewable resource.”',terminal:'ANNEX: “The exit requires a key, not a body count.” Tobin scavenges in Lost Property; Mara shelters in The Holdout; Vex waits in Departures. Mara’s locker has a free spare key. Talk, help, deceive, steal, or fight. People remember.',chest:'An abandoned chest. Coins, medical supplies, and something useful for a broken satchel.',crate:'The label says “artisan survival accompaniment.” It smells like cheese committing a crime.',note:'A sponsor memo. Its slogan could support a convincing lie; its safety warning would interest Vex.',locker:'An emergency exit key. Accessible even if every other survivor dies.',pipe:'A loose pipe hides a cache. Tobin may know more.',brazier:'A barrel of burning fuel. Kick it over and something will catch fire.',satchel:'Tobin’s satchel, packed and counted. He watches it the way other people watch doors.',whetstone:'Vex’s whetstone, left within reach. Taking it is a statement.',phone:'No service. No data. The screen still says 4G, which is the most optimistic thing left standing.',stranger1:'A man in a supermarket uniform, holding a phone that will not do anything. He has not stopped talking since it happened.',stranger2:'A woman with a cut over one eye, watching the stairwell like it might move. She has decided not to go down.',wreck:'A car folded around a lamppost. The alarm is still going, which feels like a design flaw.',awning:'Half a shopfront face down on the pavement. Somebody’s washing is still on the line above it.',stairs:'The exit accepts any exit key. No NPC is required to finish.',plaque:'ANNEX: “No exit survey today. Your behavior was the survey.”'}[id]||id));return true;}
+  if(id==='stranger1'||id==='stranger2'){if(action==='Talk')say(s,id==='stranger1'?'“It just came down. All of it. My car is right there.” He keeps pointing at it like it might apologise.':'“Do not go down there. They are counting people in. I am not getting in a hole in the ground, I do not care what the sign says.”');}
  if(id==='fountain'){s.hp=s.maxHp;say(s,'Fully healed. The station bills someone else. Enjoy the novelty.');}
  if(id==='chest'){s.flags.chest=true;s.gold+=6;s.potions++;s.items.repairKits++;s.quests.carried=true;say(s,'Found 6 coins, a potion, and a repair kit. The survivors want this cache; so do the ratmen. Neither knows you have it yet.');}
  if(id==='crate'){s.flags.crate=true;s.cheese++;say(s,'Found pungent cheese. A diplomatic instrument, probably.');}
@@ -635,6 +661,7 @@ function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...ST
  for(const name of legacy){const slot=itemSlot(name);if(slot&&!s.equipped[slot])s.equipped[slot]=name;else if(!s.gear.includes(name))s.gear.push(name);}
  delete s.accessories;
  s.standing=dictionary(s.standing)?s.standing:{};for(const id of Object.keys(NPCS))if(!STANDING.includes(s.standing[id]))s.standing[id]='neutral';
+ s.registered=s.registered!==false;s.collapsed=!!s.collapsed;s.timer=Number.isFinite(s.timer)?Math.max(0,Math.floor(s.timer)):FLOOR_SECONDS;s.surfaceTime=Number.isFinite(s.surfaceTime)?Math.max(0,Math.floor(s.surfaceTime)):SURFACE_SECONDS;
  s.companions=dictionary(s.companions)?s.companions:{};
  for(const id of Object.keys(s.companions)){const base=blankCompanion(id),held=s.companions[id];
   if(!dictionary(held)){s.companions[id]=base;continue;}
@@ -656,12 +683,13 @@ function migrate(s){const old=s.npcs;for(const id of ['mara','rat']){const n=old
  s.version=2;s.items={bandages:1,repairKits:0,smokeBombs:0,whetstones:0};s.logSerial=s.log.length;
  if(blocked(s,s.x,s.y)){const candidates=[];for(let y=1;y<=7;y++)for(let x=1;x<=11;x++)if(!blocked(s,x,y))candidates.push({x,y,d:Math.abs(x-s.x)+Math.abs(y-s.y)});candidates.sort((a,b)=>a.d-b.d);s.x=candidates[0].x;s.y=candidates[0].y;}return s;
 }
-export function decode(raw){try{let s=JSON.parse(raw);if(!dictionary(s)||![1,2].includes(s.version)||!Number.isInteger(s.room)||s.room<0||s.room>4||!Number.isInteger(s.x)||!Number.isInteger(s.y)||s.x<1||s.x>11||s.y<1||s.y>7||!Number.isInteger(s.maxHp)||s.maxHp<30||s.maxHp>200||!Number.isInteger(s.hp)||s.hp<1||s.hp>s.maxHp||s.combat!==null||s.dead!==false||typeof s.complete!=='boolean')return null;
+export function decode(raw){try{let s=JSON.parse(raw);if(!dictionary(s)||![1,2].includes(s.version)||!Number.isInteger(s.room)||s.room<0||s.room>5||!Number.isInteger(s.x)||!Number.isInteger(s.y)||s.x<1||s.x>11||s.y<1||s.y>7||!Number.isInteger(s.maxHp)||s.maxHp<30||s.maxHp>200||!Number.isInteger(s.hp)||s.hp<1||s.hp>s.maxHp||s.combat!==null||s.dead!==false||typeof s.complete!=='boolean')return null;
  for(const key of ['potions','gold','cheese','weapon'])if(!count(s[key]))return null;
  if(!count(s.xp)||!Number.isInteger(s.pending)||s.pending<0||s.pending>9)return null;
  if(typeof s.key!=='boolean'||!bools(s.flags)||!Array.isArray(s.achievements)||s.achievements.some(x=>typeof x!=='string')||!Array.isArray(s.log)||s.log.some(x=>typeof x!=='string'))return null;
  if(s.version===1){s=migrate(s);if(!s)return null;}
  s=withCharacter(s);
+ if(typeof s.registered!=='boolean'||typeof s.collapsed!=='boolean'||!Number.isInteger(s.timer)||s.timer<0||s.timer>FLOOR_SECONDS||!Number.isInteger(s.surfaceTime)||s.surfaceTime<0||s.surfaceTime>SURFACE_SECONDS)return null;
  if(!dictionary(s.boxes)||BOX_TIERS.some(tier=>!count(s.boxes[tier])))return null;
  if(!RACES[s.race]||(s.class!=='crawler'&&!CLASSES[s.class])||typeof s.classOffered!=='boolean')return null;
  if(!dictionary(s.deeds)||DEEDS.some(deed=>!count(s.deeds[deed])))return null;
