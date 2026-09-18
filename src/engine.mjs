@@ -8,7 +8,7 @@ export const props=[
  [{id:'rat',name:'Ratman scrapper',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6},{id:'brazier',name:'Burning brazier',x:10,y:6,hazard:true}],
  [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}]
 ];
-export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},accessories:[],npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
+export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},gear:[],accessories:[],npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
 export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);
  const entry=ACHIEVEMENTS[id]||{description:'',condition:'',reward:'box',message:'Logged. The dungeon saw that.'};
@@ -166,31 +166,61 @@ export const ACHIEVEMENTS={
 export const BOX_TIERS=['bronze','silver','gold'];
 export const SAFE_ROOMS=[0];
 export function isSafeRoom(s){return SAFE_ROOMS.includes(s.room);}
-export const ACCESSORIES={
- 'Lucky charm':{bonus:'checks',value:1,description:'+1 on every check and saving throw.'},
- 'Iron signet':{bonus:'damage',value:1,description:'+1 melee damage.'}
+// Item catalogue. Every item carries its rarity, type, description, stat
+// effects and an optional special trait the engine knows how to run.
+export const RARITIES=['common','uncommon','rare','epic'];
+export const ITEMS={
+ 'Bandage roll':{rarity:'common',type:'consumable',description:'Cloth and hope.',effects:{},trait:null},
+ 'Healing potion':{rarity:'common',type:'consumable',description:'Tastes like a decision you already regret.',effects:{},trait:null},
+ 'Pungent cheese':{rarity:'common',type:'consumable',description:'Technically food.',effects:{},trait:null},
+ 'Whetstone':{rarity:'common',type:'tool',description:'Sharpens what you already have.',effects:{damage:1},trait:null},
+ 'Ratfang Shiv':{rarity:'uncommon',type:'weapon',description:'A tooth with ambitions.',effects:{damage:1},trait:'wounded',traitText:'+1 to attack rolls against wounded enemies.'},
+ 'Lucky charm':{rarity:'uncommon',type:'accessory',description:'Somebody else’s good fortune, repurposed.',effects:{checks:1},trait:null},
+ 'Sewer Saint Medal':{rarity:'rare',type:'accessory',description:'Blessed by a committee of rats.',effects:{checks:1,wisdom:1},trait:'poisonward',traitText:'+1 Wisdom and +1 on saves against poison.'},
+ 'Last Laugh Boots':{rarity:'rare',type:'armor',description:'Sturdy, and slightly disappointed in you.',effects:{},trait:'lastlaugh',traitText:'Surviving a hit that leaves you under 20% HP grants a burst of movement.'},
+ 'Iron signet':{rarity:'rare',type:'accessory',description:'Heavy, official, and entirely self-issued.',effects:{damage:1},trait:null},
+ 'Improviser’s Grip':{rarity:'epic',type:'tool',description:'A strap for people who fight with furniture.',effects:{},trait:'improviser',traitText:'Thrown objects deal +2 damage.'}
 };
+export function itemOf(name){return ITEMS[name]||null;}
+export function rarityOf(name){return ITEMS[name]?.rarity||'common';}
+export function itemEffects(s,key){return (s.accessories||[]).reduce((total,name)=>total+(ITEMS[name]?.effects?.[key]||0),0);}
+export function traitOf(s,name){return (s.accessories||[]).some(item=>ITEMS[item]?.trait===name);}
+export function abilityBonus(s,ability){return (s.accessories||[]).reduce((total,name)=>total+(ITEMS[name]?.effects?.[ability]||0),0);}
+export function owned(name){return ITEMS[name]||null;}
+export function equipItem(s,name){if(!ITEMS[name]||!s.gear.includes(name))return false;
+ s.gear=s.gear.filter(item=>item!==name);if(!s.accessories.includes(name))s.accessories.push(name);
+ say(s,`Equipped ${name} (${ITEMS[name].rarity}).`);return true;}
+export function unequipItem(s,name){if(!s.accessories.includes(name))return false;
+ s.accessories=s.accessories.filter(item=>item!==name);if(!s.gear.includes(name))s.gear.push(name);
+ say(s,`Stowed ${name}.`);return true;}
+export function grantedItem(s,name,silent){if(!ITEMS[name])return false;
+ if(!s.gear.includes(name)&&!s.accessories.includes(name))s.gear.push(name);
+ if(!silent)say(s,`${ITEMS[name].rarity} item: ${name}. ${ITEMS[name].traitText||ITEMS[name].description}`);
+ return true;}
 export const BOX_LOOT={
  bronze:[
-  {weight:3,text:'Bandage',message:'A bandage. Planning ahead for another terrible decision?',apply:s=>{s.items.bandages++;}},
-  {weight:3,text:'Healing potion',message:'A healing potion. Optimism in a bottle.',apply:s=>{s.potions++;}},
-  {weight:2,text:'Cheese',message:'Food. It is cheese. Try not to think about where it has been.',apply:s=>{s.cheese++;}},
-  {weight:2,text:'20 XP',message:'Twenty experience points. Barely a rounding error, and you earned every one.',apply:s=>awardXp(s,20,'a bronze box')},
-  {weight:2,text:'Whetstone',message:'A basic weapon upgrade. The dungeon is impressed by your standards. It is not.',apply:s=>{s.items.whetstones++;}}
+  {weight:3,rarity:'common',text:'Bandage',message:'A bandage. Planning ahead for another terrible decision?',apply:s=>{s.items.bandages++;}},
+  {weight:3,rarity:'common',text:'Healing potion',message:'A healing potion. Optimism in a bottle.',apply:s=>{s.potions++;}},
+  {weight:2,rarity:'common',text:'Cheese',message:'Food. It is cheese. Try not to think about where it has been.',apply:s=>{s.cheese++;}},
+  {weight:2,rarity:'common',text:'20 XP',message:'Twenty experience points. Barely a rounding error, and you earned every one.',apply:s=>awardXp(s,20,'a bronze box')},
+  {weight:2,rarity:'common',text:'Whetstone',message:'A basic weapon upgrade. The dungeon is impressed by your standards. It is not.',apply:s=>{s.items.whetstones++;}},
+  {weight:1,item:'Ratfang Shiv',message:'An uncommon shiv. Proof that you will pick up anything with a point on it.',apply:s=>grantedItem(s,'Ratfang Shiv',true)},
  ],
  silver:[
-  {weight:3,text:'Honed blade',message:'A better blade. You will still swing it the same way.',apply:s=>{s.weapon++;s.gold+=10;}},
-  {weight:3,text:'Padded vest',message:'Congratulations. Pants with armor. Civilization has peaked.',apply:s=>{s.maxHp+=5;s.hp=Math.min(s.maxHp,s.hp+5);}},
-  {weight:3,text:'Field kit',message:'Useful consumables. Now you can be reckless with a budget.',apply:s=>{s.potions+=2;s.items.smokeBombs++;}},
-  {weight:2,text:'60 XP',message:'Sixty experience points. Try to spend them somewhere less fatal.',apply:s=>awardXp(s,60,'a silver box')},
-  {weight:2,text:'Lucky charm',message:'Lucky charm acquired. Finally, a strategy.',apply:s=>{if(!s.accessories.includes('Lucky charm'))s.accessories.push('Lucky charm');}}
+  {weight:3,item:'Ratfang Shiv',message:'Another Ratfang Shiv. Collect the set.',apply:s=>grantedItem(s,'Ratfang Shiv',true)},
+  {weight:3,item:'Lucky charm',message:'Lucky charm acquired. Finally, a strategy.',apply:s=>grantedItem(s,'Lucky charm',true)},
+  {weight:3,rarity:'uncommon',text:'Field kit',message:'Useful consumables. Now you can be reckless with a budget.',apply:s=>{s.potions+=2;s.items.smokeBombs++;}},
+  {weight:2,rarity:'uncommon',text:'60 XP',message:'Sixty experience points. Try to spend them somewhere less fatal.',apply:s=>awardXp(s,60,'a silver box')},
+  {weight:2,item:'Sewer Saint Medal',message:'A rare medal. Blessed by rats, which is still technically a blessing.',apply:s=>grantedItem(s,'Sewer Saint Medal',true)},
+  {weight:2,item:'Last Laugh Boots',message:'Rare boots. Pants with armor. Civilization has peaked.',apply:s=>grantedItem(s,'Last Laugh Boots',true)}
  ],
  gold:[
-  {weight:3,text:'Masterwork blade',message:'Strong equipment. It will not fix your footwork, but it will hide it.',apply:s=>{s.weapon+=2;}},
-  {weight:3,text:'Iron signet',message:'A rare accessory. It does nothing visible and everything quietly.',apply:s=>{if(!s.accessories.includes('Iron signet'))s.accessories.push('Iron signet');}},
-  {weight:3,text:'150 XP',message:'A large pile of experience. Statistically, you have survived more of the building than most.',apply:s=>awardXp(s,150,'a gold box')},
-  {weight:2,text:'Sponsor parcel',message:'A special delivery from a sponsor who has not read your file.',apply:s=>{s.gold+=25;s.potions+=2;s.items.repairKits++;}},
-  {weight:2,text:'Training token',message:'A class-related token. Somebody believes in you. That must be exhausting.',apply:s=>{s.pending=(s.pending||0)+1;}}
+  {weight:3,item:'Iron signet',message:'A rare accessory. It does nothing visible and everything quietly.',apply:s=>grantedItem(s,'Iron signet',true)},
+  {weight:3,item:'Sewer Saint Medal',message:'A rare medal, again. Sanctity is cheap this deep down.',apply:s=>grantedItem(s,'Sewer Saint Medal',true)},
+  {weight:3,rarity:'rare',text:'150 XP',message:'A large pile of experience. Statistically, you have survived more of the building than most.',apply:s=>awardXp(s,150,'a gold box')},
+  {weight:2,rarity:'rare',text:'Sponsor parcel',message:'A special delivery from a sponsor who has not read your file.',apply:s=>{s.gold+=25;s.potions+=2;s.items.repairKits++;}},
+  {weight:2,rarity:'rare',text:'Training token',message:'A class-related token. Somebody believes in you. That must be exhausting.',apply:s=>{s.pending=(s.pending||0)+1;}},
+  {weight:1,item:'Improviser’s Grip',message:'An epic grip. Everything in this room is now ammunition.',apply:s=>grantedItem(s,'Improviser’s Grip',true)}
  ]
 };
 export const CLASSES={
@@ -280,11 +310,12 @@ export function combatActions(s){if(!s.combat)return [];
 // every archetype attacks through exactly the same rules.
 function hitPlayer(s,id,damage,roll,rng,playerAction,d){const me=conditionsOf(s,'player');let total=damage;
  if(playerAction==='Defend'){total=Math.floor(total/2);say(s,'You defend: incoming damage is halved, rounded down.');}
- if(damage===d.damage[1]&&d.onHit&&!me[d.onHit]){const save=d20({actor:s,ability:'constitution',save:true,dc:11,modifiers:(s.race==='human'?2:0)+gearBonus(s,'checks'),rng});say(s,`Constitution save ${save.total} against DC 11. ${save.success?'Success.':'Failure.'}`);if(!save.success)applyCondition(s,'player',d.onHit,3,say);}
+ if(damage===d.damage[1]&&d.onHit&&!me[d.onHit]){const save=d20({actor:s,ability:'constitution',save:true,dc:11,modifiers:(s.race==='human'?2:0)+gearBonus(s,'checks')+(d.onHit==='poisoned'&&traitOf(s,'poisonward')?1:0),rng});say(s,`Constitution save ${save.total} against DC 11. ${save.success?'Success.':'Failure.'}`);if(!save.success)applyCondition(s,'player',d.onHit,3,say);}
  const guard=withPlayer(s).filter(member=>member!==id&&s.npcs[member].condition==='conscious').sort((a,b)=>s.npcs[a].hp-s.npcs[b].hp)[0];
  if(total>0&&guard){s.npcs[guard].hp=Math.max(0,s.npcs[guard].hp-total);say(s,`${d.name} hits ${NPCS[guard].name} for ${total}. ${s.npcs[guard].hp} HP remain.`);
   if(s.npcs[guard].hp===0){s.npcs[guard].condition='unconscious';say(s,`${NPCS[guard].name} is knocked out and can no longer help.`);}}
- else if(total>0){s.hp=Math.max(0,s.hp-total);say(s,`${d.name} hits for ${total}.`);}
+ else if(total>0){s.hp=Math.max(0,s.hp-total);say(s,`${d.name} hits for ${total}.`);
+  if(s.hp>0&&traitOf(s,'lastlaugh')&&s.hp<=Math.ceil(s.maxHp*0.2)&&!s.flags.lastLaugh){s.flags.lastLaugh=true;say(s,'Last Laugh Boots: the near miss gives you somewhere to be.');}}
  if(s.hp===0){s.dead=true;s.conditions={};say(s,'ANNEX: “Your final performance was brief but legally sufficient.”');closeCombat(s);}}
 // One enemy's turn. Each archetype follows a short, readable list of priorities
 // and is deliberately imperfect: the skulker spends turns repositioning and the
@@ -316,8 +347,8 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
  const dc=10+modifier(d.abilities.strength)+((d.skills||[]).includes('athletics')?proficiencyBonus(d.level||1):0);
  if(action.startsWith('Switch to')){s.combat.intent=action==='Switch to nonlethal'?'nonlethal':'lethal';say(s,s.combat.intent==='nonlethal'?'Nonlethal mode: attacks deal 1 less damage and knock out instead of killing. Switching intent does not consume a turn.':'Lethal mode: a finishing attack kills. Switching intent does not consume a turn.');return true;}
  if(action==='Switch target'){const list=s.combat.enemies.filter(enemy=>s.npcs[enemy].condition==='conscious');s.combat.enemy=list[(list.indexOf(s.combat.enemy)+1)%list.length];say(s,`You turn on ${NPCS[s.combat.enemy].name}.`);return true;}
- if(action==='Close in'){s.combat.range=Math.max(1,s.combat.range-1);say(s,`You close to range ${s.combat.range}.`);}
- if(action==='Back off'){s.combat.range=Math.min(3,s.combat.range+1);say(s,`You fall back to range ${s.combat.range}.`);}
+ if(action==='Close in'){const step=s.flags.lastLaugh?2:1;delete s.flags.lastLaugh;s.combat.range=Math.max(1,s.combat.range-step);say(s,`You close to range ${s.combat.range}.`);}
+ if(action==='Back off'){const step=s.flags.lastLaugh?2:1;delete s.flags.lastLaugh;s.combat.range=Math.min(3,s.combat.range+step);say(s,`You fall back to range ${s.combat.range}.`);}
  if(action==='Stand up'){clearCondition(s,'player','prone',say);say(s,'You push yourself upright. That cost you the moment.');}
  if(action==='Shake it off'){clearCondition(s,'player','stunned',say);say(s,'You clear your head.');}
  if(action==='Pat out flames'){clearCondition(s,'player','burning',say);say(s,'You smother the flames.');}
@@ -337,7 +368,7 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
    if(action==='Rally'){s.combat.used[action]=true;s.hp=Math.min(s.maxHp,s.hp+8);say(s,`You rally. ${s.hp} HP.`);recordDeed(s,'help');}
    if(action==='Terrify'){s.combat.used[action]=true;applyCondition(s,id,'stunned',2,say);say(s,'Your reputation does the talking. It works.');recordDeed(s,'intimidation');}
    if(action==='Attack'||action==='Throw a rock'||action==='Cleave'||action==='Backstab'||action==='Snare'){const [lo,hi]=attackRange(s);let mode=theirs('prone')?'advantage':me('poisoned')||s.combat.range>1||s.combat.cover[id]?'disadvantage':'none';let raw=0;
-    if(action==='Throw a rock'){raw=damageRoll(roll,[2,4],me('poisoned')?'disadvantage':'none');recordDeed(s,'ranged');}
+    if(action==='Throw a rock'){raw=damageRoll(roll,[2,4],me('poisoned')?'disadvantage':'none')+(traitOf(s,'improviser')?2:0);recordDeed(s,'ranged');}
     else if(action==='Cleave'){raw=damageRoll(roll,[lo+4,hi+4],mode);recordDeed(s,'melee');}
     else if(action==='Backstab'){raw=damageRoll(roll,[lo+2,hi+2],'advantage');recordDeed(s,'melee');}
     else if(action==='Snare'){raw=3;recordDeed(s,'environment');applyCondition(s,id,'prone',2,say);}
@@ -345,6 +376,7 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
     if(action==='Attack')s.combat.attackUsed=true;else s.combat.used[action]=true;
     const damage=raw-(s.combat.intent==='nonlethal'?1:0);n.hp=Math.max(0,n.hp-damage);say(s,`You hit ${d.name} for ${damage}. ${n.hp} HP remain.`);
    if(action==="Attack"&&raw===hi&&!theirs("bleeding")&&n.hp>0)applyCondition(s,id,"bleeding",3,say);
+   if(action==='Attack'&&traitOf(s,'wounded')&&n.hp*2<=NPCS[id].hp){raw+=1;say(s,'Ratfang Shiv: the wound makes the opening.');}
    if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;if(id==='rat'){s.gold+=n.inventory.gold;n.inventory.gold=0;}say(s,nonlethal?`${d.name} is unconscious, not dead. You can loot, wake, or kill them. They do not wake automatically.`:`${d.name} is dead and will stay dead. Loot their remaining possessions if you choose.`);defeated(s,id);awardXp(s,NPCS[id].xp||20,"defeating "+NPCS[id].name);if(!nonlethal)witnessed(s,'kill',id);dropEnemy(s,id);if(!s.combat)return true;}if(s.combat&&allyStrike(s,roll,rng))return true;}
  if(action==='Use potion'){s.potions--;const old=s.hp;s.hp=Math.min(s.maxHp,s.hp+10);say(s,`Potion restored ${s.hp-old} HP.`);}
    s.combat.round++;
@@ -367,15 +399,16 @@ export function openRewardBox(s,tier,rng=Math.random){if(!BOX_TIERS.includes(tie
  let pick=rng()*total,entry=table[table.length-1];
  for(const row of table){pick-=row.weight;if(pick<=0){entry=row;break;}}
  entry.apply(s);
- say(s,`${tier} box: ${entry.text}. ${entry.message}`);
- return {ok:true,tier,reward:entry.text,message:entry.message};}
-export function gearBonus(s,kind){return (s.accessories||[]).reduce((total,name)=>{const item=ACCESSORIES[name];return total+(item&&item.bonus===kind?item.value:0);},0);}
+ const label=entry.item||entry.text,rarity=entry.rarity||(entry.item?rarityOf(entry.item):null);
+ say(s,`${tier} box: ${rarity?rarity+' ':''}${label}. ${entry.message}`);
+ return {ok:true,tier,reward:label,rarity,message:entry.message};}
+export function gearBonus(s,kind){return itemEffects(s,kind);}
 export function outcome(s){return PEOPLE.map(id=>{const n=s.npcs[id];return `${NPCS[id].name}: ${n.condition}, ${n.attitude}. ${memoryText(n)}.`;}).join('\n');}
 export function encode(s){if(s.dead||s.combat)return null;return JSON.stringify(s);}
 // The bridge between a saved character and the d20 rules: pass the result as
 // check({actor:character(s), skill:'stealth', dc:12}).
-export function character(s,id='player'){if(id==='player')return {name:'Crawler 01',level:s.level,abilities:s.abilities,skills:s.skills,saves:s.saves};const d=NPCS[id];return {name:d.name,level:d.level||1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
-function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!dictionary(s.stolen))s.stolen={};s.places=normalisePlaces(s.places);s.conditions=normaliseConditions(s.conditions);if(!Array.isArray(s.party))s.party=[];if(!dictionary(s.allies))s.allies={};if(!Number.isInteger(s.level))s.level=1;if(!Number.isInteger(s.maxHp)||s.maxHp<30)s.maxHp=30;if(!Number.isInteger(s.xp)||s.xp<0)s.xp=0;s.deeds=dictionary(s.deeds)?s.deeds:{};if(typeof s.boxes==='number')s.boxes={bronze:Math.max(0,s.boxes),silver:0,gold:0};if(!dictionary(s.boxes))s.boxes={bronze:0,silver:0,gold:0};for(const tier of BOX_TIERS)if(!Number.isInteger(s.boxes[tier])||s.boxes[tier]<0)s.boxes[tier]=0;if(!Array.isArray(s.accessories))s.accessories=[];s.accessories=s.accessories.filter(name=>!!ACCESSORIES[name]);for(const deed of DEEDS)if(!Number.isInteger(s.deeds[deed])||s.deeds[deed]<0)s.deeds[deed]=0;if(!RACES[s.race])s.race="human";if(s.class!=="crawler"&&!CLASSES[s.class])s.class="crawler";if(typeof s.classOffered!=="boolean")s.classOffered=false;if(!Number.isInteger(s.pending)||s.pending<0)s.pending=0;return s;}
+export function character(s,id='player'){if(id==='player'){const abilities={};for(const key of ABILITIES)abilities[key]=s.abilities[key]+abilityBonus(s,key);return {name:'Crawler 01',level:s.level,abilities,skills:s.skills,saves:s.saves};}const d=NPCS[id];return {name:d.name,level:d.level||1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
+function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!dictionary(s.stolen))s.stolen={};s.places=normalisePlaces(s.places);s.conditions=normaliseConditions(s.conditions);if(!Array.isArray(s.party))s.party=[];if(!dictionary(s.allies))s.allies={};if(!Number.isInteger(s.level))s.level=1;if(!Number.isInteger(s.maxHp)||s.maxHp<30)s.maxHp=30;if(!Number.isInteger(s.xp)||s.xp<0)s.xp=0;s.deeds=dictionary(s.deeds)?s.deeds:{};if(typeof s.boxes==='number')s.boxes={bronze:Math.max(0,s.boxes),silver:0,gold:0};if(!dictionary(s.boxes))s.boxes={bronze:0,silver:0,gold:0};for(const tier of BOX_TIERS)if(!Number.isInteger(s.boxes[tier])||s.boxes[tier]<0)s.boxes[tier]=0;s.gear=Array.isArray(s.gear)?s.gear.filter(name=>!!ITEMS[name]):[];if(!Array.isArray(s.accessories))s.accessories=[];s.accessories=s.accessories.filter(name=>!!ITEMS[name]);for(const deed of DEEDS)if(!Number.isInteger(s.deeds[deed])||s.deeds[deed]<0)s.deeds[deed]=0;if(!RACES[s.race])s.race="human";if(s.class!=="crawler"&&!CLASSES[s.class])s.class="crawler";if(typeof s.classOffered!=="boolean")s.classOffered=false;if(!Number.isInteger(s.pending)||s.pending<0)s.pending=0;return s;}
 function dictionary(v){return v&&typeof v==='object'&&!Array.isArray(v);}
 function bools(v){return dictionary(v)&&Object.values(v).every(x=>typeof x==='boolean');}
 function count(v){return Number.isInteger(v)&&v>=0&&v<=100000;}

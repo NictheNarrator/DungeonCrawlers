@@ -1,4 +1,4 @@
-import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,ACCESSORIES} from './engine.mjs?v=npc1';
+import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,itemOf,equipItem,unequipItem,rarityOf} from './engine.mjs?v=npc1';
 import {PEOPLE,NPCS,tradePrice,itemName,memoryText,stockText,withPlayer} from './npcs.mjs';
 import {bindHoldControls} from './controls.mjs';
 const $=id=>document.getElementById(id),canvas=$('game'),screen=canvas.getContext('2d'),world=document.createElement('canvas');world.width=832;world.height=576;const ctx=world.getContext('2d'),STORAGE='dungeoncrawlers.floor1.v1';
@@ -15,7 +15,7 @@ function aiSay(message){$('toast').textContent='DUNGEON AI: '+message;$('toast')
 // Opening a box rolls its table, consumes it and answers with the AI line.
 function openBox(tier){const result=openRewardBox(state,tier);
  if(!result.ok){$('pack-feedback').textContent=result.reason==='unsafe'?'That box only opens in a safe room.':result.reason==='empty'?'That box is already empty.':'Not now.';return;}
- save();render();$('pack-feedback').textContent=`${tier} box: ${result.reward}`;aiSay(result.message);}
+ save();render();$('pack-feedback').textContent=`${tier} box: ${result.rarity?result.rarity+' ':''}${result.reward}`;aiSay(result.message);}
 // The Dungeon AI popup. Several unlocks can land at once, so they queue and
 // each gets its own moment in the banner.
 let awardQueue=[],awardTimer=null;
@@ -50,11 +50,16 @@ function button(label,fn){const b=document.createElement('button');b.textContent
 function render(){
  $('rooms').replaceChildren(...rooms.map((r,i)=>{const el=document.createElement('span');el.className=i===state.room?'active':'';el.setAttribute('aria-label',r);if(i===state.room)el.setAttribute('aria-current','step');return el;}));
  $('roomtitle').textContent=rooms[state.room];$('mode').textContent=(state.combat?'YOUR TURN':'EXPLORING')+(conditionText(state,'player')?' · '+conditionText(state,'player'):'');$('hp').textContent=`${state.hp} / ${state.maxHp}`;$('healthbar').style.width=(100*state.hp/state.maxHp)+'%';$('healthbar').style.background=state.hp<10?'#e08e73':'var(--lime)';$('gold').textContent=state.gold;$('objective').textContent=(state.class!=='crawler'?CLASSES[state.class].name+' · ':'')+`Lv ${state.level} · ${state.xp}/${xpForNext(state.level)} XP`+(state.pending>0?' · LEVEL UP':(state.key?' · Key acquired · Head east':' · Find an exit key'));
- $('inventory').replaceChildren(...[`${state.potions} × Healing potion`,`${state.cheese} × Cheese`,`${state.boxes.bronze} × Bronze box`,`${state.boxes.silver} × Silver box`,`${state.boxes.gold} × Gold box`,state.key?'1 × Exit key':'No exit key yet',...Object.entries(state.items).map(([key,n])=>`${n} × ${itemName[key]}`),`Attack: ${attackRange(state).join('–')}`,...(state.accessories||[]).map(name=>`${name} — ${ACCESSORIES[name].description}`)].map(t=>{const el=document.createElement('span');el.textContent=t;return el;}));
+ $('inventory').replaceChildren(...[`${state.potions} × Healing potion`,`${state.cheese} × Cheese`,`${state.boxes.bronze} × Bronze box`,`${state.boxes.silver} × Silver box`,`${state.boxes.gold} × Gold box`,state.key?'1 × Exit key':'No exit key yet',...Object.entries(state.items).map(([key,n])=>`${n} × ${itemName[key]}`),`Attack: ${attackRange(state).join('–')}`,...(state.accessories||[]).map(name=>`${rarityOf(name)} ${name}`)].map(t=>{const el=document.createElement('span');el.textContent=t;return el;}));
  // One line per achievement so a long list stays readable and scrollable.
  $('achievements').replaceChildren(...(state.achievements.length?state.achievements.map(name=>{const entry=achievementFor(name),row=document.createElement('article'),title=document.createElement('strong'),line=document.createElement('p');
   title.textContent='◇ '+name;line.textContent=(entry?entry.description:'Logged by the dungeon.')+(entry?` (${entry.reward})`:'');row.append(title,line);return row;}):[Object.assign(document.createElement('p'),{textContent:'Nothing yet. Try doing something regrettable.'})]));
  $('packcount').textContent=state.potions+state.cheese+BOX_TIERS.reduce((sum,tier)=>sum+state.boxes[tier],0)+Object.values(state.items).reduce((a,b)=>a+b,0);
+ // Equipment: rarity is part of the label, and gear can be swapped in the pack.
+ $('gear').replaceChildren(...[...(state.accessories||[]).map(name=>({name,worn:true})),...(state.gear||[]).map(name=>({name,worn:false}))].map(({name,worn})=>{
+  const item=itemOf(name),row=document.createElement('span');row.textContent=`${worn?'◈':'◇'} ${item.rarity} ${name} — ${item.traitText?item.traitText:item.description}`;
+  const button=document.createElement('button');button.textContent=worn?'Stow':'Equip';button.onclick=()=>{worn?unequipItem(state,name):equipItem(state,name);save();render();};
+  row.append(' ',button);return row;}));
  const stopped=!!(state.combat||state.dead||state.complete);$('potion').disabled=stopped||!state.potions||state.hp===state.maxHp;$('bandage').disabled=stopped||!state.items.bandages||state.hp===state.maxHp;$('sharpen').disabled=stopped||!state.items.whetstones;$('save').disabled=stopped;$('load').disabled=!saved();document.querySelectorAll('[data-move]').forEach(b=>b.disabled=stopped);
  const safe=isSafeRoom(state)&&!stopped;
  $('boxes').replaceChildren(...BOX_TIERS.map(tier=>{const b=document.createElement('button');b.textContent=`Open ${tier} box`;b.disabled=!safe||!state.boxes[tier];b.onclick=()=>openBox(tier);return b;}));
