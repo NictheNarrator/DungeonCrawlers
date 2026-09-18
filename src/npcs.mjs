@@ -1,3 +1,5 @@
+import {check,modifier,proficiencyBonus} from './rules.mjs';
+export function pickpocketDC(id){const d=NPCS[id];return 10+modifier(d.abilities.wisdom)+((d.skills||[]).includes('perception')?proficiencyBonus(d.level||1):0);}
 export const PEOPLE = ['mara','tobin','vex'];
 export const ATTITUDES = ['friendly','neutral','suspicious','hostile'];
 export const CONDITIONS = ['conscious','unconscious','dead'];
@@ -55,7 +57,7 @@ function talk(s,id,say){const n=s.npcs[id],m=n.memory;m.met=true;
   vex:m.befriended?'Vex: “I wanted a rival. The producers wanted a corpse. Stay alive and we both get to disappoint somebody.”':m.helped?'Vex: “Useful information beats loud confidence. You brought something useful. That puts you ahead of most of this room.”':'Vex rests a blade across one knee. “Don’t mistake a shared exit for a team. Read the maintenance memo in Lost Property and tell me what it says. Or spare a potion. Then we’ll see.”'
  };say(s,lines[id]);
 }
-export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[]}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
+export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Math.random}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
  if(action==='Inspect'){say(s,describeNPC(s,id));return true;}
  if(action==='Loot'){const got=takeAll(s,n);m.looted=true;if(got!=='nothing'&&n.condition==='unconscious'){betray(n);m.robbed=true;n.attitude='hostile';}say(s,got==='nothing'?`${d.name} has nothing left. Possessions do not respawn.`:`You take ${got} from ${d.name}. ${n.condition==='unconscious'?'They remain alive and unconscious.':'They remain dead.'}`);return true;}
  if(action==='Wake up'){n.condition='conscious';n.hp=Math.max(1,Math.ceil(d.hp/4));m.woken=true;n.attitude='hostile';say(s,`${d.name} wakes at ${n.hp} HP. They remember the attack${m.looted?' and the missing possessions':''}. Waking them does not restore their inventory or trust.`);return true;}
@@ -91,9 +93,16 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[]}){const
  }
  if(action==='Pickpocket'){
   if(m.stolen){say(s,`${d.name} guards what remains. No second pickpocket opportunity.`);return true;}
-  if(!m.distracted&&n.attitude!=='friendly'){betray(n);m.theftAttempt=true;n.attitude='hostile';say(s,`${d.name} catches your hand. Distract them with a credible lie or gain their trust first. They are now hostile.`);witness('theft',id);return true;}
+  // A distracted or friendly target is easier; an alert one is harder. The
+  // roll is the central d20 check, so the result line shows its working.
+  const alert=!m.distracted&&n.attitude!=='friendly',dc=pickpocketDC(id);
+  const result=check({actor:s,skill:'sleight of hand',dc,advantage:!alert,disadvantage:alert,rng});
+  const odds=result.advantage?' with advantage':result.disadvantage?' with disadvantage':'';
+  const spread=result.rolls.length>1?` from ${result.rolls.join(' and ')}`:'';
+  const line=`Sleight of hand ${result.total} (d20 ${result.rawRoll}${spread} + ${result.abilityModifier} dexterity${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${odds}) against DC ${dc}. ${result.success?'Success.':'Failure.'}`;
+  if(!result.success){betray(n);m.theftAttempt=true;n.attitude='hostile';say(s,`${line} ${d.name} catches your hand. They are now hostile.`);witness('theft',id);return true;}
   const key=[d.pick,'potions','gold',...ITEM_KEYS,'key'].find(k=>n.inventory[k]>0);if(!key){say(s,`${d.name} has nothing to steal.`);return true;}
-  const got=transfer(s,n,key,key==='gold'?2:1);betray(n);m.stolen=true;m.distracted=false;say(s,`You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
+  const got=transfer(s,n,key,key==='gold'?2:1);betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
  }
  if(action==='Threaten'){
   betray(n);m.threatened=true;n.attitude=n.attitude==='friendly'?'suspicious':'hostile';say(s,`${d.name} remembers your threat. ${id==='vex'?'Vex draws a weapon rather than backing down.':'They pull their belongings close. Open robbery would take them, but end any chance of trust.'}`);if(id==='vex')startCombat(s,id,'lethal');return true;
