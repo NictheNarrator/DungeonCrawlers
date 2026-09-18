@@ -308,5 +308,14 @@ test('Every prop draws its own sprite and no sprite recurses into itself',async(
  for(const id of ids){const sig=await signature(id);assert.notEqual(sig,fallback,`${id} falls through to the generic box instead of its own sprite`);assert.notEqual(sig,empty,`${id} draws nothing`);assert(!seen.has(sig),`${id} and ${seen.get(sig)} share one sprite; the guide wants distinct world objects`);seen.set(sig,id);}
  appEngine.props[6]=spare;
 });
+test('Item icons read by type and rarity at a glance',async()=>{
+ const app=await import('./src/app.mjs?test=items');
+ const mark=label=>{drawn.length=0;const chip=app.itemIcon(label);return chip?drawn.join(','):null;};
+ assert.equal(mark('Attack: 2–4'),null,'a plain number gets no chip');
+ const kinds={potion:'Healing potion',cheese:'2 × Cheese',bandage:'1 × Bandage',whetstone:'1 × Whetstone',bronze:'1 × Bronze box',gold:'1 × Gold box',key:'1 × Exit key'};
+ const seen={};for(const [kind,label] of Object.entries(kinds)){seen[kind]=mark(label);assert(seen[kind],`${kind} should have an icon`);}
+ assert.equal(new Set(Object.values(seen)).size,Object.keys(kinds).length,'each object type reads differently');
+ assert.notEqual(mark('Lucky charm'),mark('Improviser’s Grip'),'rarity changes the frame on the same silhouette');
+});
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));

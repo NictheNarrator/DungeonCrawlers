@@ -4,7 +4,7 @@
 
 Verified on the recovered working copy, then committed and pushed as `be7a10b`.
 
-- All 160 automated checks pass (`npm test`). They cover room transitions and prop reachability, the peaceful no-NPC route, worst-case ratman balance and death, turn control, defend, healing, fleeing, and invalid actions, then the full survivor matrix for Mara, Tobin and Vex: help, friendship, one-time rewards, remembered assistance, credible and exposed lies, pickpocketing, discovery on room exit, betrayal that helpful actions cannot erase, finite trade stock, payments entering the seller's wallet, nonlethal defeat, looting, waking, execution, and no duplicate rewards.
+- All 161 automated checks pass (`npm test`). They cover room transitions and prop reachability, the peaceful no-NPC route, worst-case ratman balance and death, turn control, defend, healing, fleeing, and invalid actions, then the full survivor matrix for Mara, Tobin and Vex: help, friendship, one-time rewards, remembered assistance, credible and exposed lies, pickpocketing, discovery on room exit, betrayal that helpful actions cannot erase, finite trade stock, payments entering the seller's wallet, nonlethal defeat, looting, waking, execution, and no duplicate rewards.
 - The d20 rules checks pass for stealth, sleight of hand (including the worked example), persuasion, intimidation, perception, saving throws, advantage, disadvantage, and for ability scores surviving a save while old saves gain the defaults.
 - Witness checks pass: a theft, an attack and a killing seen by an onlooker are remembered and change that onlooker's attitude, a witnessed helpful action warms them, an unwitnessed theft leaves no trace outside the victim, and witnessed knowledge survives a save round-trip.
 - Cross-survivor checks pass: threats change attitudes and Vex fights back, open robbery is surrendered to by Mara and Tobin while Vex resists, Vex reacts to an earlier robbery or killing of Tobin, and exposed lies and failed thefts have lasting outcomes.
@@ -12,6 +12,7 @@ Verified on the recovered working copy, then committed and pushed as `be7a10b`.
 - Save integrity passes: version 1 saves migrate attitudes, deaths and inventories without reviving anyone, malformed saves fail safely, and unconscious and completed saves round-trip.
 - Input checks pass: held direction repeats, release stops, a click does not double-step, cancelled touches and app pause stop movement, and only the active finger owns direction.
 - Sprite checks pass: the renderer runs for real against a stub DOM and every world object — each prop, loot item, survivor and creature — must draw its own unique sprite rather than the generic fallback, and no sprite may call itself.
+- Item-icon checks pass: every pack entry, equipment row and reward result draws a chip whose silhouette is the item type and whose frame is its rarity, while plain numbers get no chip at all.
 - The static build passes (`npm run build`) and every runtime file, including `src/npcs.mjs`, is served over HTTP with the expected contents by the local preview server.
 
 Not verified in this pass: no browser click-through of the NPC tabs, relationship panel, or completion summary was performed, and no physical phone testing was done.

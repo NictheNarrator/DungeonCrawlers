@@ -15,3 +15,13 @@
 .actioncard.companion-turn{border-left:3px solid var(--gold);background:#221d13;border-radius:10px;padding-left:8px}
 body.pre-dungeon .hud{visibility:hidden}
 body.pre-dungeon #roomtitle,body.pre-dungeon #rooms{visibility:hidden}
+/* Item chips: rarity is the frame, item type is the silhouette. */
+.item-chip{width:24px;height:24px;flex:none;image-rendering:pixelated;border-radius:5px}
+.inventory span{display:flex;align-items:center;gap:9px}
+.inventory b{font-weight:600;font-size:12px}
+#gear article{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px 9px}
+#gear article>.item-chip{grid-column:1;grid-row:1;width:26px;height:26px}
+#gear article>strong{grid-column:2;grid-row:1}
+#gear article>p{grid-column:1/-1}
+#gear article>button{grid-column:1/-1;justify-self:start}
+.feedback span{display:flex;align-items:center;gap:9px}

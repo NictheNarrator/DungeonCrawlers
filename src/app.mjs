@@ -52,7 +52,7 @@ function actOn(who,action){$('companion-modal').close();interact(state,who,actio
 function openBox(tier){const result=openRewardBox(state,tier);
  if(!result.ok){$('pack-feedback').textContent=result.reason==='unsafe'?'That box only opens in a safe room.':result.reason==='empty'?'That box is already empty.':'Not now.';return;}
  save();render();
- $('pack-feedback').textContent=`${tier} box: ${result.rarity?result.rarity+' ':''}${result.reward}`+(result.traitName?` — Trait ${result.traitName}: ${result.traitText}`:'');
+ $('pack-feedback').replaceChildren(rewardLine(`${tier} box: ${result.rarity?result.rarity+' ':''}${result.reward}`+(result.traitName?` — Trait ${result.traitName}: ${result.traitText}`:'')));
  aiSay(result.message+(result.traitName?` Trait ${result.traitName}: ${result.traitText}`:''));}
 // The Dungeon AI popup. Several unlocks can land at once, so they queue and
 // each gets its own moment in the banner.
@@ -92,7 +92,7 @@ function render(){
  $('journal').hidden=!journalUnlocked(state);
  $('companion').hidden=!state.npcs.mara.memory.met;
  document.body.classList.toggle('pre-dungeon',!state.registered);
- $('inventory').replaceChildren(...[`${state.potions} × Healing potion`,`${state.cheese} × Cheese`,`${state.boxes.bronze} × Bronze box`,`${state.boxes.silver} × Silver box`,`${state.boxes.gold} × Gold box`,state.key?'1 × Exit key':'No exit key yet',...Object.entries(state.items).map(([key,n])=>`${n} × ${itemName[key]}`),`Attack: ${attackRange(state).join('–')}`,...(state.accessories||[]).map(name=>`${rarityOf(name)} ${name}`)].map(t=>{const el=document.createElement('span');el.textContent=t;return el;}));
+ $('inventory').replaceChildren(...[`${state.potions} × Healing potion`,`${state.cheese} × Cheese`,`${state.boxes.bronze} × Bronze box`,`${state.boxes.silver} × Silver box`,`${state.boxes.gold} × Gold box`,state.key?'1 × Exit key':'No exit key yet',...Object.entries(state.items).map(([key,n])=>`${n} × ${itemName[key]}`),`Attack: ${attackRange(state).join('–')}`,...(state.accessories||[]).map(name=>`${rarityOf(name)} ${name}`)].map(t=>{const el=document.createElement('span'),chip=itemIcon(t),label=document.createElement('b');if(chip)el.append(chip);label.textContent=t;el.append(label);return el;}));
  // One line per achievement so a long list stays readable and scrollable.
  $('achievements').replaceChildren(...(state.achievements.length?state.achievements.map(name=>{const entry=achievementFor(name),row=document.createElement('article'),title=document.createElement('strong'),line=document.createElement('p');
   title.textContent='◇ '+name;line.textContent=(entry?entry.description:'Logged by the dungeon.')+(entry?` (${entry.reward})`:'');row.append(title,line);return row;}):[Object.assign(document.createElement('p'),{textContent:'Nothing yet. Try doing something regrettable.'})]));
@@ -102,7 +102,7 @@ function render(){
   title.textContent=`${worn?'◈':'◇'} ${slot?slot.toUpperCase()+': ':''}${name} · ${item.rarity}`;
   line.textContent=item.traitName?`Trait ${item.traitName}: ${item.traitText}`:item.description;
   const button=document.createElement('button');button.textContent=worn?'Stow':'Equip';button.onclick=()=>{worn?unequipItem(state,name):equipItem(state,name);save();render();};
-  row.append(title,line,button);return row;}
+  const chip=itemIcon(name);row.append(...(chip?[chip]:[]),title,line,button);return row;}
  $('gear').replaceChildren(...SLOTS.map(slot=>{const name=state.equipped[slot];return name?gearRow(name,true,slot):Object.assign(document.createElement('article'),{textContent:`${slot.toUpperCase()}: empty`});}),...(state.gear||[]).map(name=>gearRow(name,false,null)));
  const stopped=!!(state.combat||state.dead||state.complete);$('potion').disabled=stopped||!state.potions||state.hp===state.maxHp;$('bandage').disabled=stopped||!state.items.bandages||state.hp===state.maxHp;$('sharpen').disabled=stopped||!state.items.whetstones;$('save').disabled=stopped;$('load').disabled=!saved();document.querySelectorAll('[data-move]').forEach(b=>b.disabled=stopped);
  const safe=isSafeRoom(state)&&!stopped;
@@ -176,6 +176,37 @@ function propSprite(px,py,type){
  if(type==='debris'){rect(px+14,py+44,14,7,'#6d6a62');rect(px+32,py+40,16,10,'#4a453f');rect(px+22,py+34,10,6,'#8a5a34');return;}
  if(type==='terminal'){rect(px+14,py+11,37,44,'#687b76');rect(px+18,py+15,29,29,'#283e35');rect(px+22,py+20,20,3,'#4fc4d8');rect(px+22,py+27,13,3,'#4fc4d8');rect(px+17,py+53,7,5,'#172725');rect(px+43,py+53,7,5,'#172725');return;}
  rect(px+14,py+11,37,44,'#687b76');rect(px+18,py+15,29,29,'#424f4a');rect(px+39,py+32,4,7,'#b0a184');rect(px+17,py+53,7,5,'#172725');rect(px+43,py+53,7,5,'#172725');}
+// Item icons. Same palette and top-left light as the world sprites, shrunk to a
+// 32px chip: rarity is the frame, item type is the silhouette, so the pack, the
+// equipment slots and a reward result all read the same way at phone size.
+const RARITY_FRAME={common:'#6d6a62',uncommon:'#5d7f7a',rare:'#4fc4d8',epic:'#a457c4'};
+const BOX_FRAME={bronze:'#8a5a34',silver:'#b0a184',gold:'#d9a63f'};
+function iconKind(label){const item=itemOf(label);
+ if(/bronze box/i.test(label))return 'bronze';if(/silver box/i.test(label))return 'silver';if(/gold box/i.test(label))return 'gold';
+ if(/potion/i.test(label))return 'potion';if(/cheese/i.test(label))return 'cheese';if(/bandage/i.test(label))return 'bandage';
+ if(/whetstone/i.test(label))return 'whetstone';if(/bomb/i.test(label))return 'bomb';if(/repair kit/i.test(label))return 'repair kit';
+ if(/exit key/i.test(label))return 'key';if(/attack/i.test(label))return null;
+ return item?item.type:null;}
+export function itemIcon(label){const kind=iconKind(label);if(!kind)return null;
+ const chip=document.createElement('canvas');chip.width=chip.height=32;chip.className='item-chip';chip.setAttribute('aria-hidden','true');
+ const g=chip.getContext('2d');if(!g)return chip;
+ const paint=(x,y,w,h,color)=>{g.fillStyle=color;g.fillRect(x,y,w,h);};
+ const item=itemOf(label),frame=BOX_FRAME[kind]||RARITY_FRAME[item?.rarity||'common'];
+ paint(1,1,30,30,frame);paint(3,3,26,26,'#152724');
+ if(kind==='potion'||kind==='bronze'||kind==='silver'||kind==='gold'||kind==='bomb'){
+  if(kind==='potion'){paint(12,14,8,12,'#a8332e');paint(13,15,3,9,'#d4544c');paint(13,10,6,4,'#e6e2d6');paint(14,11,2,2,'#8a5a34');}
+  else if(kind==='bomb'){paint(10,15,12,12,'#4a453f');paint(11,16,4,5,'#6d6a62');paint(15,10,3,5,'#8a5a34');paint(17,8,3,3,'#e8c14a');}
+  else{paint(8,12,16,14,BOX_FRAME[kind]);paint(8,12,16,3,'#e6e2d6');paint(14,8,4,5,'#26292b');paint(11,16,10,6,'#26292b');paint(13,18,6,2,BOX_FRAME[kind]);}
+ }else if(kind==='cheese'){paint(8,14,16,11,'#e8c14a');paint(8,14,16,3,'#f3d97c');paint(11,18,3,3,'#8a5a34');paint(17,21,3,2,'#8a5a34');}
+ else if(kind==='bandage'||kind==='repair kit'){paint(8,14,16,11,'#e6e2d6');paint(8,14,16,3,'#f4f1e8');paint(10,11,3,6,'#a8332e');paint(19,11,3,6,'#a8332e');if(kind==='repair kit')paint(14,17,4,5,'#6d6a62');}
+ else if(kind==='whetstone'){paint(7,19,18,6,'#6d6a62');paint(7,19,18,2,'#8b877c');paint(10,14,12,5,'#b0a184');}
+ else if(kind==='key'){paint(12,11,8,8,'#e8c14a');paint(14,13,4,4,'#152724');paint(15,19,3,8,'#e8c14a');paint(18,21,4,2,'#e8c14a');}
+ else if(kind==='weapon'){paint(9,21,14,4,'#8a5a34');paint(14,8,4,14,'#cfd6d2');paint(12,10,9,3,'#cfd6d2');}
+ else if(kind==='armor'){paint(10,10,12,14,'#5d7f7a');paint(10,10,12,3,'#7d9a94');paint(7,13,4,7,'#5d7f7a');paint(21,13,4,7,'#5d7f7a');}
+ else{paint(14,10,4,4,'#b0a184');paint(10,15,12,8,'#b0a184');paint(12,16,3,6,'#c8bb9c');}
+ return chip;}
+// A one-line result with its icon, used wherever a reward is announced.
+function rewardLine(text){const wrap=document.createElement('span'),chip=itemIcon(text),label=document.createElement('b');if(chip)wrap.append(chip);label.textContent=text;wrap.append(label);return wrap;}
 const look={
  player:{skin:'#b0a184',coat:'#6f7a4a',trim:'#b6c187',head:'#3c4a63'},
  mara:{skin:'#b0a184',coat:'#8a5a34',trim:'#b0a184',pack:'#3c4a63'},
