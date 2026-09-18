@@ -82,7 +82,7 @@ function talk(s,id,say){const n=s.npcs[id],m=n.memory;m.met=true;
   vex:m.befriended?'Vex: “I wanted a rival. The producers wanted a corpse. Stay alive and we both get to disappoint somebody.”':m.helped?'Vex: “Useful information beats loud confidence. You brought something useful. That puts you ahead of most of this room.”':'Vex rests a blade across one knee. “Don’t mistake a shared exit for a team. Read the maintenance memo in Lost Property and tell me what it says. Or spare a potion. Then we’ll see.”'
  };say(s,lines[id]);
 }
-export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Math.random}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
+export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()=>{},rng=Math.random}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
  if(action==='Inspect'){say(s,describeNPC(s,id));return true;}
  if(action==='Loot'){const got=takeAll(s,n,id);m.looted=true;if(got!=='nothing'&&n.condition==='unconscious'){betray(n);m.robbed=true;n.attitude='hostile';}say(s,got==='nothing'?`${d.name} has nothing left. Possessions do not respawn.`:`You take ${got} from ${d.name}. ${n.condition==='unconscious'?'They remain alive and unconscious.':'They remain dead.'}`);return true;}
  if(action==='Wake up'){n.condition='conscious';n.hp=Math.max(1,Math.ceil(d.hp/4));m.woken=true;n.attitude='hostile';say(s,`${d.name} wakes at ${n.hp} HP. They remember the attack${m.looted?' and the missing possessions':''}. Waking them does not restore their inventory or trust.`);return true;}
@@ -103,7 +103,7 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Mat
   if(id==='tobin'){if(s.items.repairKits){s.items.repairKits--;cost='a repair kit';}else if(s.gold>=2){s.gold-=2;cost='2 coins for repairs';}}
   if(id==='vex'){if(s.flags.memo)cost='the maintenance memo’s warning';else if(s.potions){s.potions--;cost='a healing potion';}}
   if(!cost){say(s,`To help ${d.name}, you need ${d.help.toLowerCase()}.`);return true;}
-  m.helped=true;if(n.attitude!=='hostile'&&!m.betrayed)n.attitude=id==='mara'?'friendly':'neutral';say(s,`You give ${d.name} ${cost}. ${n.attitude==='hostile'?'They accept the help, but do not forgive what happened.':'They remember the help. Talk, then Befriend to build an alliance.'}`);witness(n.hp<=Math.ceil(d.hp/4)?'rescue':'help',id);return true;
+  deed('help');m.helped=true;if(n.attitude!=='hostile'&&!m.betrayed)n.attitude=id==='mara'?'friendly':'neutral';say(s,`You give ${d.name} ${cost}. ${n.attitude==='hostile'?'They accept the help, but do not forgive what happened.':'They remember the help. Talk, then Befriend to build an alliance.'}`);witness(n.hp<=Math.ceil(d.hp/4)?'rescue':'help',id);return true;
  }
  if(action==='Befriend'){
    if(n.attitude==='hostile'||m.betrayed||m.lieExposed){say(s,`${d.name} refuses. Help does not erase betrayal or violence.`);return true;}
@@ -119,7 +119,7 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Mat
   m.lied=true;if(!m.met||(!s.flags.memo&&n.attitude!=='friendly')){m.lieExposed=true;n.attitude='suspicious';say(s,`${d.name}: “Sponsor rescue team? You don’t even know their slogan.” Read the memo before trying a cover story. The lie is remembered.`);return true;}
   m.distracted=true;say(s,`You claim a sponsor rescue team is coming and quote the memo’s slogan. ${d.name} checks the radio: one pickpocket opportunity and a 1-coin trade discount. Talking again will expose the lie.`);return true;
  }
- if(action==='Recruit'){recruit(s,id,say,rng);return true;}
+ if(action==='Recruit'){recruit(s,id,say,rng,deed);return true;}
  if(action==='Ask about goods'){if(refusesTrade(s,id)){say(s,`${d.name} will not discuss goods with you.`);return true;}say(s,goodsText(s,id));return true;}
  if(action.startsWith('Sell 1 ')){
   if(refusesTrade(s,id)){say(s,`${d.name} will not trade with you.`);return true;}
@@ -163,14 +163,14 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Mat
   const line=`Sleight of hand ${result.total} (d20 ${result.rawRoll}${spread} + ${result.abilityModifier} dexterity${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${odds}) against DC ${dc}. ${result.success?'Success.':'Failure.'}`;
   if(!result.success){betray(n);m.theftAttempt=true;n.attitude='hostile';say(s,`${line} ${d.name} catches your hand. They are now hostile.`);witness('theft',id);return true;}
   const key=[d.pick,'potions','gold',...ITEM_KEYS,'key'].find(k=>n.inventory[k]>0&&!(d.equipped||[]).includes(k));if(!key){say(s,`${d.name} has nothing to steal.`);return true;}
-  const got=transfer(s,n,key,key==='gold'?2:1);s.stolen[key]=id;betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
+  const got=transfer(s,n,key,key==='gold'?2:1);s.stolen[key]=id;deed('theft');betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
  }
  if(action==='Threaten'){
-  betray(n);m.threatened=true;n.attitude=n.attitude==='friendly'?'suspicious':'hostile';say(s,`${d.name} remembers your threat. ${id==='vex'?'Vex draws a weapon rather than backing down.':'They pull their belongings close. Open robbery would take them, but end any chance of trust.'}`);if(id==='vex')startCombat(s,id,'lethal');return true;
+  deed('intimidation');betray(n);m.threatened=true;n.attitude=n.attitude==='friendly'?'suspicious':'hostile';say(s,`${d.name} remembers your threat. ${id==='vex'?'Vex draws a weapon rather than backing down.':'They pull their belongings close. Open robbery would take them, but end any chance of trust.'}`);if(id==='vex')startCombat(s,id,'lethal');return true;
  }
  if(action==='Rob openly'){
   betray(n);m.robberyAttempt=true;n.attitude='hostile';if(id==='vex'){say(s,'Vex: “You have badly misread the room.” Vex fights back; defeat them before looting.');startCombat(s,id,'lethal');return true;}
-  leaveParty(s,id,say,'was robbed by you');m.robbed=true;say(s,`${d.name} surrenders ${takeAll(s,n,id)} rather than die. They remain alive, hostile, and remember the robbery. ${id==='tobin'?'Tobin reaches for a radio.':''}`);witness('rob',id);return true;
+  leaveParty(s,id,say,'was robbed by you');deed('theft');m.robbed=true;say(s,`${d.name} surrenders ${takeAll(s,n,id)} rather than die. They remain alive, hostile, and remember the robbery. ${id==='tobin'?'Tobin reaches for a radio.':''}`);witness('rob',id);return true;
  }
  if(['Attack','Knock unconscious','Kill'].includes(action)){startCombat(s,id,action==='Knock unconscious'?'nonlethal':'lethal');return true;}
  return false;
@@ -185,7 +185,7 @@ export function confront(s,id,say,startCombat){const n=s.npcs[id],d=NPCS[id];lea
 // Recruitment. The relationship has to justify it: a finished request opens
 // the conversation, a friendly attitude or a shared enemy makes it easier,
 // and a Persuasion check decides the answer.
-export function recruit(s,id,say,rng=Math.random){const n=s.npcs[id],m=n.memory,d=NPCS[id],terms=RECRUIT[id];
+export function recruit(s,id,say,rng=Math.random,deed=()=>{}){const n=s.npcs[id],m=n.memory,d=NPCS[id],terms=RECRUIT[id];
  if(!terms){say(s,`${d.name} has no interest in travelling with you.`);return false;}
  if(isWith(s,id)){say(s,`${d.name} is already with you.`);return false;}
  if(m.betrayed||m.lieExposed||m.robbed||m.theftDetected||m.attacked||m.sawKill){n.attitude='suspicious';say(s,`${d.name} refuses. They have seen what you do to people who trust you.`);return false;}
@@ -195,7 +195,7 @@ export function recruit(s,id,say,rng=Math.random){const n=s.npcs[id],m=n.memory,
  const result=check({actor:s,skill:'persuasion',dc:terms.dc,advantage:sharedEnemy||n.attitude==='friendly',disadvantage:n.attitude==='suspicious',modifiers:m.befriended?2:m.helped?1:0,rng});
  const line=`Persuasion ${result.total} (d20 ${result.rawRoll}${result.rolls.length>1?` from ${result.rolls.join(' and ')}`:''} + ${result.abilityModifier} charisma${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${m.befriended?' +2 finished request':m.helped?' +1 helped':''}${result.advantage?' with advantage':result.disadvantage?' with disadvantage':''}) against DC ${terms.dc}. ${result.success?'Success.':'Failure.'}`;
  if(!result.success){n.attitude='suspicious';say(s,`${line} ${d.name} turns you down.`);return false;}
- m.recruited=true;n.attitude='friendly';
+ m.recruited=true;n.attitude='friendly';deed('persuasion');deed('recruit');
  if(terms.encounters){s.allies[id]=terms.encounters;say(s,`${line} ${d.name} agrees to help for ${terms.encounters} fights, then goes their own way.`);}
  else{s.party=[...(s.party||[]),id];say(s,`${line} ${d.name} joins you.`);}
  return true;}

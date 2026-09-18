@@ -8,7 +8,7 @@ export const props=[
  [{id:'rat',name:'Ratman scrapper',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6},{id:'brazier',name:'Burning brazier',x:10,y:6,hazard:true}],
  [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}]
 ];
-export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:0,npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
+export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:0,npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
 export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);s.boxes++;say(s,`Achievement: ${id}. One loot box added to your pack.`);awardXp(s,40,`achievement: ${id}`);}
 export function blocked(s,x,y){if(x<1||x>11||y<1||y>7)return true;
@@ -88,14 +88,14 @@ export function ownedTake(s,id,text,keys){const prop=props[s.room].find(p=>p.id=
  if(!seer&&!watchers.length){say(s,'Nobody is watching.');return;}
  if(seer)confront(s,owner,say,startCombat);
  recordWitness(s,watchers,'theft',say);}
-function startCombat(s,id,intent='lethal'){const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';leaveParty(s,id,say,'was attacked by you');s.combat={enemy:id,enemies:[id],turn:'player',intent,range:1,cover:{},round:0};
+function startCombat(s,id,intent='lethal'){const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';if(leaveParty(s,id,say,'was attacked by you'))recordDeed(s,'betrayal');s.combat={enemy:id,enemies:[id],turn:'player',intent,range:1,cover:{},round:0,used:{}};
  say(s,`${NPCS[id].name} fights back. ${intent==='nonlethal'?'Nonlethal strikes will knock them unconscious.':'Lethal attacks can kill them.'} You can change intent during combat.`);
  const pack=NPCS[id].pack;
  if(pack)for(const other of Object.keys(NPCS)){if(other===id||NPCS[other].pack!==pack||s.npcs[other].condition!=='conscious')continue;if(placeOf(s,other).room!==placeOf(s,id).room)continue;s.combat.enemies.push(other);say(s,`${NPCS[other].name} joins the fight.`);}
  witnessed(s,'attack',id);worldTurn(s);}
 // A recruited character fights in their own body with their own damage, and a
 // temporary ally spends one encounter of their agreement each time combat ends.
-function closeCombat(s){if(!s.combat)return;s.combat=null;s.conditions={};for(const id of Object.keys(s.allies||{})){s.allies[id]-=1;if(s.allies[id]<=0){delete s.allies[id];say(s,`${NPCS[id].name} has done what they promised and steps away. The temporary alliance is over.`);}}}
+function closeCombat(s){if(!s.combat)return;if(!s.dead&&s.hp<=Math.ceil(s.maxHp*0.25))recordDeed(s,'survival');s.combat=null;s.conditions={};for(const id of Object.keys(s.allies||{})){s.allies[id]-=1;if(s.allies[id]<=0){delete s.allies[id];say(s,`${NPCS[id].name} has done what they promised and steps away. The temporary alliance is over.`);}}}
 function allyStrike(s,roll,rng){const enemy=s.combat?.enemy;if(!enemy)return false;const n=s.npcs[enemy],d=NPCS[enemy];
  for(const id of withPlayer(s)){const ally=s.npcs[id];if(ally.condition!=='conscious'||id===enemy)continue;const damage=roll(...NPCS[id].damage);n.hp=Math.max(0,n.hp-damage);say(s,`${NPCS[id].name} hits ${d.name} for ${damage}. ${n.hp} HP remain.`);
   if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;say(s,`${d.name} is ${nonlethal?'unconscious':'dead'}. Your ally finished it.`);awardXp(s,NPCS[enemy].xp||20,`defeating ${NPCS[enemy].name}`);closeCombat(s);return true;}}
@@ -105,7 +105,7 @@ function allyStrike(s,roll,rng){const enemy=s.combat?.enemy;if(!enemy)return fal
 export function witnesses(s,targetId){return roomProps(s).filter(p=>NPCS[p.id]&&p.id!==targetId&&s.npcs[p.id]?.condition==='conscious'&&Math.abs(p.x-s.x)+Math.abs(p.y-s.y)<=WITNESS_RANGE).map(p=>p.id);}
 export function witnessed(s,event,targetId){return recordWitness(s,witnesses(s,targetId),event,say);}
 export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id===id)||!actions(s,id).includes(action))return false;
-  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),rng});
+  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),rng});
  if(action==='Inspect'){say(s,s.npcs[id]?describeNPC(s,id):({fountain:'Free full healing. The plaque says “A healthy contestant is a renewable resource.”',terminal:'ANNEX: “The exit requires a key, not a body count.” Tobin scavenges in Lost Property; Mara shelters in The Holdout; Vex waits in Departures. Mara’s locker has a free spare key. Talk, help, deceive, steal, or fight. People remember.',chest:'An abandoned chest. Coins, medical supplies, and something useful for a broken satchel.',crate:'The label says “artisan survival accompaniment.” It smells like cheese committing a crime.',note:'A sponsor memo. Its slogan could support a convincing lie; its safety warning would interest Vex.',locker:'An emergency exit key. Accessible even if every other survivor dies.',pipe:'A loose pipe hides a cache. Tobin may know more.',brazier:'A barrel of burning fuel. Kick it over and something will catch fire.',satchel:'Tobin’s satchel, packed and counted. He watches it the way other people watch doors.',whetstone:'Vex’s whetstone, left within reach. Taking it is a statement.',stairs:'The exit accepts any exit key. No NPC is required to finish.',plaque:'ANNEX: “No exit survey today. Your behavior was the survey.”'}[id]||id));return true;}
  if(id==='fountain'){s.hp=s.maxHp;say(s,'Fully healed. The station bills someone else. Enjoy the novelty.');}
  if(id==='chest'){s.flags.chest=true;s.gold+=6;s.potions++;s.items.repairKits++;say(s,'Found 6 coins, a potion, and a repair kit. Tobin could use the kit.');}
@@ -118,17 +118,49 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
  if(NPCS[id]?.archetype&&id!=='rat'){if(action==='Fight')startCombat(s,id);return true;}
  if(id==='rat'){
   if(action==='Talk')say(s,'Ratman: “Cheese tax. Or go around. I am paid neither way.”');
-  if(action==='Offer cheese'){if(s.npcs.rat.attitude==='friendly')say(s,'The custodian has already accepted your tribute.');else if(!s.cheese)say(s,'You have no cheese. Try the crate in Lost Property.');else{s.cheese--;s.npcs.rat.attitude='friendly';s.npcs.rat.memory.helped=true;award(s,'Cheese diplomacy');say(s,'The ratman accepts. The only honest transaction in the building.');}}
-  if(action==='Sneak past'){s.flags.sneaked=true;award(s,'Quiet quitting');say(s,'You slip along the wall. The custodian pretends not to see.');awardXp(s,30,'resolving the custodian without a fight');}
+  if(action==='Offer cheese'){if(s.npcs.rat.attitude==='friendly')say(s,'The custodian has already accepted your tribute.');else if(!s.cheese)say(s,'You have no cheese. Try the crate in Lost Property.');else{s.cheese--;s.npcs.rat.attitude='friendly';s.npcs.rat.memory.helped=true;recordDeed(s,'persuasion');award(s,'Cheese diplomacy');say(s,'The ratman accepts. The only honest transaction in the building.');}}
+  if(action==="Sneak past"){s.flags.sneaked=true;recordDeed(s,"stealth");award(s,"Quiet quitting");say(s,'You slip along the wall. The custodian pretends not to see.');awardXp(s,30,'resolving the custodian without a fight');}
   if(action==='Fight')startCombat(s,'rat');
  }
  if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in The Holdout, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
  return true;
 }
-export function attackRange(s){const bonus=s.weapon+(s.flags.vexTraining?1:0);return [5+bonus,7+bonus];}
+export function attackRange(s){const bonus=s.weapon+(s.flags.vexTraining?1:0)+classBonus(s);return [5+bonus,7+bonus];}
+export function classBonus(s){return s.class==='bruiser'?2:0;}
 // Levelling. XP comes from fights, discoveries, peaceful resolutions and
 // achievements; each level adds max HP and one stat increase to spend.
 export const XP_PER_LEVEL=100;
+// Races and classes. Humans are the only race in this build; the class event
+// reads what the player actually did and offers the paths that fit.
+export const RACES={human:{name:'Human',description:'Adaptable, unremarkable, and still breathing.',primary:'charisma',passive:'Adaptable: +2 on saving throws.'}};
+export const CLASSES={
+ bruiser:{name:'Bruiser',description:'You solve rooms the direct way.',primary:'strength',passive:'Heavy hands: +2 melee damage.',active:'Cleave',deeds:['melee','environment']},
+ rogue:{name:'Rogue',description:'You take what you want and leave quietly.',primary:'dexterity',passive:'Light fingers: +2 on stealth and sleight of hand checks.',active:'Backstab',deeds:['stealth','theft','ranged']},
+ trapper:{name:'Trapper',description:'You let the room do the work.',primary:'intelligence',passive:'Improviser: advantage when shoving or grappling.',active:'Snare',deeds:['fire','environment']},
+ warden:{name:'Warden',description:'You keep other people alive.',primary:'wisdom',passive:'Steady: +5 maximum HP.',active:'Rally',deeds:['help','recruit','persuasion']},
+ warlord:{name:'Warlord',description:'You make refusing you expensive.',primary:'charisma',passive:'Dread: +2 on Charisma checks.',active:'Terrify',deeds:['intimidation','betrayal']}
+};
+export const DEEDS=['melee','ranged','stealth','theft','persuasion','intimidation','help','betrayal','environment','fire','survival','explore','recruit'];
+export function recordDeed(s,deed,times=1){if(!DEEDS.includes(deed))return;s.deeds[deed]=(s.deeds[deed]||0)+times;}
+export function totalDeeds(s){return DEEDS.reduce((total,deed)=>total+(s.deeds[deed]||0),0);}
+export function classScore(s,id){return CLASSES[id].deeds.reduce((total,deed)=>total+(s.deeds[deed]||0),0);}
+export function classOptions(s){const ranked=Object.keys(CLASSES).sort((a,b)=>classScore(s,b)-classScore(s,a));
+ const chosen=ranked.filter(id=>classScore(s,id)>0).slice(0,3);
+ for(const id of ranked)if(chosen.length<3&&!chosen.includes(id))chosen.push(id);
+ return chosen;}
+export function classReady(s){return s.race==='human'&&s.class==='crawler'&&!s.classOffered&&totalDeeds(s)>=6;}
+export function classPassive(s){return CLASSES[s.class]||null;}
+export function skillBonus(s,skill){const name=String(skill||'').toLowerCase();
+ if(s.class==='rogue'&&(name==='stealth'||name==='sleight of hand'))return 2;
+ if(s.class==='warlord'&&(name==='intimidation'||name==='persuasion'))return 2;
+ return 0;}
+export function activeAbility(s){const entry=CLASSES[s.class];return entry?entry.active:null;}
+export function abilityReady(s){const active=activeAbility(s);return !!active&&!!s.combat&&!s.combat.used?.[active];}
+export function chooseClass(s,id){if(!CLASSES[id]||s.class!=='crawler')return false;
+ s.class=id;s.classOffered=true;
+ if(s.class==='warden'){s.maxHp+=5;s.hp=Math.min(s.maxHp,s.hp+5);}
+ say(s,`${CLASSES[id].name}: ${CLASSES[id].description} ${CLASSES[id].passive} Active ability: ${CLASSES[id].active}.`);return true;}
+export function chooseRace(s,id){if(!RACES[id]||s.race!=='human')return false;s.race=id;say(s,`You are ${RACES[id].name}. ${RACES[id].passive}`);return true;}
 export function xpForNext(level){return XP_PER_LEVEL*level;}
 export function awardXp(s,amount,reason){if(amount<=0)return 0;s.xp+=amount;const gained=amount;say(s,`${gained} XP: ${reason}.`);
  let levelled=0;
@@ -150,18 +182,18 @@ export function clearCondition(s,id,name,say){const table=s.conditions[id];if(!t
  if(was&&say)say(s,`${id==='player'?'You are':`${NPCS[id].name} is`} no longer ${CONDITION_TEXT[name]}.`);return was;}
 function clearConditions(s,id){if(s.conditions[id])delete s.conditions[id];}
 function damageRoll(roll,range,mode){if(mode==='none')return roll(...range);const first=roll(...range),second=roll(...range);return mode==='advantage'?Math.max(first,second):Math.min(first,second);}
-function hurt(s,id,damage,say){if(id==='player'){s.hp=Math.max(0,s.hp-damage);say(s,`You take ${damage}. ${s.hp} HP remain.`);if(s.hp===0){s.dead=true;s.combat=null;say(s,'ANNEX: “Your final performance was briefly sufficient.”');}return;}
+function hurt(s,id,damage,say,cause){if(id==='player'){s.hp=Math.max(0,s.hp-damage);say(s,`You take ${damage}. ${s.hp} HP remain.`);if(s.hp===0){s.dead=true;s.combat=null;say(s,'ANNEX: “Your final performance was briefly sufficient.”');}return;}
  const n=s.npcs[id];n.hp=Math.max(0,n.hp-damage);say(s,`${NPCS[id].name} takes ${damage}. ${n.hp} HP remain.`);
- if(n.hp===0){const nonlethal=s.combat?.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;say(s,`${NPCS[id].name} is ${nonlethal?'unconscious':'dead'}.`);awardXp(s,NPCS[id].xp||20,`defeating ${NPCS[id].name}`);closeCombat(s);}}
+ if(n.hp===0){const nonlethal=s.combat?.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;say(s,`${NPCS[id].name} is ${nonlethal?'unconscious':'dead'}.`);if(cause)recordDeed(s,cause);awardXp(s,NPCS[id].xp||20,`defeating ${NPCS[id].name}`);closeCombat(s);}}
 function tickConditions(s,say){for(const id of ['player',...Object.keys(NPCS)]){const table=s.conditions[id];if(!table)continue;
- if(table.burning>0)hurt(s,id,2,say);
- if(table.bleeding>0)hurt(s,id,1,say);
+ if(table.burning>0)hurt(s,id,2,say,'environment');
+ if(table.bleeding>0)hurt(s,id,1,say,'environment');
  if(!s.combat)break;   // a death ends the fight before the rest of the tick
  for(const name of Object.keys(table)){table[name]-=1;if(table[name]<=0)delete table[name];}
  if(!Object.keys(table).length)delete s.conditions[id];}}
 // Secondary actions sit behind a disclosure in the dock so the common loop
 // stays three taps deep. The core is whatever is left.
-export const SECONDARY_ACTIONS=['Shove','Grapple','Switch to nonlethal','Switch to lethal','Smoke bomb','Tip the brazier','Flee','Switch target'];
+export const SECONDARY_ACTIONS=['Shove','Grapple','Switch to nonlethal','Switch to lethal','Smoke bomb','Tip the brazier','Flee','Switch target','Throw a rock','Cleave','Backstab','Snare','Rally','Terrify'];
 export const ARCHETYPE_RULES={scrapper:{speed:2,rush:true,shoves:true},skulker:{speed:2,thrown:[2,4],cover:true,fleesAt:0.35},brute:{speed:1,grapple:true,shoves:true}};
 function actorOf(d){return {name:d.name,level:1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
 function playerDC(s){return 10+modifier(s.abilities.strength)+(s.skills.includes('athletics')?proficiencyBonus(s.level):0);}
@@ -181,12 +213,13 @@ export function combatActions(s){if(!s.combat)return [];
  const fix=table.grappled>0?['Break free']:table.burning>0?['Pat out flames']:table.bleeding>0?['Treat bleeding']:['Shove','Grapple'];
  const extra=table.prone>0?['Stand up']:[];
  const fire=!s.flags.brazier&&props[s.room].some(prop=>prop.id==='brazier')?['Tip the brazier']:[];
- return [...stance,s.combat.intent==='lethal'?'Switch to nonlethal':'Switch to lethal',...free,...fix,...extra,...fire,...targets];}
+ const power=abilityReady(s)?[activeAbility(s)]:[];
+ return [...stance,s.combat.intent==='lethal'?'Switch to nonlethal':'Switch to lethal',...free,...fix,...extra,...fire,...power,...targets];}
 // Landing a blow on the crawler, whoever ends up wearing it. Kept separate so
 // every archetype attacks through exactly the same rules.
 function hitPlayer(s,id,damage,roll,rng,playerAction,d){const me=conditionsOf(s,'player');let total=damage;
  if(playerAction==='Defend'){total=Math.floor(total/2);say(s,'You defend: incoming damage is halved, rounded down.');}
- if(damage===d.damage[1]&&d.onHit&&!me[d.onHit]){const save=d20({actor:s,ability:'constitution',save:true,dc:11,rng});say(s,`Constitution save ${save.total} against DC 11. ${save.success?'Success.':'Failure.'}`);if(!save.success)applyCondition(s,'player',d.onHit,3,say);}
+ if(damage===d.damage[1]&&d.onHit&&!me[d.onHit]){const save=d20({actor:s,ability:'constitution',save:true,dc:11,modifiers:s.race==='human'?2:0,rng});say(s,`Constitution save ${save.total} against DC 11. ${save.success?'Success.':'Failure.'}`);if(!save.success)applyCondition(s,'player',d.onHit,3,say);}
  const guard=withPlayer(s).filter(member=>member!==id&&s.npcs[member].condition==='conscious').sort((a,b)=>s.npcs[a].hp-s.npcs[b].hp)[0];
  if(total>0&&guard){s.npcs[guard].hp=Math.max(0,s.npcs[guard].hp-total);say(s,`${d.name} hits ${NPCS[guard].name} for ${total}. ${s.npcs[guard].hp} HP remain.`);
   if(s.npcs[guard].hp===0){s.npcs[guard].condition='unconscious';say(s,`${NPCS[guard].name} is knocked out and can no longer help.`);}}
@@ -228,9 +261,10 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
  if(action==='Shake it off'){clearCondition(s,'player','stunned',say);say(s,'You clear your head.');}
  if(action==='Pat out flames'){clearCondition(s,'player','burning',say);say(s,'You smother the flames.');}
  if(action==='Treat bleeding'){if(!s.items.bandages){say(s,'No bandages. The wound keeps bleeding.');return false;}s.items.bandages--;clearCondition(s,'player','bleeding',say);say(s,'You bind the wound. It stops, for now.');}
- if(action==='Tip the brazier'){s.flags.brazier=true;applyCondition(s,id,'burning',3,say);say(s,'You kick the brazier over. Burning fuel spreads across the floor.');}
- if(action==='Shove'||action==='Grapple'||action==='Break free'){const result=d20({actor:s,skill:'athletics',dc,disadvantage:me('poisoned'),rng});
+ if(action==='Tip the brazier'){s.flags.brazier=true;recordDeed(s,'fire');recordDeed(s,'environment');applyCondition(s,id,'burning',3,say);say(s,'You kick the brazier over. Burning fuel spreads across the floor.');}
+ if(action==='Shove'||action==='Grapple'||action==='Break free'){const result=d20({actor:s,skill:'athletics',dc,disadvantage:me('poisoned'),advantage:s.class==='trapper',modifiers:skillBonus(s,'athletics'),rng});
   const line=`Athletics ${result.total} (d20 ${result.rawRoll}${result.rolls.length>1?` from ${result.rolls.join(' and ')}`:''} + ${result.abilityModifier}${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}) against DC ${dc}. ${result.success?'Success.':'Failure.'}`;
+  if(action!=='Break free')recordDeed(s,'environment');
   if(action==='Break free'){if(result.success){clearCondition(s,'player','grappled',say);say(s,`${line} You tear free.`);}else say(s,`${line} You are still held.`);}
   else if(!result.success)say(s,`${line} ${d.name} keeps their footing.`);
   else if(action==='Grapple'){applyCondition(s,id,'grappled',3,say);say(s,`${line} You have hold of them.`);}
@@ -239,8 +273,17 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
  if(action==='Use potion'&&(!s.potions||s.hp===s.maxHp)){say(s,!s.potions?'No potions. Choose another action.':'Already at full health.');return false;}
   if(action==='Smoke bomb'){if(!s.items.smokeBombs){say(s,'No smoke bombs. Tobin carries them.');return false;}s.items.smokeBombs--;s.x=1;s.y=4;say(s,'Smoke fills the room. You escape without a retaliatory hit. Your opponent keeps their injuries and memories.');closeCombat(s);return true;}
  s.combat.turn='enemy';
-   if(action==='Attack'){const [lo,hi]=attackRange(s);const mode=theirs('prone')?'advantage':me('poisoned')||s.combat.range>1||s.combat.cover[id]?'disadvantage':'none';const raw=damageRoll(roll,[lo,hi],mode);const damage=raw-(s.combat.intent==='nonlethal'?1:0);n.hp=Math.max(0,n.hp-damage);say(s,`You hit ${d.name} for ${damage}. ${n.hp} HP remain.`);
-   if(raw===hi&&!theirs('bleeding')&&n.hp>0&&!theirs('undead'))applyCondition(s,id,'bleeding',3,say);
+   if(action==='Rally'){s.combat.used[action]=true;s.hp=Math.min(s.maxHp,s.hp+8);say(s,`You rally. ${s.hp} HP.`);recordDeed(s,'help');}
+   if(action==='Terrify'){s.combat.used[action]=true;applyCondition(s,id,'stunned',2,say);say(s,'Your reputation does the talking. It works.');recordDeed(s,'intimidation');}
+   if(action==='Attack'||action==='Throw a rock'||action==='Cleave'||action==='Backstab'||action==='Snare'){const [lo,hi]=attackRange(s);let mode=theirs('prone')?'advantage':me('poisoned')||s.combat.range>1||s.combat.cover[id]?'disadvantage':'none';let raw=0;
+    if(action==='Throw a rock'){raw=damageRoll(roll,[2,4],me('poisoned')?'disadvantage':'none');recordDeed(s,'ranged');}
+    else if(action==='Cleave'){raw=damageRoll(roll,[lo+4,hi+4],mode);recordDeed(s,'melee');}
+    else if(action==='Backstab'){raw=damageRoll(roll,[lo+2,hi+2],'advantage');recordDeed(s,'melee');}
+    else if(action==='Snare'){raw=3;recordDeed(s,'environment');applyCondition(s,id,'prone',2,say);}
+    else{raw=damageRoll(roll,[lo,hi],mode);recordDeed(s,'melee');}
+    if(action!=='Attack')s.combat.used[action]=true;
+    const damage=raw-(s.combat.intent==='nonlethal'?1:0);n.hp=Math.max(0,n.hp-damage);say(s,`You hit ${d.name} for ${damage}. ${n.hp} HP remain.`);
+   if(action==="Attack"&&raw===hi&&!theirs("bleeding")&&n.hp>0)applyCondition(s,id,"bleeding",3,say);
    if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;if(id==='rat'){s.gold+=n.inventory.gold;n.inventory.gold=0;}say(s,nonlethal?`${d.name} is unconscious, not dead. You can loot, wake, or kill them. They do not wake automatically.`:`${d.name} is dead and will stay dead. Loot their remaining possessions if you choose.`);awardXp(s,NPCS[id].xp||20,"defeating "+NPCS[id].name);if(!nonlethal)witnessed(s,'kill',id);dropEnemy(s,id);if(!s.combat)return true;}if(s.combat&&allyStrike(s,roll,rng))return true;}
  if(action==='Use potion'){s.potions--;const old=s.hp;s.hp=Math.min(s.maxHp,s.hp+10);say(s,`Potion restored ${s.hp-old} HP.`);}
    s.combat.round++;
@@ -258,7 +301,7 @@ export function encode(s){if(s.dead||s.combat)return null;return JSON.stringify(
 // The bridge between a saved character and the d20 rules: pass the result as
 // check({actor:character(s), skill:'stealth', dc:12}).
 export function character(s,id='player'){if(id==='player')return {name:'Crawler 01',level:s.level,abilities:s.abilities,skills:s.skills,saves:s.saves};const d=NPCS[id];return {name:d.name,level:d.level||1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
-function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!dictionary(s.stolen))s.stolen={};s.places=normalisePlaces(s.places);s.conditions=normaliseConditions(s.conditions);if(!Array.isArray(s.party))s.party=[];if(!dictionary(s.allies))s.allies={};if(!Number.isInteger(s.level))s.level=1;if(!Number.isInteger(s.maxHp)||s.maxHp<30)s.maxHp=30;if(!Number.isInteger(s.xp)||s.xp<0)s.xp=0;if(!Number.isInteger(s.pending)||s.pending<0)s.pending=0;return s;}
+function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!dictionary(s.stolen))s.stolen={};s.places=normalisePlaces(s.places);s.conditions=normaliseConditions(s.conditions);if(!Array.isArray(s.party))s.party=[];if(!dictionary(s.allies))s.allies={};if(!Number.isInteger(s.level))s.level=1;if(!Number.isInteger(s.maxHp)||s.maxHp<30)s.maxHp=30;if(!Number.isInteger(s.xp)||s.xp<0)s.xp=0;s.deeds=dictionary(s.deeds)?s.deeds:{};for(const deed of DEEDS)if(!Number.isInteger(s.deeds[deed])||s.deeds[deed]<0)s.deeds[deed]=0;if(!RACES[s.race])s.race="human";if(s.class!=="crawler"&&!CLASSES[s.class])s.class="crawler";if(typeof s.classOffered!=="boolean")s.classOffered=false;if(!Number.isInteger(s.pending)||s.pending<0)s.pending=0;return s;}
 function dictionary(v){return v&&typeof v==='object'&&!Array.isArray(v);}
 function bools(v){return dictionary(v)&&Object.values(v).every(x=>typeof x==='boolean');}
 function count(v){return Number.isInteger(v)&&v>=0&&v<=100000;}
@@ -274,6 +317,8 @@ export function decode(raw){try{let s=JSON.parse(raw);if(!dictionary(s)||![1,2].
  if(typeof s.key!=='boolean'||!bools(s.flags)||!Array.isArray(s.achievements)||s.achievements.some(x=>typeof x!=='string')||!Array.isArray(s.log)||s.log.some(x=>typeof x!=='string'))return null;
  if(s.version===1){s=migrate(s);if(!s)return null;}
  s=withCharacter(s);
+ if(!RACES[s.race]||(s.class!=='crawler'&&!CLASSES[s.class])||typeof s.classOffered!=='boolean')return null;
+ if(!dictionary(s.deeds)||DEEDS.some(deed=>!count(s.deeds[deed])))return null;
  if(!dictionary(s.items)||ITEM_KEYS.some(k=>!count(s.items[k]))||!Number.isSafeInteger(s.logSerial)||s.logSerial<0)return null;
  for(const id of Object.keys(NPCS)){const n=s.npcs?.[id];if(!dictionary(n)||!Number.isInteger(n.hp)||n.hp<0||n.hp>NPCS[id].hp||!ATTITUDES.includes(n.attitude)||!CONDITIONS.includes(n.condition)||(n.condition==='conscious')!==(n.hp>0)||!bools(n.memory)||!dictionary(n.inventory)||STOCK_KEYS.some(k=>!count(n.inventory[k])))return null;}
  if(!ABILITIES.every(ability=>Number.isInteger(s.abilities[ability])&&s.abilities[ability]>=1&&s.abilities[ability]<=30)||!Number.isInteger(s.level)||s.level<1||s.level>20||s.skills.some(x=>typeof x!=='string')||s.saves.some(x=>typeof x!=='string')||Object.values(s.stolen).some(owner=>typeof owner!=='string'||!NPCS[owner]))return null;
