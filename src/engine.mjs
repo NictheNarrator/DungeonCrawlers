@@ -10,7 +10,14 @@ export const props=[
 ];
 export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:0,npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
-export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);s.boxes++;say(s,`Achievement: ${id}. One loot box added to your pack.`);awardXp(s,40,`achievement: ${id}`);}
+export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);
+ const entry=ACHIEVEMENTS[id]||{description:'',condition:'',reward:'box',message:'Logged. The dungeon saw that.'};
+ if(entry.reward==='box')s.boxes++;
+ else if(entry.reward==='xp')awardXp(s,50,`achievement: ${id}`);
+ say(s,`NEW ACHIEVEMENT: ${id}. ${entry.message}`);
+ awardXp(s,40,`achievement: ${id}`);
+ return entry;}
+export function achievementFor(id){return ACHIEVEMENTS[id]||null;}
 export function blocked(s,x,y){if(x<1||x>11||y<1||y>7)return true;
  if(props[s.room].some(p=>p.x===x&&p.y===y&&!NPCS[p.id]))return true;
  return Object.keys(NPCS).filter(id=>!isWith(s,id)).some(id=>{const place=placeOf(s,id);return place.room===s.room&&place.x===x&&place.y===y;});}
@@ -61,7 +68,7 @@ export function worldTurn(s){for(const id of Object.keys(NPCS)){const n=s.npcs[i
  if(d.routine==='scavenge')moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);}}
 export function move(s,dx,dy){if(s.combat||s.dead||s.complete||!Number.isInteger(dx)||!Number.isInteger(dy)||Math.abs(dx)+Math.abs(dy)!==1)return false;const x=s.x+dx,y=s.y+dy;
  const exit=y===4&&((x===12&&s.room<4)||(x===0&&s.room>0));
- if(exit){discoverThefts(s,PEOPLE.filter(id=>roomOf(s,id)===s.room),say);s.room+=x===12?1:-1;s.x=x===12?1:11;s.y=4;say(s,`Entered ${rooms[s.room]}.`);
+ if(exit){discoverThefts(s,PEOPLE.filter(id=>roomOf(s,id)===s.room),say,award);s.room+=x===12?1:-1;s.x=x===12?1:11;s.y=4;say(s,`Entered ${rooms[s.room]}.`);
   const seen='seen'+s.room;if(!s.flags[seen]){s.flags[seen]=true;awardXp(s,20,`finding ${rooms[s.room]}`);}
   worldTurn(s);return true;}
  if(blocked(s,x,y))return false;s.x=x;s.y=y;return true;
@@ -88,17 +95,20 @@ export function ownedTake(s,id,text,keys){const prop=props[s.room].find(p=>p.id=
  if(!seer&&!watchers.length){say(s,'Nobody is watching.');return;}
  if(seer)confront(s,owner,say,startCombat);
  recordWitness(s,watchers,'theft',say);}
-function startCombat(s,id,intent='lethal'){const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';if(leaveParty(s,id,say,'was attacked by you'))recordDeed(s,'betrayal');s.combat={enemy:id,enemies:[id],turn:'player',intent,range:1,cover:{},round:0,used:{}};
+function startCombat(s,id,intent='lethal'){const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';if(leaveParty(s,id,say,'was attacked by you')){recordDeed(s,'betrayal');award(s,'Severance Package');}s.combat={enemy:id,enemies:[id],turn:'player',intent,range:1,cover:{},round:0,used:{}};
  say(s,`${NPCS[id].name} fights back. ${intent==='nonlethal'?'Nonlethal strikes will knock them unconscious.':'Lethal attacks can kill them.'} You can change intent during combat.`);
  const pack=NPCS[id].pack;
  if(pack)for(const other of Object.keys(NPCS)){if(other===id||NPCS[other].pack!==pack||s.npcs[other].condition!=='conscious')continue;if(placeOf(s,other).room!==placeOf(s,id).room)continue;s.combat.enemies.push(other);say(s,`${NPCS[other].name} joins the fight.`);}
  witnessed(s,'attack',id);worldTurn(s);}
 // A recruited character fights in their own body with their own damage, and a
 // temporary ally spends one encounter of their agreement each time combat ends.
-function closeCombat(s){if(!s.combat)return;if(!s.dead&&s.hp<=Math.ceil(s.maxHp*0.25))recordDeed(s,'survival');s.combat=null;s.conditions={};for(const id of Object.keys(s.allies||{})){s.allies[id]-=1;if(s.allies[id]<=0){delete s.allies[id];say(s,`${NPCS[id].name} has done what they promised and steps away. The temporary alliance is over.`);}}}
+function closeCombat(s){if(!s.combat)return;
+ if(!s.dead&&s.hp<=Math.ceil(s.maxHp*0.25)){recordDeed(s,'survival');award(s,'Terminal Optimism');}
+ if(!s.dead&&s.combat.defeated&&!s.combat.attackUsed)award(s,'Hands Off');
+ s.combat=null;s.conditions={};for(const id of Object.keys(s.allies||{})){s.allies[id]-=1;if(s.allies[id]<=0){delete s.allies[id];say(s,`${NPCS[id].name} has done what they promised and steps away. The temporary alliance is over.`);}}}
 function allyStrike(s,roll,rng){const enemy=s.combat?.enemy;if(!enemy)return false;const n=s.npcs[enemy],d=NPCS[enemy];
  for(const id of withPlayer(s)){const ally=s.npcs[id];if(ally.condition!=='conscious'||id===enemy)continue;const damage=roll(...NPCS[id].damage);n.hp=Math.max(0,n.hp-damage);say(s,`${NPCS[id].name} hits ${d.name} for ${damage}. ${n.hp} HP remain.`);
-  if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;say(s,`${d.name} is ${nonlethal?'unconscious':'dead'}. Your ally finished it.`);awardXp(s,NPCS[enemy].xp||20,`defeating ${NPCS[enemy].name}`);closeCombat(s);return true;}}
+  if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;say(s,`${d.name} is ${nonlethal?"unconscious":"dead"}. Your ally finished it.`);defeated(s,enemy);awardXp(s,NPCS[enemy].xp||20,`defeating ${NPCS[enemy].name}`);closeCombat(s);return true;}}
  return false;}
 // Who can see what happens where the player is standing: the same room, close
 // enough, conscious, and not the person the event happened to.
@@ -133,6 +143,24 @@ export const XP_PER_LEVEL=100;
 // Races and classes. Humans are the only race in this build; the class event
 // reads what the player actually did and offers the paths that fit.
 export const RACES={human:{name:'Human',description:'Adaptable, unremarkable, and still breathing.',primary:'charisma',passive:'Adaptable: +2 on saving throws.'}};
+// Achievements carry their own Dungeon AI line. Rewards are a loot box, bonus
+// XP, or nothing but the memory.
+export const ACHIEVEMENTS={
+ 'First Blood':{description:'Defeat your first crawler.',condition:'Win any fight.',reward:'box',message:'Someone had to go first. It was not you. Statistically, that is a win.'},
+ 'Occupational Hazard':{description:'Finish someone with fire or blood loss.',condition:'Kill an enemy with burning or bleeding.',reward:'box',message:'You shoved a Ratman into a fire. Congratulations on your exciting new career in workplace safety.'},
+ 'Hands Off':{description:'Win a fight without a normal attack.',condition:'Win without using Attack.',reward:'xp',message:'You won without swinging properly. Filed under interpretive dance.'},
+ 'Terminal Optimism':{description:'Win a fight at death’s door.',condition:'Survive a fight at a quarter health or less.',reward:'box',message:'Held together by adrenaline and poor decisions. Management is impressed. Management is also concerned.'},
+ 'Five-Finger Discount':{description:'Steal something successfully.',condition:'Pick a pocket or rob someone without being caught.',reward:'xp',message:'Property is a social construct. So is trust, and you just deleted both.'},
+ 'Sticky Fingers':{description:'Get caught stealing.',condition:'Be caught picking a pocket, or have a theft discovered.',reward:'none',message:'You reached for something and found consequences instead. Fascinating.'},
+ 'Severance Package':{description:'Betray someone who trusted you.',condition:'Attack, rob or loot a recruited ally.',reward:'none',message:'They trusted you. You have chosen a different retirement plan. Yours.'},
+ 'Pack Tactics':{description:'Beat two enemies in one fight.',condition:'Defeat two or more enemies in a single fight.',reward:'box',message:'Two against one, and you still won. The dungeon suggests you stop while the odds look like that.'},
+ 'Cheese diplomacy':{description:'Pay the custodian in cheese.',condition:'Offer the ratman cheese.',reward:'box',message:'You bribed a civil servant with dairy. That is how the building works. You are learning.'},
+ 'Quiet quitting':{description:'Slip past a problem.',condition:'Sneak past the ratman.',reward:'box',message:'You avoided a fight by walking quietly. Your performance review notes “technically employed”.'},
+ 'Pipe dream':{description:'Find a hidden cache.',condition:'Search the loose pipe.',reward:'box',message:'Hidden coins behind a pipe. Inspirational. Send a postcard from your retirement.'},
+ 'People person':{description:'Make a friend in the dungeon.',condition:'Befriend a survivor.',reward:'box',message:'You made a friend. In here. Adorable. Try not to outlive them.'},
+ 'Mutual inventory':{description:'Earn a scavenger’s trust.',condition:'Befriend Tobin.',reward:'box',message:'Tobin likes you now. He has a strange way of showing it, involving assets and dividends.'},
+ 'Worthy rival':{description:'Earn a rival’s respect.',condition:'Befriend Vex.',reward:'box',message:'Vex respects you. That is not friendship, it is a future grievance with better posture.'}
+};
 export const CLASSES={
  bruiser:{name:'Bruiser',description:'You solve rooms the direct way.',primary:'strength',passive:'Heavy hands: +2 melee damage.',active:'Cleave',deeds:['melee','environment']},
  rogue:{name:'Rogue',description:'You take what you want and leave quietly.',primary:'dexterity',passive:'Light fingers: +2 on stealth and sleight of hand checks.',active:'Backstab',deeds:['stealth','theft','ranged']},
@@ -182,9 +210,10 @@ export function clearCondition(s,id,name,say){const table=s.conditions[id];if(!t
  if(was&&say)say(s,`${id==='player'?'You are':`${NPCS[id].name} is`} no longer ${CONDITION_TEXT[name]}.`);return was;}
 function clearConditions(s,id){if(s.conditions[id])delete s.conditions[id];}
 function damageRoll(roll,range,mode){if(mode==='none')return roll(...range);const first=roll(...range),second=roll(...range);return mode==='advantage'?Math.max(first,second):Math.min(first,second);}
+function defeated(s,id){if(s.combat){s.combat.defeated=true;s.combat.kills=(s.combat.kills||0)+1;if(s.combat.kills>=2)award(s,'Pack Tactics');}award(s,'First Blood');}
 function hurt(s,id,damage,say,cause){if(id==='player'){s.hp=Math.max(0,s.hp-damage);say(s,`You take ${damage}. ${s.hp} HP remain.`);if(s.hp===0){s.dead=true;s.combat=null;say(s,'ANNEX: “Your final performance was briefly sufficient.”');}return;}
  const n=s.npcs[id];n.hp=Math.max(0,n.hp-damage);say(s,`${NPCS[id].name} takes ${damage}. ${n.hp} HP remain.`);
- if(n.hp===0){const nonlethal=s.combat?.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;say(s,`${NPCS[id].name} is ${nonlethal?'unconscious':'dead'}.`);if(cause)recordDeed(s,cause);awardXp(s,NPCS[id].xp||20,`defeating ${NPCS[id].name}`);closeCombat(s);}}
+ if(n.hp===0){const nonlethal=s.combat?.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;say(s,`${NPCS[id].name} is ${nonlethal?'unconscious':'dead'}.`);if(cause)recordDeed(s,cause);if(cause==='environment')award(s,'Occupational Hazard');awardXp(s,NPCS[id].xp||20,`defeating ${NPCS[id].name}`);defeated(s,id);closeCombat(s);}}
 function tickConditions(s,say){for(const id of ['player',...Object.keys(NPCS)]){const table=s.conditions[id];if(!table)continue;
  if(table.burning>0)hurt(s,id,2,say,'environment');
  if(table.bleeding>0)hurt(s,id,1,say,'environment');
@@ -211,7 +240,7 @@ export function combatActions(s){if(!s.combat)return [];
  const targets=s.combat.enemies.filter(enemy=>s.npcs[enemy].condition==='conscious').length>1?['Switch target']:[];
  const free=table.grappled>0?[]:['Flee','Smoke bomb'];
  const fix=table.grappled>0?['Break free']:table.burning>0?['Pat out flames']:table.bleeding>0?['Treat bleeding']:['Shove','Grapple'];
- const extra=table.prone>0?['Stand up']:[];
+ const extra=[...(table.prone>0?['Stand up']:[]),'Throw a rock'];
  const fire=!s.flags.brazier&&props[s.room].some(prop=>prop.id==='brazier')?['Tip the brazier']:[];
  const power=abilityReady(s)?[activeAbility(s)]:[];
  return [...stance,s.combat.intent==='lethal'?'Switch to nonlethal':'Switch to lethal',...free,...fix,...extra,...fire,...power,...targets];}
@@ -281,10 +310,10 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
     else if(action==='Backstab'){raw=damageRoll(roll,[lo+2,hi+2],'advantage');recordDeed(s,'melee');}
     else if(action==='Snare'){raw=3;recordDeed(s,'environment');applyCondition(s,id,'prone',2,say);}
     else{raw=damageRoll(roll,[lo,hi],mode);recordDeed(s,'melee');}
-    if(action!=='Attack')s.combat.used[action]=true;
+    if(action==='Attack')s.combat.attackUsed=true;else s.combat.used[action]=true;
     const damage=raw-(s.combat.intent==='nonlethal'?1:0);n.hp=Math.max(0,n.hp-damage);say(s,`You hit ${d.name} for ${damage}. ${n.hp} HP remain.`);
    if(action==="Attack"&&raw===hi&&!theirs("bleeding")&&n.hp>0)applyCondition(s,id,"bleeding",3,say);
-   if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;if(id==='rat'){s.gold+=n.inventory.gold;n.inventory.gold=0;}say(s,nonlethal?`${d.name} is unconscious, not dead. You can loot, wake, or kill them. They do not wake automatically.`:`${d.name} is dead and will stay dead. Loot their remaining possessions if you choose.`);awardXp(s,NPCS[id].xp||20,"defeating "+NPCS[id].name);if(!nonlethal)witnessed(s,'kill',id);dropEnemy(s,id);if(!s.combat)return true;}if(s.combat&&allyStrike(s,roll,rng))return true;}
+   if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;if(id==='rat'){s.gold+=n.inventory.gold;n.inventory.gold=0;}say(s,nonlethal?`${d.name} is unconscious, not dead. You can loot, wake, or kill them. They do not wake automatically.`:`${d.name} is dead and will stay dead. Loot their remaining possessions if you choose.`);defeated(s,id);awardXp(s,NPCS[id].xp||20,"defeating "+NPCS[id].name);if(!nonlethal)witnessed(s,'kill',id);dropEnemy(s,id);if(!s.combat)return true;}if(s.combat&&allyStrike(s,roll,rng))return true;}
  if(action==='Use potion'){s.potions--;const old=s.hp;s.hp=Math.min(s.maxHp,s.hp+10);say(s,`Potion restored ${s.hp-old} HP.`);}
    s.combat.round++;
    for(const enemyId of [...s.combat.enemies]){if(!s.combat)break;if(s.npcs[enemyId].condition!=='conscious')continue;enemyTurn(s,enemyId,roll,rng,action);}

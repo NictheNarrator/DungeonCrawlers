@@ -46,7 +46,7 @@ function refusesTrade(s,id){const n=s.npcs[id];return n.attitude==='hostile'||!!
 function transfer(s,n,key,count){const amount=Math.min(n.inventory[key],count);if(!amount)return 0;n.inventory[key]-=amount;if(key==='key')s.key=true;else if(ITEM_KEYS.includes(key))s.items[key]+=amount;else s[key]+=amount;return amount;}
 function takeAll(s,n,id){const got=[];for(const key of STOCK_KEYS){if(NPCS[id]?.equipped?.includes(key))continue;const amount=transfer(s,n,key,n.inventory[key]);if(amount){got.push(`${amount} ${itemName[key]}`);if(id)s.stolen[key]=id;}}return got.join(', ')||'nothing';}
 function betray(n){if(n.memory.helped||n.memory.befriended||n.attitude==='friendly')n.memory.betrayed=true;}
-export function discoverThefts(s,ids,say){for(const id of ids){const n=s.npcs[id];if(!n||n.condition!=='conscious'||!n.memory.stolen||n.memory.theftDetected)continue;n.memory.theftDetected=true;n.memory.distracted=false;n.attitude='hostile';say(s,`${NPCS[id].name} notices the missing belongings as you leave. The theft is remembered.`);}}
+export function discoverThefts(s,ids,say,award=()=>{}){for(const id of ids){const n=s.npcs[id];if(!n||n.condition!=='conscious'||!n.memory.stolen||n.memory.theftDetected)continue;n.memory.theftDetected=true;n.memory.distracted=false;n.attitude='hostile';award(s,'Sticky Fingers');say(s,`${NPCS[id].name} notices the missing belongings as you leave. The theft is remembered.`);}}
 // Witnessing. An NPC only learns about a major event by being in the room and
 // close enough to see it, so an unwitnessed crime stays between the player and
 // whoever it was done to.
@@ -161,23 +161,23 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()
   const odds=result.advantage?' with advantage':result.disadvantage?' with disadvantage':'';
   const spread=result.rolls.length>1?` from ${result.rolls.join(' and ')}`:'';
   const line=`Sleight of hand ${result.total} (d20 ${result.rawRoll}${spread} + ${result.abilityModifier} dexterity${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${odds}) against DC ${dc}. ${result.success?'Success.':'Failure.'}`;
-  if(!result.success){betray(n);m.theftAttempt=true;n.attitude='hostile';say(s,`${line} ${d.name} catches your hand. They are now hostile.`);witness('theft',id);return true;}
+  if(!result.success){award(s,'Sticky Fingers');betray(n);m.theftAttempt=true;n.attitude='hostile';say(s,`${line} ${d.name} catches your hand. They are now hostile.`);witness('theft',id);return true;}
   const key=[d.pick,'potions','gold',...ITEM_KEYS,'key'].find(k=>n.inventory[k]>0&&!(d.equipped||[]).includes(k));if(!key){say(s,`${d.name} has nothing to steal.`);return true;}
-  const got=transfer(s,n,key,key==='gold'?2:1);s.stolen[key]=id;deed('theft');betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
+  const got=transfer(s,n,key,key==='gold'?2:1);s.stolen[key]=id;deed('theft');award(s,'Five-Finger Discount');betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
  }
  if(action==='Threaten'){
   deed('intimidation');betray(n);m.threatened=true;n.attitude=n.attitude==='friendly'?'suspicious':'hostile';say(s,`${d.name} remembers your threat. ${id==='vex'?'Vex draws a weapon rather than backing down.':'They pull their belongings close. Open robbery would take them, but end any chance of trust.'}`);if(id==='vex')startCombat(s,id,'lethal');return true;
  }
  if(action==='Rob openly'){
   betray(n);m.robberyAttempt=true;n.attitude='hostile';if(id==='vex'){say(s,'Vex: “You have badly misread the room.” Vex fights back; defeat them before looting.');startCombat(s,id,'lethal');return true;}
-  leaveParty(s,id,say,'was robbed by you');deed('theft');m.robbed=true;say(s,`${d.name} surrenders ${takeAll(s,n,id)} rather than die. They remain alive, hostile, and remember the robbery. ${id==='tobin'?'Tobin reaches for a radio.':''}`);witness('rob',id);return true;
+  if(leaveParty(s,id,say,'was robbed by you'))award(s,'Severance Package');deed('theft');m.robbed=true;say(s,`${d.name} surrenders ${takeAll(s,n,id)} rather than die. They remain alive, hostile, and remember the robbery. ${id==='tobin'?'Tobin reaches for a radio.':''}`);witness('rob',id);return true;
  }
  if(['Attack','Knock unconscious','Kill'].includes(action)){startCombat(s,id,action==='Knock unconscious'?'nonlethal':'lethal');return true;}
  return false;
 }
 // Being caught taking something. How the owner reacts depends on who they are:
 // Vex attacks, Mara and Tobin demand it back, and everyone remembers.
-export function confront(s,id,say,startCombat){const n=s.npcs[id],d=NPCS[id];leaveParty(s,id,say,'was stolen from by you');n.memory.stolen=true;n.memory.theftDetected=true;n.memory.demanded=true;n.attitude='hostile';
+export function confront(s,id,say,startCombat){const n=s.npcs[id],d=NPCS[id];if(leaveParty(s,id,say,'was stolen from by you'))award(s,'Severance Package');n.memory.stolen=true;n.memory.theftDetected=true;n.memory.demanded=true;n.attitude='hostile';
  if(id==='vex'){say(s,'Vex: “Put it down. You can keep the memory, not the whetstone.” Vex draws a weapon.');startCombat(s,id,'lethal');return;}
  if(id==='mara'){say(s,'Mara: “That is mine. Put it back and we can both pretend this stayed civil.”');return;}
  if(id==='tobin'){say(s,'Tobin: “I counted those twice. You will hand them back.”');return;}
