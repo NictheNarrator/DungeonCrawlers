@@ -189,7 +189,20 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64;
  if(type==='note'){rect(px+19,py+21,28,33,'#cabd8d');for(let i=0;i<4;i++)rect(px+24,py+28+i*5,16,2,'#786c4c');return;}
  rect(px+14,py+11,37,44,'#687b76');rect(px+18,py+15,29,29,type==='terminal'?'#283e35':'#424f4a');if(type==='terminal'){rect(px+22,py+20,20,3,'#c9e896');rect(px+22,py+27,13,3,'#c9e896');}else{rect(px+39,py+32,4,7,'#d1b97b');}rect(px+17,py+53,7,5,'#172725');rect(px+43,py+53,7,5,'#172725');
 }
-function draw(){const [a,b,wall]=palettes[state.room]||palettes[0];ctx.clearRect(0,0,832,576);rect(0,0,832,576,'#111b1c');for(let y=0;y<9;y++)for(let x=0;x<13;x++){const edge=x===0||x===12||y===0||y===8;const door=y===4&&((x===0&&state.room>0)||(x===12&&state.room<4));rect(x*64+1,y*64+1,62,62,edge&&!door?'#28312f':(x+y)%2?a:b);if(edge&&!door){rect(x*64+2,y*64+4,60,11,wall);rect(x*64+3,y*64+20,58,3,'#151f1d');rect(x*64+31,y*64+4,3,16,'#222e2b');}else{rect(x*64+6,y*64+58,52,2,'#1b292644');if((x*7+y*11)%6===0)rect(x*64+13,y*64+21,8,3,'#6a766033');if(door){ctx.fillStyle='#d8e69c';ctx.font='24px monospace';ctx.fillText(x===0?'←':'→',x*64+21,y*64+39);}}}
+// Environment tiles: clean, dirty, cracked, bloodstained, grate, hazard stripe
+// and sludge, layered deterministically so a room reads the same every visit.
+// Walls get damaged chunks and a subway band; the base palette stays dirty and
+// each accent means something.
+function tileDetail(x,y,solid){const h=((x*73856093)^(y*19349663)^((state.room+1)*83492791))>>>0,px=x*64,py=y*64;
+ if(solid){if(h%3===0)rect(px+38,py+30,18,16,'#20272a');if(h%5===0)rect(px+22,py+34,20,2,'#b0a184');if(h%7===0)rect(px+18,py+8,26,9,'#3c4a63');return;}
+ if(h%6===0){rect(px+12,py+18,6,2,'#1b1f21');rect(px+18,py+22,8,2,'#1b1f21');}
+ if(h%9===0)rect(px+10,py+40,26,10,'#4a453f');
+ if(h%13===0)for(let i=0;i<4;i++)rect(px+16+i*8,py+26,4,14,'#1b1f21');
+ if(h%17===0)rect(px+34,py+12,18,10,'#a8332e');
+ if(state.room===3&&h%4===0)rect(px+8,py+44,44,8,'#3b4a45');
+ if(state.room===4&&h%8===0)rect(px+8,py+14,48,3,'#e8c14a');
+ if(state.room===5&&h%5===0)rect(px+14,py+30,20,9,'#6d6a62');}
+function draw(){const [a,b,wall]=palettes[state.room]||palettes[0];ctx.clearRect(0,0,832,576);rect(0,0,832,576,'#111b1c');for(let y=0;y<9;y++)for(let x=0;x<13;x++){const edge=x===0||x===12||y===0||y===8;const door=y===4&&((x===0&&state.room>0)||(x===12&&state.room<4));rect(x*64+1,y*64+1,62,62,edge&&!door?'#28312f':(x+y)%2?a:b);tileDetail(x,y,edge&&!door);if(edge&&!door){rect(x*64+2,y*64+4,60,11,wall);rect(x*64+3,y*64+20,58,3,'#151f1d');rect(x*64+31,y*64+4,3,16,'#222e2b');}else{rect(x*64+6,y*64+58,52,2,'#1b292644');if((x*7+y*11)%6===0)rect(x*64+13,y*64+21,8,3,'#6a766033');if(door){ctx.fillStyle='#d8e69c';ctx.font='24px monospace';ctx.fillText(x===0?'←':'→',x*64+21,y*64+39);}}}
  for(const p of roomProps(state)){const near=nearby(state).some(n=>n.id===p.id);if(near){ctx.strokeStyle='#d9ec9b';ctx.lineWidth=2;ctx.strokeRect(p.x*64+5,p.y*64+4,54,55);}sprite(p.x,p.y,p.id,state.npcs[p.id]?.condition||'conscious');if((p.id==='chest'&&state.flags.chest)||(p.id==='crate'&&state.flags.crate)){rect(p.x*64+8,p.y*64+28,49,4,'#1b2420');}if(state.npcs[p.id]?.attitude==='friendly'&&state.npcs[p.id]?.condition==='conscious'){ctx.fillStyle='#d9ec9b';ctx.font='13px monospace';ctx.fillText('♥',p.x*64+28,p.y*64+5);}}
  for(const p of roomProps(state).filter(p=>PEOPLE.includes(p.id))){ctx.font='11px monospace';ctx.textAlign='center';ctx.fillStyle=({friendly:'#d6ef9b',neutral:'#e5dcc3',suspicious:'#e4ba75',hostile:'#e8988d'})[state.npcs[p.id].attitude];ctx.fillText(withPlayer(state).includes(p.id)?NPCS[p.id].name+' ✦':NPCS[p.id].name,p.x*64+32,p.y*64+3);ctx.textAlign='left';}
  ctx.strokeStyle='#cce59e55';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(visual.x*64+33,visual.y*64+53,24,8,0,0,Math.PI*2);ctx.stroke();sprite(visual.x,visual.y,'player',state.dead?'dead':'conscious');
