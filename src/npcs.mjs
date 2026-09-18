@@ -38,7 +38,13 @@ export function goodsText(s,id){const n=s.npcs[id],d=NPCS[id];
  const buys=wantedGoods(s,id).map(key=>`${itemName[key]} for ${sellPriceOf(s,id,key)} coins`);
  const keeps=[...(d.equipped||[]),...(d.refuse||[])].filter(key=>n.inventory[key]>0).map(key=>itemName[key]);
  return `${d.name} sells: ${sells.join(', ')||'nothing right now'}. ${d.name} buys: ${buys.join(', ')}. ${keeps.length?`Never traded: ${keeps.join(', ')}.`:''}`;}
-export function describeNPC(s,id){const n=s.npcs[id],d=NPCS[id];return `${d.name} · ${n.attitude} · ${n.condition} · ${n.hp}/${d.hp} HP. Damage ${d.damage.join('–')}. Carries: ${stockText(n)}. Remembers: ${memoryText(n)}.`;}
+// What the player can actually see. Someone you have barely met is a person,
+// not a stat block: numbers and possessions only once you have traded blows or
+// goods with them.
+export function profileKnown(n){const m=n.memory||{};return !!(m.traded||m.attacked||m.knockedOut||m.killed||m.robbed||m.stolen||m.looted||m.helped||m.fed);}
+export function describeNPC(s,id){const n=s.npcs[id],d=NPCS[id];
+ if(!profileKnown(n))return `${d.name} · ${n.condition}. You do not know much else about them yet.`;
+ return `${d.name} · ${n.attitude} · ${n.condition} · ${n.hp}/${d.hp} HP. Damage ${d.damage.join('–')}. Carries: ${stockText(n)}. Remembers: ${memoryText(n)}.`;}
 export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];const owed=Object.keys(s.stolen||{}).some(key=>s.stolen[key]===id);
  const trade=n.attitude==='hostile'?[]:['Ask about goods','Trade','Offer a fair swap',...wantedGoods(s,id).filter(key=>held(s,key)).slice(0,3).map(key=>`Sell 1 ${itemName[key]}`)];
  return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),'Threaten','Lie',...trade,'Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}

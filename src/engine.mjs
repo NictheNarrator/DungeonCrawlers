@@ -94,7 +94,10 @@ export function worldTurn(s){for(const id of Object.keys(NPCS)){const n=s.npcs[i
  if(d.routine==='patrol'){if(noise||n.attitude==='hostile')moveTo(s,id,room+Math.sign(s.room-room),say);else moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);continue;}
  if(d.routine==='scavenge')moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);}}
 export function move(s,dx,dy){if(s.combat||s.dead||s.complete||!Number.isInteger(dx)||!Number.isInteger(dy)||Math.abs(dx)+Math.abs(dy)!==1)return false;const x=s.x+dx,y=s.y+dy;
- const exit=y===4&&((x===12&&s.room<4)||(x===0&&s.room>0));
+ // Only the five-room corridor has doorways; the surface and the break room
+ // are entered through their own props, so their edges are simply walls.
+ const corridor=s.room>=0&&s.room<=4;
+ const exit=corridor&&y===4&&((x===12&&s.room<4)||(x===0&&s.room>0));
  if(exit){discoverThefts(s,PEOPLE.filter(id=>roomOf(s,id)===s.room),say,award);s.room+=x===12?1:-1;s.x=x===12?1:11;s.y=4;say(s,`Entered ${rooms[s.room]}.`);
   const seen='seen'+s.room;if(!s.flags[seen]){s.flags[seen]=true;awardXp(s,20,`finding ${rooms[s.room]}`);}
   worldTurn(s);return true;}
@@ -374,6 +377,13 @@ export function leaveCompanion(s,id,reason){const companion=companionOf(s,id);if
  s.party=(s.party||[]).filter(member=>member!==id);if(s.allies)delete s.allies[id];
  say(s,`${NPCS[id].name} leaves the party: ${reason}. She keeps everything she is carrying.`);return true;}
 export function relationshipOf(s,id){const companion=companionOf(s,id);return companion?relationshipText(companion):'';}
+// Discovery gates for the interface: the player only gets the field notes and
+// the profile view once they have actually learned something worth writing down.
+export function journalUnlocked(s){if(!s.registered)return false;
+ return Object.keys(NPCS).some(id=>s.npcs[id].memory?.met)||!!s.flags.safeRoomSeen;}
+export function knownPeople(s){return Object.keys(NPCS).filter(id=>s.npcs[id].memory?.met&&s.npcs[id].condition!=='dead'||s.npcs[id].memory?.met);}
+export function knowsFaction(s,faction){return factionMembers(faction).some(id=>s.npcs[id].memory?.met);}
+export function knowsSupplies(s){return !!(s.flags.chest||questState(s)!=='open');}
 // Everything the player can do with a companion who is standing in front of
 // them: talk, patch up, share supplies, hand over gear, settle her locket.
 // Player-choice dialogue, shared by every conversation in the game. The engine
