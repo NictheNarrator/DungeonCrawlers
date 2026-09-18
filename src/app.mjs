@@ -124,13 +124,19 @@ function render(){
   card.append(h,p);return card;}
  $('log').replaceChildren(...state.log.map(t=>{const el=document.createElement('li');el.textContent=t;return el;}));
  const near=nearby(state);if(!near.some(p=>p.id===target))target=null;if(!target&&near.length===1)target=near[0].id;
- $('interact').disabled=stopped||!near.length;$('nearby-label').textContent=near.length?'✦ '+near.map(p=>p.name).join(' / '):'Explore the room';$('shell').classList.toggle('combat',!!state.combat);document.querySelector('.west').hidden=state.room===0;document.querySelector('.east').hidden=state.room===4;
+ $('interact').disabled=stopped||!near.length;
+ {const label=document.createElement('b');label.textContent=near.length?near.map(p=>p.name).join(' / '):'Explore the room';
+  const chips=near.map(p=>markerIcon(markerOf(state,p.id))).filter(Boolean);$('nearby-label').replaceChildren(...chips,label);}
+ $('shell').classList.toggle('combat',!!state.combat);document.querySelector('.west').hidden=state.room===0;document.querySelector('.east').hidden=state.room===4;
  if(state.combat)actionOpen=true;const showing=actionOpen&&!state.dead&&!state.complete;$('actioncard').hidden=!showing;document.querySelector('.explore-controls').hidden=showing&&!!state.combat;$('close-actions').hidden=!!state.combat;$('action-label').textContent=state.combat?(state.combat.pendingCompanion?NPCS[state.combat.pendingCompanion].name.toUpperCase()+'’S TURN':'COMBAT · YOUR TURN'):'WITHIN REACH';$('actioncard').classList.toggle('companion-turn',!!state.combat?.pendingCompanion);$('action-feedback').textContent=feedback;
  const person=target&&PEOPLE.includes(target)&&state.npcs[target].condition==='conscious'&&!state.combat;$('npc-tabs').hidden=!person;document.querySelectorAll('[data-npc-tab]').forEach(b=>{const on=b.dataset.npcTab===npcTab;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
  $('actions').replaceChildren();if(state.combat){const id=state.combat.enemy,d=NPCS[id],nonlethal=state.combat.intent==='nonlethal';$('target').textContent=d.name+' · '+state.npcs[id].hp+' HP'+(state.combat.enemies.length>1?' · '+state.combat.enemies.length+' ENEMIES':'')+' · RANGE '+state.combat.range;$('targethint').textContent=(nonlethal?'NONLETHAL':'LETHAL')+' · Your damage '+attackRange(state).map(n=>n-(nonlethal?1:0)).join('–')+' · Enemy '+d.damage.join('–')+(conditionText(state,id)?' · '+conditionText(state,id).toUpperCase():'');for(const a of combatActions(state)){const b=button(a,()=>action(a));if(a==='Use potion')b.disabled=busy||!state.potions||state.hp===30;if(a==='Smoke bomb')b.disabled=busy||!state.items.smokeBombs;$('actions').append(b);}}
  else if(target){const n=state.npcs[target];$('target').textContent=(roomProps(state).find(p=>p.id===target)||{}).name||target;let hint=n?n.attitude.toUpperCase()+' · '+n.condition+' · '+n.hp+'/'+NPCS[target].hp+' HP'+((state.party||[]).includes(target)?' · IN YOUR PARTY':(state.allies?.[target]>0?` · ALLY (${state.allies[target]})`:'')):'Choose what happens next.';if(person)hint+=npcTab==='social'?' · Help: '+NPCS[target].help:npcTab==='supplies'?' · Trade: 1 '+itemName[NPCS[target].trade]+' / '+tradePrice(state,target)+' coins':' · Attack/Kill are lethal. Knock unconscious starts nonlethal combat.';$('targethint').textContent=hint;let available=actions(state,target);if(person){const groups={social:['Inspect','Talk','Help','Befriend','Recruit','Lie','Hand it back'],supplies:['Trade','Ask about goods','Offer a fair swap','Pickpocket','Rob openly','Inspect'],conflict:['Threaten','Attack','Knock unconscious','Kill']};available=available.filter(a=>groups[npcTab].includes(a)||(npcTab==='supplies'&&a.startsWith('Sell 1 ')));}for(const a of available)$('actions').append(button(a,()=>action(a)));}
  else{$('target').textContent='Choose an object';$('targethint').textContent='These are within reach.';for(const p of near)$('actions').append(button(p.name,()=>{target=p.id;npcTab='social';feedback='';render();}));}
 
+ {const who=state.combat?state.combat.enemy:target,chip=who?markerIcon(markerOf(state,who)):null;
+  if(chip){const label=document.createElement('b');label.textContent=$('target').textContent;$('target').replaceChildren(chip,label);}
+  const pips=$('rooms').children;if(pips)for(let i=0;i<pips.length;i++)pips[i].classList?.toggle('safe',i===state.room&&isSafeRoom(state));}
  scheduleDraw();
 }
 function scheduleDraw(){if(!frame)frame=requestAnimationFrame(t=>{frame=0;if(motion){const p=Math.min(1,(t-motion.start)/140),e=1-(1-p)*(1-p);visual.x=motion.from.x+(motion.to.x-motion.from.x)*e;visual.y=motion.from.y+(motion.to.y-motion.from.y)*e;if(p===1)motion=null;}draw();if(motion)scheduleDraw();});}
@@ -205,8 +211,46 @@ export function itemIcon(label){const kind=iconKind(label);if(!kind)return null;
  else if(kind==='armor'){paint(10,10,12,14,'#5d7f7a');paint(10,10,12,3,'#7d9a94');paint(7,13,4,7,'#5d7f7a');paint(21,13,4,7,'#5d7f7a');}
  else{paint(14,10,4,4,'#b0a184');paint(10,15,12,8,'#b0a184');paint(12,16,3,6,'#c8bb9c');}
  return chip;}
+// Interaction icon in the world: colour-coded corner brackets around whatever is
+// within reach, so an object reads by category without hiding its own sprite.
+// Chunky filled arms, not strokes: everything else here is a fill, and a stroked
+// path would blur when the canvas is scaled up on a phone.
+function brackets(x,y,color){const t=3,arm=13,w=57;
+ rect(x,y,arm,t,color);rect(x,y,t,arm,color);
+ rect(x+w-arm,y,arm,t,color);rect(x+w-t,y,t,arm,color);
+ rect(x,y+w-t,arm,t,color);rect(x,y+w-arm,t,arm,color);
+ rect(x+w-arm,y+w-t,arm,t,color);rect(x+w-t,y+w-arm,t,arm,color);}
 // A one-line result with its icon, used wherever a reward is announced.
 function rewardLine(text){const wrap=document.createElement('span'),chip=itemIcon(text),label=document.createElement('b');if(chip)wrap.append(chip);label.textContent=text;wrap.append(label);return wrap;}
+// One simplified marker language for everything that is not an item: a category,
+// not an identity. The guide wants a handful of shapes that stay legible at 16px
+// — loot, person, enemy, door, safe room, stairs, objective — so a new prop
+// never needs its own marker.
+const MARKERS={person:'#b0a184',enemy:'#a8332e',loot:'#d9a63f',door:'#e8c14a',safe:'#4b8fd0',stairs:'#4fc4d8',objective:'#d97a34',prop:'#6d6a62'};
+const LOOT_IDS=['chest','crate','satchel','bag','note','locker','pipe','bin','whetstone'];
+const DOOR_IDS=['service','staffdoor','exitdoor'];
+export function markerOf(s,id){
+ if(id==='stairs'||id==='stairwell')return 'stairs';
+ if(id==='breakdoor')return 'safe';
+ if(DOOR_IDS.includes(id))return 'door';
+ const n=s.npcs[id];
+ if(n&&PEOPLE.includes(id))return n.condition!=='conscious'||n.attitude==='hostile'?'enemy':'person';
+ if(id==='chest'&&questState(s)==='open')return 'objective';
+ return LOOT_IDS.includes(id)?'loot':'prop';}
+export function markerIcon(category){const tint=MARKERS[category];if(!tint)return null;
+ const chip=document.createElement('canvas');chip.width=chip.height=16;chip.className='marker-chip';chip.setAttribute('aria-hidden','true');
+ const g=chip.getContext('2d');if(!g)return chip;
+ const paint=(x,y,w,h,color)=>{g.fillStyle=color;g.fillRect(x,y,w,h);};
+ paint(0,0,16,16,'#101b1c');paint(1,1,14,14,'#152724');
+ if(category==='person'){paint(6,3,4,4,tint);paint(4,7,8,5,tint);}
+ else if(category==='enemy'){paint(4,4,3,6,tint);paint(9,4,3,6,tint);paint(4,10,8,2,tint);paint(5,12,2,2,tint);paint(9,12,2,2,tint);}
+ else if(category==='loot'){paint(6,3,4,2,tint);paint(4,5,8,3,tint);paint(5,8,6,5,tint);}
+ else if(category==='door'){paint(4,3,8,10,tint);paint(5,4,6,8,'#152724');paint(9,8,2,2,tint);}
+ else if(category==='safe'){paint(2,3,12,3,tint);paint(3,6,10,3,tint);paint(5,9,6,2,tint);paint(7,11,2,2,tint);}
+ else if(category==='stairs'){paint(3,4,4,2,tint);paint(4,7,6,2,tint);paint(5,10,8,2,tint);}
+ else if(category==='objective'){paint(5,5,6,6,tint);paint(7,7,2,2,'#152724');paint(7,2,2,2,tint);paint(7,12,2,2,tint);paint(2,7,2,2,tint);paint(12,7,2,2,tint);}
+ else{paint(4,4,8,8,tint);paint(6,6,4,4,'#152724');}
+ return chip;}
 const look={
  player:{skin:'#b0a184',coat:'#6f7a4a',trim:'#b6c187',head:'#3c4a63'},
  mara:{skin:'#b0a184',coat:'#8a5a34',trim:'#b0a184',pack:'#3c4a63'},
@@ -272,7 +316,7 @@ function tileDetail(x,y,solid){const h=((x*73856093)^(y*19349663)^((state.room+1
  if(state.room===4&&h%8===0)rect(px+8,py+14,48,3,'#e8c14a');
  if(state.room===5&&h%5===0)rect(px+14,py+30,20,9,'#6d6a62');}
 function draw(){const [a,b,wall]=palettes[state.room]||palettes[0];ctx.clearRect(0,0,832,576);rect(0,0,832,576,'#111b1c');for(let y=0;y<9;y++)for(let x=0;x<13;x++){const edge=x===0||x===12||y===0||y===8;const door=y===4&&((x===0&&state.room>0)||(x===12&&state.room<4));rect(x*64+1,y*64+1,62,62,edge&&!door?'#28312f':(x+y)%2?a:b);tileDetail(x,y,edge&&!door);if(edge&&!door){rect(x*64+2,y*64+4,60,11,wall);rect(x*64+3,y*64+20,58,3,'#151f1d');rect(x*64+31,y*64+4,3,16,'#222e2b');}else{rect(x*64+6,y*64+58,52,2,'#1b292644');if((x*7+y*11)%6===0)rect(x*64+13,y*64+21,8,3,'#6a766033');if(door){ctx.fillStyle='#d8e69c';ctx.font='24px monospace';ctx.fillText(x===0?'←':'→',x*64+21,y*64+39);}}}
- for(const p of roomProps(state)){const near=nearby(state).some(n=>n.id===p.id);if(near){ctx.strokeStyle='#d9ec9b';ctx.lineWidth=2;ctx.strokeRect(p.x*64+5,p.y*64+4,54,55);}sprite(p.x,p.y,p.id,state.npcs[p.id]?.condition||'conscious');if((p.id==='chest'&&state.flags.chest)||(p.id==='crate'&&state.flags.crate)){rect(p.x*64+8,p.y*64+28,49,4,'#1b2420');}if(state.npcs[p.id]?.attitude==='friendly'&&state.npcs[p.id]?.condition==='conscious'){ctx.fillStyle='#d9ec9b';ctx.font='13px monospace';ctx.fillText('♥',p.x*64+28,p.y*64+5);}}
+ for(const p of roomProps(state)){const near=nearby(state).some(n=>n.id===p.id);if(near)brackets(p.x*64+5,p.y*64+4,p.id===target?'#e6e2d6':MARKERS[markerOf(state,p.id)]);sprite(p.x,p.y,p.id,state.npcs[p.id]?.condition||'conscious');if((p.id==='chest'&&state.flags.chest)||(p.id==='crate'&&state.flags.crate)){rect(p.x*64+8,p.y*64+28,49,4,'#1b2420');}if(state.npcs[p.id]?.attitude==='friendly'&&state.npcs[p.id]?.condition==='conscious'){ctx.fillStyle='#d9ec9b';ctx.font='13px monospace';ctx.fillText('♥',p.x*64+28,p.y*64+5);}}
  for(const p of roomProps(state).filter(p=>PEOPLE.includes(p.id))){ctx.font='11px monospace';ctx.textAlign='center';ctx.fillStyle=({friendly:'#d6ef9b',neutral:'#e5dcc3',suspicious:'#e4ba75',hostile:'#e8988d'})[state.npcs[p.id].attitude];ctx.fillText(withPlayer(state).includes(p.id)?NPCS[p.id].name+' ✦':NPCS[p.id].name,p.x*64+32,p.y*64+3);ctx.textAlign='left';}
  ctx.strokeStyle='#cce59e55';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(visual.x*64+33,visual.y*64+53,24,8,0,0,Math.PI*2);ctx.stroke();sprite(visual.x,visual.y,'player',state.dead?'dead':'conscious');
  ctx.fillStyle='#cbd8bb';ctx.font='12px monospace';ctx.textAlign='center';ctx.fillText('YOU',visual.x*64+33,visual.y*64+3);ctx.textAlign='left';present();

@@ -25,3 +25,11 @@ body.pre-dungeon #roomtitle,body.pre-dungeon #rooms{visibility:hidden}
 #gear article>p{grid-column:1/-1}
 #gear article>button{grid-column:1/-1;justify-self:start}
 .feedback span{display:flex;align-items:center;gap:9px}
+/* Map and interaction markers: one shape per category, tinted by meaning. */
+.marker-chip{width:16px;height:16px;flex:none;image-rendering:pixelated;border-radius:4px}
+.nearbyline>span{display:flex;align-items:center;gap:5px;max-width:76%}
+.nearbyline b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#target{display:flex;align-items:center;gap:8px}
+#target b{font-size:17px}
+#target>.marker-chip{width:20px;height:20px}
+nav span.active.safe{background:var(--safe-blue);box-shadow:0 0 8px #4b8fd055}

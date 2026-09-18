@@ -317,5 +317,21 @@ test('Item icons read by type and rarity at a glance',async()=>{
  assert.equal(new Set(Object.values(seen)).size,Object.keys(kinds).length,'each object type reads differently');
  assert.notEqual(mark('Lucky charm'),mark('Improviser’s Grip'),'rarity changes the frame on the same silhouette');
 });
+test('Map markers speak one language by category',async()=>{
+ const app=await import('./src/app.mjs?test=markers');
+ const s=fresh();
+ assert.equal(app.markerOf(s,'stairs'),'stairs');assert.equal(app.markerOf(s,'stairwell'),'stairs');
+ assert.equal(app.markerOf(s,'breakdoor'),'safe','the way into the safe room is the safe marker');
+ for(const id of ['service','staffdoor','exitdoor'])assert.equal(app.markerOf(s,id),'door',`${id} is a door`);
+ assert.equal(app.markerOf(s,'chest'),'objective','the cache is the objective while the errand is open');
+ s.quests.supplies='kept';assert.equal(app.markerOf(s,'chest'),'loot','once it is settled it is only a chest');
+ for(const id of ['satchel','bin','locker','whetstone'])assert.equal(app.markerOf(s,id),'loot',`${id} is loot`);
+ for(const id of ['sign','fountain','debris'])assert.equal(app.markerOf(s,id),'prop',`${id} is scenery`);
+ assert.equal(app.markerOf(s,'mara'),'person','a neutral survivor is a person, not a threat');
+ s.npcs.mara.attitude='hostile';assert.equal(app.markerOf(s,'mara'),'enemy','a hostile one reads as a threat');
+ s.npcs.mara.attitude='neutral';s.npcs.mara.condition='unconscious';assert.equal(app.markerOf(s,'mara'),'enemy','so does one face down on the floor');
+ const seen=new Map();for(const category of ['person','enemy','loot','door','safe','stairs','objective','prop']){drawn.length=0;const chip=app.markerIcon(category);const sig=chip?drawn.join(','):null;assert(sig,`${category} should draw a marker`);assert(!seen.has(sig),`${category} and ${seen.get(sig)} share one marker; the guide wants one shape per category`);seen.set(sig,category);}
+ assert.equal(app.markerIcon('cheese'),null,'an item is not a map category');
+});
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));
