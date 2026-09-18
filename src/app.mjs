@@ -120,7 +120,7 @@ function render(){
   card.append(h,p);return card;}
  function questCard(){const card=document.createElement('article'),h=document.createElement('strong'),p=document.createElement('p');
   const done=questState(state),live=done==='open';h.textContent='THE SUPPLY CACHE';
-  p.textContent=live?(questCarried(state)?'You are carrying the cache. Two factions expect it.':'The abandoned chest in Lost Property is still untouched.'):done==='kept'?'You kept the cache. Both sides noticed.':`Delivered to the ${FACTIONS[done].name}.`;
+  p.textContent=live?(questCarried(state)?'You are carrying the cache. Two factions expect it.':'The abandoned chest in Food Storage is still untouched.'):done==='kept'?'You kept the cache. Both sides noticed.':`Delivered to the ${FACTIONS[done].name}.`;
   card.append(h,p);return card;}
  $('log').replaceChildren(...state.log.map(t=>{const el=document.createElement('li');el.textContent=t;return el;}));
  const near=nearby(state);if(!near.some(p=>p.id===target))target=null;if(!target&&near.length===1)target=near[0].id;
@@ -154,7 +154,10 @@ function present(){const r=canvas.getBoundingClientRect();if(!r.width||!r.height
 // One palette per room: the corridor, then the street above it, then the break
 // room. A missing entry always falls back to the first so a new area can never
 // break the render loop again.
-const palettes=[['#2b2f31','#3a3f3d','#6f7a4a'],['#2d2622','#3b322a','#8a5a34'],['#2b2d2e','#3a3c3d','#6d6a62'],['#232d2c','#2c3a37','#5d7f7a'],['#262a33','#333a49','#3c4a63'],['#26292b','#33373a','#6d6a62'],['#1e2a33','#26384a','#4b8fd0']];
+// One palette per area of the floor, in room order: the contested concourse,
+// the warm camp, the grey offices, the rust of the ratmen, the checkpoint's
+// hazard yellow, the street, the blue safe room, and the cold way down.
+const palettes=[['#2b2f31','#3a3f3d','#6f7a4a'],['#2f2a24','#3d372d','#8a5a34'],['#2b2d30','#383c42','#3c4a63'],['#2d2622','#3b322a','#8a5a34'],['#262a33','#333a49','#3c4a63'],['#26292b','#33373a','#6d6a62'],['#1e2a33','#26384a','#4b8fd0'],['#262a30','#333a42','#e8c14a'],['#232d2c','#2c3a37','#5d7f7a'],['#23282a','#2e3436','#5d7f7a'],['#252a22','#31382b','#6f7a4a'],['#232b33','#2e3a44','#4fc4d8']];
 function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(x,y,w,h);}
 // Characters. One light direction (top-left highlight, bottom-right shade),
 // hard short shadows, and a silhouette that reads at phone size. Guide palette:
@@ -323,6 +326,30 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
  if(type==='stairs'){for(let i=0;i<5;i++){rect(px+5+i*5,py+51-i*9,53-i*7,8,i%2?'#abb6a1':'#849483');}return;}
  if(type==='pipe'){rect(px+9,py+22,45,12,'#70867d');rect(px+40,py+22,12,28,'#70867d');rect(px+15,py+19,5,18,'#a0aba0');rect(px+38,py+40,16,5,'#a0aba0');return;}
  if(type==='note'){rect(px+19,py+21,28,33,'#cabd8d');for(let i=0;i<4;i++)rect(px+24,py+28+i*5,16,2,'#786c4c');return;}
+// Faction and structure props. Same rules as everything else: one silhouette per
+// object, top-left light, hard short shadow, accents used on purpose.
+ if(type==='barricade'){rect(px+6,py+42,52,8,'#4a453f');rect(px+10,py+30,44,5,'#8a5a34');rect(px+16,py+36,32,5,'#8a5a34');
+  rect(px+9,py+24,5,26,'#6d6a62');rect(px+50,py+24,5,26,'#6d6a62');rect(px+16,py+44,6,8,'#26292b');rect(px+42,py+44,6,8,'#26292b');return;}
+ if(type==='bedroll'){rect(px+12,py+38,40,13,'#6f7a4a');rect(px+12,py+38,40,4,'#8b9a63');rect(px+16,py+30,32,8,'#5d7f7a');rect(px+46,py+33,8,8,'#b0a184');return;}
+ if(type==='triage'){rect(px+8,py+32,48,13,'#b0a184');rect(px+8,py+32,48,4,'#c8bb9c');rect(px+13,py+45,6,9,'#4a453f');rect(px+45,py+45,6,9,'#4a453f');
+  rect(px+30,py+20,8,22,'#a8332e');rect(px+23,py+27,22,8,'#a8332e');return;}
+ if(type==='banner'){rect(px+28,py+6,4,52,'#4a453f');rect(px+14,py+10,36,30,'#6f7a4a');rect(px+18,py+16,28,4,'#e6e2d6');rect(px+18,py+23,18,4,'#e6e2d6');rect(px+14,py+40,36,5,'#5b6340');return;}
+ if(type==='gate'){rect(px+8,py+14,48,40,'#3c4a63');rect(px+12,py+18,40,32,'#6d6a62');rect(px+16,py+22,6,24,'#4a453f');rect(px+42,py+22,6,24,'#4a453f');
+  rect(px+20,py+24,24,4,'#a8332e');rect(px+20,py+38,24,4,'#a8332e');rect(px+8,py+8,48,6,'#33373a');return;}
+ if(type==='desk'){rect(px+8,py+32,48,10,'#8a5a34');rect(px+8,py+32,48,3,'#a06a3c');rect(px+12,py+42,6,13,'#6d6a62');rect(px+46,py+42,6,13,'#6d6a62');
+  rect(px+22,py+22,18,10,'#b0a184');rect(px+25,py+24,12,3,'#e6e2d6');return;}
+ if(type==='cabinet'){rect(px+18,py+10,28,46,'#6d6a62');rect(px+18,py+10,28,4,'#8b877c');rect(px+21,py+16,22,2,'#4a453f');rect(px+21,py+30,22,2,'#4a453f');
+  rect(px+34,py+22,4,4,'#e8c14a');rect(px+34,py+36,4,4,'#e8c14a');return;}
+ if(type==='panel'){rect(px+14,py+10,36,48,'#4a453f');rect(px+14,py+10,36,4,'#5f6355');rect(px+19,py+18,26,16,'#283e35');
+  rect(px+22,py+22,8,3,'#4fc4d8');rect(px+22,py+28,14,3,'#4fc4d8');rect(px+21,py+40,22,4,'#e8c14a');return;}
+ if(type==='cables'){rect(px+6,py+24,52,8,'#3c4a63');rect(px+6,py+36,52,6,'#a8332e');rect(px+6,py+46,52,5,'#6d6a62');rect(px+10,py+20,6,10,'#4a453f');rect(px+48,py+20,6,10,'#4a453f');return;}
+ if(type==='nest'){rect(px+12,py+36,40,15,'#6b6b58');rect(px+12,py+36,40,4,'#7d8a74');rect(px+20,py+28,24,10,'#5d7f7a');rect(px+26,py+22,12,7,'#8a5a34');return;}
+ if(type==='scrap'){rect(px+8,py+42,48,12,'#6d6a62');rect(px+16,py+32,13,11,'#8a5a34');rect(px+32,py+30,15,13,'#4a453f');rect(px+22,py+23,11,9,'#5d7f7a');rect(px+36,py+22,6,8,'#e8c14a');return;}
+ if(type==='skullpost'){rect(px+30,py+12,5,48,'#4a453f');rect(px+22,py+8,21,15,'#e6e2d6');rect(px+26,py+13,5,4,'#26292b');rect(px+35,py+13,5,4,'#26292b');rect(px+29,py+20,8,3,'#26292b');rect(px+18,py+44,28,5,'#6d6a62');return;}
+ if(type==='pit'){rect(px+3,py+28,58,30,'#16221b');rect(px+8,py+33,48,21,'#2f4a35');rect(px+14,py+38,16,7,'#4a6b3f');rect(px+38,py+40,14,7,'#4a6b3f');
+  rect(px+24,py+24,12,6,'#a8332e');rect(px+8,py+24,6,4,'#e8c14a');rect(px+50,py+24,6,4,'#e8c14a');return;}
+ if(type==='platform'){rect(px+4,py+18,56,10,'#3c4a63');rect(px+4,py+18,56,3,'#4f5f7d');rect(px+10,py+28,3,26,'#6d6a62');rect(px+51,py+28,3,26,'#6d6a62');
+  rect(px+27,py+4,9,14,'#e8c14a');rect(px+12,py+30,40,4,'#4a453f');return;}
  if(type==='whetstone'){rect(px+13,py+41,38,12,'#6d6a62');rect(px+13,py+41,38,3,'#8b877c');rect(px+19,py+35,26,8,'#b0a184');rect(px+19,py+35,26,3,'#c8bb9c');rect(px+44,py+45,9,4,'#4a453f');return;}
  propSprite(px,py,type);}
 // Environment tiles: clean, dirty, cracked, bloodstained, grate, hazard stripe

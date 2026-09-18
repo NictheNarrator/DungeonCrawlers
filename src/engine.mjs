@@ -2,23 +2,52 @@ import {PEOPLE,ATTITUDES,CONDITIONS,ITEM_KEYS,STOCK_KEYS,NPCS,makeNPC,npcActions
 import {ABILITIES,STARTING_ABILITIES,STARTING_SKILLS,STARTING_SAVES,modifier,proficiencyBonus,check as d20} from './rules.mjs';
 import {blankCompanion,companionOf,isCompanion,adjustApproval,bandFor,relationshipText,conversationFor,remember,reactionLine,COMPANIONS,clampApproval,approvalReaction} from './companions.mjs';
 import {nodeFor,startNodeFor,optionsFor} from './dialogue.mjs';
-export const rooms=['The Concourse','Lost Property','The Holdout','Pest Control','Departures','Surface','Break Room'];
+// Floor 1 as a level rather than a corridor: the map's areas, its two faction
+// territories, the contested middle, and the last checkpoint before the stairs.
+export const rooms=['Main Concourse','Survivor Camp','Records / Security','Ratmen Territory','Final Checkpoint','Surface','Safe Room','Access Control','Electrical Control','Maintenance Tunnels','Food Storage','Stairwell Down'];
 export const SURFACE=5;
 // The prologue: an ordinary street, seconds after everything stopped being ordinary.
 export const FLOOR_SECONDS=48*60*60;
 export const SURFACE_SECONDS=10*60;
 export const props=[
- [{id:'fountain',name:'Recovery station',x:4,y:3},{id:'terminal',name:'Welcome terminal',x:8,y:3},
-  {id:'sign',name:'Wayfinding sign',x:2,y:2},{id:'vending',name:'Vending machine',x:6,y:2},{id:'tickets',name:'Ticket dispenser',x:7,y:5},
-  {id:'bin',name:'Overflowing bin',x:10,y:6},{id:'bag',name:'Abandoned bag',x:2,y:6},{id:'service',name:'Service door',x:11,y:3},
-  {id:'help',name:'Help point',x:9,y:5},{id:'debris',name:'Scattered debris',x:5,y:6},{id:'cart',name:'Overturned cart',x:2,y:4},
+// 0 Main Concourse — the contested hub. Public furniture turned into cover,
+// both factions within sight of each other, and the way on in every direction.
+ [{id:'fountain',name:'Recovery station',x:4,y:3},{id:'terminal',name:'Welcome terminal',x:8,y:3},{id:'sign',name:'Wayfinding sign',x:2,y:2},
+  {id:'vending',name:'Vending machine',x:6,y:2},{id:'tickets',name:'Ticket dispenser',x:7,y:5},{id:'bin',name:'Overflowing bin',x:10,y:2},
+  {id:'bag',name:'Abandoned bag',x:2,y:6},{id:'service',name:'Service door',x:11,y:2},{id:'help',name:'Help point',x:8,y:6},
+  {id:'debris',name:'Scattered debris',x:5,y:6},{id:'cart',name:'Overturned cart',x:2,y:4},{id:'barricade',name:'Improvised barricade',x:9,y:4},
   {id:'mara',name:'Mara, survivor',x:3,y:4},{id:'skrit',name:'Skrit',x:6,y:3},{id:'staffdoor',name:'Employees only door',x:1,y:3}],
- [{id:'chest',name:'Abandoned chest',x:4,y:3},{id:'crate',name:'Cracked crate',x:8,y:6},{id:'note',name:'Folded memo',x:8,y:3},{id:'tobin',name:'Tobin, scavenger',x:6,y:6},{id:'satchel',name:'Tobin’s satchel',x:5,y:5,owner:'tobin'},{id:'skulker',name:'Ratman skulker',x:10,y:2}],
- [{id:'locker',name:'Emergency locker',x:9,y:3},{id:'brute',name:'Ratman brute',x:2,y:6}],
- [{id:'rat',name:'Ratman scrapper',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6},{id:'brazier',name:'Burning brazier',x:10,y:6,hazard:true}],
- [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}],
+// 1 Survivor Camp — improvised, exhausted, organised around one working triage.
+ [{id:'banner',name:'Camp banner',x:3,y:2},{id:'triage',name:'Triage cot',x:7,y:2},{id:'barricade',name:'Barricade line',x:6,y:3},{id:'bedroll',name:'Bedroll',x:2,y:6},
+  {id:'cart',name:'Scavenged cart',x:9,y:3},{id:'satchel',name:'Tobin’s satchel',x:5,y:5,owner:'tobin'},{id:'whetstone',name:'Vex’s sharpening kit',x:9,y:6,owner:'vex'},
+  {id:'tobin',name:'Tobin, scavenger',x:4,y:4},{id:'vex',name:'Vex, rival crawler',x:8,y:5}],
+// 2 Records / Security — logs, keys and regrets; Eli barricades himself in.
+ [{id:'locker',name:'Emergency locker',x:8,y:5},{id:'desk',name:'Records desk',x:3,y:2},{id:'cabinet',name:'Filing cabinet',x:9,y:2},
+  {id:'note',name:'Folded memo',x:5,y:3},{id:'barricade',name:'Barricaded office',x:4,y:6}],
+// 3 Ratmen Territory — their home, not a spawn point: nests, trophies, a fire.
+ [{id:'rat',name:'Ratman scrapper',x:5,y:4},{id:'brazier',name:'Burning brazier',x:10,y:5,hazard:true},{id:'nest',name:'Ratman nest',x:9,y:2},
+  {id:'scrap',name:'Scrap pile',x:6,y:5},{id:'skullpost',name:'Trophy post',x:7,y:2}],
+// 4 Final Checkpoint — the last obstacle, with the stairwell sign already visible.
+ [{id:'platform',name:'Suspended platform',x:3,y:3},{id:'gate',name:'Checkpoint gate',x:9,y:3},{id:'desk',name:'Inspector’s desk',x:2,y:5},
+  {id:'cabinet',name:'Abandoned cabinet',x:2,y:2},{id:'barricade',name:'Rusted barricade',x:5,y:6}],
+// 5 Surface — the prologue, unchanged: the stairwell is the way in.
  [{id:'wreck',name:'Wrecked car',x:3,y:3},{id:'awning',name:'Collapsed awning',x:7,y:3},{id:'stranger1',name:'Panicked man',x:5,y:6},{id:'stranger2',name:'Panicked woman',x:9,y:6},{id:'stairwell',name:'The stairwell',x:10,y:5}],
- [{id:'breakdoor',name:'Employees only door',x:1,y:3},{id:'map',name:'Transit map',x:5,y:2},{id:'sofa',name:'Sagging sofa',x:8,y:5},{id:'kettle',name:'Staff kettle',x:3,y:5},{id:'machines',name:'Dead vending machine',x:1,y:6},{id:'exitdoor',name:'Back to the concourse',x:10,y:4}]
+// 6 Safe Room — blue light, working kettle, and the two regulars.
+ [{id:'breakdoor',name:'Employees only door',x:1,y:3},{id:'map',name:'Transit map',x:5,y:2},{id:'sofa',name:'Sagging sofa',x:8,y:5},{id:'kettle',name:'Staff kettle',x:3,y:5},{id:'machines',name:'Dead vending machine',x:1,y:6},{id:'exitdoor',name:'Back to the concourse',x:10,y:4}],
+// 7 Access Control — the direct route, and the gate that closes it.
+ [{id:'gate',name:'Access control gate',x:6,y:3},{id:'desk',name:'Security desk',x:8,y:3},{id:'cabinet',name:'Key cabinet',x:3,y:2},
+  {id:'cables',name:'Ripped-out cabling',x:10,y:6},{id:'barricade',name:'Abandoned barricade',x:3,y:6}],
+// 8 Electrical Control — Vex's route: panels, cable, and power worth rerouting.
+ [{id:'panel',name:'Control panel',x:3,y:3},{id:'panel',name:'Breaker panel',x:8,y:2},{id:'cables',name:'Cable run',x:5,y:4},
+  {id:'cables',name:'Frayed cable run',x:9,y:5},{id:'cabinet',name:'Tool cabinet',x:2,y:6}],
+// 9 Maintenance Tunnels — tighter, darker, and the way around the gate.
+ [{id:'pipe',name:'Loose pipe',x:4,y:3},{id:'cables',name:'Low conduit',x:2,y:4},{id:'cables',name:'Ceiling conduit',x:8,y:6},
+  {id:'nest',name:'Squatter nest',x:6,y:2},{id:'skulker',name:'Ratman skulker',x:10,y:5}],
+// 10 Food Storage — the hazard pit the ratmen will not go near, and a risky cache.
+ [{id:'pit',name:'The Sump Maw',x:5,y:5,hazard:true},{id:'chest',name:'Abandoned chest',x:9,y:6},{id:'crate',name:'Cracked crate',x:3,y:3},
+  {id:'nest',name:'Scavenger nest',x:7,y:2},{id:'brute',name:'Ratman brute',x:4,y:5}],
+// 11 Stairwell Down — the map's last landmark: down, into the dark.
+ [{id:'stairs',name:'Exit stairs',x:6,y:3},{id:'plaque',name:'Departure plaque',x:4,y:5},{id:'cables',name:'Dead cable run',x:3,y:6}]
 ];
 // A brand new crawler starts upstairs, unregistered, with no idea what is coming.
 export function prologue(){const s=fresh();s.registered=false;s.room=SURFACE;s.x=2;s.y=5;s.timer=0;s.surfaceTime=SURFACE_SECONDS;return s;}
@@ -50,13 +79,20 @@ export function achievementFor(id){return ACHIEVEMENTS[id]||null;}
 // bypass instead of one corridor. A room with no entry here has walled edges and
 // is entered through a prop, like the Surface shaft and the break room.
 export const EXITS=[
- [{x:12,y:4,to:1,tx:1,ty:4}],
- [{x:0,y:4,to:0,tx:11,ty:4},{x:12,y:4,to:2,tx:1,ty:4}],
- [{x:0,y:4,to:1,tx:11,ty:4},{x:12,y:4,to:3,tx:1,ty:4}],
- [{x:0,y:4,to:2,tx:11,ty:4},{x:12,y:4,to:4,tx:1,ty:4}],
- [{x:0,y:4,to:3,tx:11,ty:4}],
+ // West to the camp, east to Access Control, south to Food Storage, and a
+ // hidden maintenance hatch in the east wall that skips the gate entirely.
+ [{x:0,y:4,to:1,tx:11,ty:4},{x:12,y:4,to:7,tx:1,ty:4},{x:12,y:6,to:9,tx:1,ty:6,secret:true},{x:6,y:8,to:10,tx:6,ty:1}],
+ [{x:12,y:4,to:0,tx:1,ty:4}],
+ [{x:6,y:8,to:7,tx:6,ty:1},{x:12,y:3,to:8,tx:1,ty:3}],
+ [{x:0,y:2,to:9,tx:11,ty:2},{x:0,y:5,to:10,tx:11,ty:5},{x:6,y:8,to:4,tx:6,ty:1}],
+ [{x:6,y:0,to:3,tx:6,ty:7},{x:6,y:8,to:11,tx:6,ty:1},{x:0,y:4,to:9,tx:11,ty:4}],
  [],
- []];
+ [],
+ [{x:0,y:4,to:0,tx:11,ty:4},{x:6,y:0,to:2,tx:6,ty:7},{x:4,y:8,to:9,tx:4,ty:1}],
+ [{x:0,y:3,to:2,tx:11,ty:3},{x:9,y:8,to:9,tx:9,ty:1}],
+ [{x:4,y:0,to:7,tx:4,ty:7},{x:9,y:0,to:8,tx:9,ty:7},{x:0,y:6,to:0,tx:11,ty:6},{x:12,y:2,to:3,tx:1,ty:2},{x:12,y:4,to:4,tx:1,ty:4}],
+ [{x:6,y:0,to:0,tx:6,ty:7},{x:12,y:5,to:3,tx:1,ty:5}],
+ [{x:6,y:0,to:4,tx:6,ty:7}]];
 export function exitAt(room,x,y){return(EXITS[room]||[]).find(exit=>exit.x===x&&exit.y===y)||null;}
 export function blocked(s,x,y){if(x<1||x>11||y<1||y>7)return true;
  if(props[s.room].some(p=>p.x===x&&p.y===y&&!NPCS[p.id]))return true;
@@ -90,21 +126,57 @@ export function roomProps(s){const followers=withPlayer(s).filter(id=>s.npcs[id]
 // A world turn: characters act when the player changes room or violence breaks
 // out. Nobody walks into the room the player is standing in, which keeps the
 // world deterministic and stops bystanders drifting into the player's fights.
-function moveTo(s,id,room,say){const from=roomOf(s,id);if(room===from||room<0||room>4||room===s.room)return false;
- setPlace(s,id,room,room<from?10:2,4);
- if(s.room===from||s.room===room)say(s,`${NPCS[id].name} ${room<from?'slips west into':'moves east into'} ${rooms[room]}.`);
+// Neighbours and one hop toward a destination, both read from the doorway table
+// so an NPC routine works on a hub with branches instead of only a corridor.
+function neighbours(room){return [...new Set((EXITS[room]||[]).map(exit=>exit.to))];}
+function nextRoomToward(from,to){if(from===to)return null;
+ const came=new Map([[from,null]]),queue=[from];
+ while(queue.length){const here=queue.shift();if(here===to)break;
+  for(const next of neighbours(here))if(!came.has(next)){came.set(next,here);queue.push(next);}}
+ if(!came.has(to))return null;
+ let step=to;while(came.get(step)!==from)step=came.get(step);
+ return step;}
+function distanceBetween(a,b){if(a===b)return 0;
+ const seen=new Map([[a,0]]),queue=[a];
+ while(queue.length){const here=queue.shift();
+  for(const next of neighbours(here))if(!seen.has(next)){if(next===b)return seen.get(here)+1;seen.set(next,seen.get(here)+1);queue.push(next);}}
+ return Infinity;}
+// The tile just inside each of a room's own doorways: the spots a passer-by has
+// to walk through, so nobody parks there and walls off the room.
+function innerTiles(room){return new Set((EXITS[room]||[]).map(exit=>`${exit.x===12?11:exit.x===0?1:exit.x},${exit.y===8?7:exit.y===0?1:exit.y}`));}
+function moveTo(s,id,room,say){const from=roomOf(s,id);if(room===from||!rooms[room]||room===s.room)return false;
+ const step=(EXITS[from]||[]).some(exit=>exit.to===room)?room:nextRoomToward(from,room);
+ if(step===null)return false;
+ const hop=(EXITS[from]||[]).find(exit=>exit.to===step);
+ // Stand clear of the doorway: a character parked on the tile beside it would
+ // wall the route off for everyone else.
+ const doorwayTiles=innerTiles(step);
+ const findSpot=(x,y)=>{const seen=new Set(),queue=[[x,y]];
+  while(queue.length){const [cx,cy]=queue.shift(),key=cx+','+cy;if(seen.has(key))continue;seen.add(key);
+   if(cx>=1&&cx<=11&&cy>=1&&cy<=7&&!doorwayTiles.has(key)&&!blocked(s,cx,cy))return [cx,cy];
+   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])queue.push([cx+dx,cy+dy]);}
+  return null;};
+ const spot=(hop&&findSpot(hop.tx,hop.ty))||[hop?hop.tx:2,hop?hop.ty:4];
+ setPlace(s,id,step,spot[0],spot[1]);
+ if(s.room===from||s.room===step)say(s,`${NPCS[id].name} moves on toward ${rooms[step]}.`);
  return true;}
 function bodyIn(s,room,except){return Object.keys(NPCS).some(id=>id!==except&&roomOf(s,id)===room&&s.npcs[id].condition!=='conscious');}
-function awayFromPlayer(s,room){return [room-1,room+1].filter(candidate=>candidate>=0&&candidate<=4&&candidate!==s.room).sort((a,b)=>Math.abs(b-s.room)-Math.abs(a-s.room))[0];}
+function awayFromPlayer(s,room){const options=neighbours(room).filter(candidate=>candidate!==s.room);
+ if(!options.length)return undefined;
+ const away=room=>{const seen=new Map([[s.room,0]]),queue=[s.room];
+  while(queue.length){const here=queue.shift();if(here===room)return seen.get(here);
+   for(const next of neighbours(here))if(!seen.has(next)){seen.set(next,seen.get(here)+1);queue.push(next);}}
+  return -1;};
+ return options.sort((a,b)=>away(b)-away(a))[0];}
 export function worldTurn(s){for(const id of Object.keys(NPCS)){const n=s.npcs[id];if(n.condition!=='conscious'||isWith(s,id)||s.combat?.enemy===id)continue;const d=NPCS[id],room=roomOf(s,id);
- const fighting=!!s.combat&&s.room===room,noise=!!s.combat&&Math.abs(room-s.room)<=2,body=bodyIn(s,room,id),wounded=n.hp<=Math.ceil(d.hp/3);
+ const fighting=!!s.combat&&s.room===room,noise=!!s.combat&&distanceBetween(room,s.room)<=2,body=bodyIn(s,room,id),wounded=n.hp<=Math.ceil(d.hp/3);
  if(body&&!n.memory.sawBody){n.memory.sawBody=true;say(s,`${NPCS[id].name} finds a body in ${rooms[room]} and keeps clear of it.`);}
  const nervous=d.routine==='shelter'||d.routine==='scavenge';
  if(((fighting||wounded)&&nervous)||(body&&d.routine==='shelter')){const away=awayFromPlayer(s,room);if(away!==undefined&&moveTo(s,id,away,say))n.memory.fled=true;continue;}
  if(noise)n.memory.heardViolence=true;
  if(s.room===room)continue;   // they hold still while the player is in the room
  if(d.routine==='shelter'&&noise){const away=awayFromPlayer(s,room);if(away!==undefined)moveTo(s,id,away,say);continue;}
- if(d.routine==='patrol'){if(noise||n.attitude==='hostile')moveTo(s,id,room+Math.sign(s.room-room),say);else moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);continue;}
+ if(d.routine==='patrol'){if(noise||n.attitude==='hostile')moveTo(s,id,nextRoomToward(room,s.room)??room,say);else moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);continue;}
  if(d.routine==='scavenge')moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);}}
 export function move(s,dx,dy){if(s.combat||s.dead||s.complete||!Number.isInteger(dx)||!Number.isInteger(dy)||Math.abs(dx)+Math.abs(dy)!==1)return false;const x=s.x+dx,y=s.y+dy;
  const exit=exitAt(s.room,x,y);
@@ -207,7 +279,7 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
    const took=Math.min(2,s.npcs.skrit.inventory.gold);s.npcs.skrit.inventory.gold-=took;s.gold+=took;s.stolen.gold='skrit';s.npcs.skrit.memory.stolen=true;
    recordDeed(s,'theft');award(s,'Five-Finger Discount');shiftMember(s,'skrit',2,'you stole from him');
    say(s,`Sleight of hand ${result.total} against DC ${dc}. Success. You take ${took} coins while he is busy being hungry.`);return true;}}
- if(action==='Inspect'){say(s,s.npcs[id]?describeNPC(s,id)+(factionOf(id)?' '+factionLine(s,id):''):({sign:'WAYFINDING. Arrows point to PEST CONTROL, DEPARTURES and a third place the sign does not name. Someone has scratched out the last one.',vending:'A vending machine, still lit. Six rows of things that were food this morning.',tickets:'A ticket dispenser, still working. It is the only machine down here that seems pleased with itself.',bin:'An overflowing bin. Municipal pride, post-apocalypse.',bag:'An abandoned handbag, sitting where somebody put it down.',service:'A service door with a small badge slot beside the handle.',help:'A blue help point. The handset is warm.',debris:'Ceiling tiles, a shoe, a birthday card. The floor is made of small endings.',fountain:'Free full healing. The plaque says “A healthy contestant is a renewable resource.”',terminal:'ANNEX: “The exit requires a key, not a body count.” Tobin scavenges in Lost Property; Mara shelters in The Holdout; Vex waits in Departures. Mara’s locker has a free spare key. Talk, help, deceive, steal, or fight. People remember.',chest:'An abandoned chest. Coins, medical supplies, and something useful for a broken satchel.',crate:'The label says “artisan survival accompaniment.” It smells like cheese committing a crime.',note:'A sponsor memo. Its slogan could support a convincing lie; its safety warning would interest Vex.',locker:'An emergency exit key. Accessible even if every other survivor dies.',pipe:'A loose pipe hides a cache. Tobin may know more.',brazier:'A barrel of burning fuel. Kick it over and something will catch fire.',satchel:'Tobin’s satchel, packed and counted. He watches it the way other people watch doors.',whetstone:'Vex’s whetstone, left within reach. Taking it is a statement.',phone:'No service. No data. The screen still says 4G, which is the most optimistic thing left standing.',stranger1:'A man in a supermarket uniform, holding a phone that will not do anything. He has not stopped talking since it happened.',stranger2:'A woman with a cut over one eye, watching the stairwell like it might move. She has decided not to go down.',wreck:'A car folded around a lamppost. The alarm is still going, which feels like a design flaw.',awning:'Half a shopfront face down on the pavement. Somebody’s washing is still on the line above it.',stairs:'The exit accepts any exit key. No NPC is required to finish.',plaque:'ANNEX: “No exit survey today. Your behavior was the survey.”'}[id]||id));return true;}
+ if(action==='Inspect'){say(s,s.npcs[id]?describeNPC(s,id)+(factionOf(id)?' '+factionLine(s,id):''):({sign:'WAYFINDING. Arrows point to ACCESS CONTROL, RATMEN TERRITORY and a third place the sign does not name. Someone has scratched out the last one.',vending:'A vending machine, still lit. Six rows of things that were food this morning.',tickets:'A ticket dispenser, still working. It is the only machine down here that seems pleased with itself.',bin:'An overflowing bin. Municipal pride, post-apocalypse.',bag:'An abandoned handbag, sitting where somebody put it down.',service:'A service door with a small badge slot beside the handle.',help:'A blue help point. The handset is warm.',debris:'Ceiling tiles, a shoe, a birthday card. The floor is made of small endings.',fountain:'Free full healing. The plaque says “A healthy contestant is a renewable resource.”',terminal:'ANNEX: “The exit requires a key, not a body count.” Tobin scavenges in Lost Property; Mara shelters in The Holdout; Vex waits in Departures. Mara’s locker has a free spare key. Talk, help, deceive, steal, or fight. People remember.',chest:'An abandoned chest. Coins, medical supplies, and something useful for a broken satchel.',crate:'The label says “artisan survival accompaniment.” It smells like cheese committing a crime.',note:'A sponsor memo. Its slogan could support a convincing lie; its safety warning would interest Vex.',locker:'An emergency exit key. Accessible even if every other survivor dies.',pipe:'A loose pipe hides a cache. Tobin may know more.',brazier:'A barrel of burning fuel. Kick it over and something will catch fire.',satchel:'Tobin’s satchel, packed and counted. He watches it the way other people watch doors.',whetstone:'Vex’s whetstone, left within reach. Taking it is a statement.',phone:'No service. No data. The screen still says 4G, which is the most optimistic thing left standing.',stranger1:'A man in a supermarket uniform, holding a phone that will not do anything. He has not stopped talking since it happened.',stranger2:'A woman with a cut over one eye, watching the stairwell like it might move. She has decided not to go down.',wreck:'A car folded around a lamppost. The alarm is still going, which feels like a design flaw.',awning:'Half a shopfront face down on the pavement. Somebody’s washing is still on the line above it.',stairs:'The exit accepts any exit key. No NPC is required to finish.',plaque:'ANNEX: “No exit survey today. Your behavior was the survey.”'}[id]||id));return true;}
   if(id==='stranger1'||id==='stranger2'){if(action==='Talk')say(s,id==='stranger1'?'“It just came down. All of it. My car is right there.” He keeps pointing at it like it might apologise.':'“Do not go down there. They are counting people in. I am not getting in a hole in the ground, I do not care what the sign says.”');}
  if(id==='fountain'){s.hp=s.maxHp;say(s,'Fully healed. The station bills someone else. Enjoy the novelty.');}
  if(id==='chest'){s.flags.chest=true;s.gold+=6;s.potions++;s.items.repairKits++;s.quests.carried=true;say(s,'Found 6 coins, a potion, and a repair kit. The survivors want this cache; so do the ratmen. Neither knows you have it yet.');}
@@ -218,17 +290,17 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
  if(id==='satchel'){s.flags.satchel=true;s.gold+=3;s.items.smokeBombs++;ownedTake(s,'satchel','3 coins and a smoke bomb',['gold','smokeBombs']);}
  if(id==='whetstone'){s.flags.whetstone=true;s.items.whetstones++;ownedTake(s,'whetstone','1 whetstone',['whetstones']);}
  if(NPCS[id]?.archetype&&id!=='rat'){if(action==='Fight')startCombat(s,id);
-  else if(action==='Offer cheese'){if(!s.cheese){say(s,'You have no cheese. Try the crate in Lost Property.');return true;}
+  else if(action==='Offer cheese'){if(!s.cheese){say(s,'You have no cheese. Try the crate in Food Storage.');return true;}
    s.cheese--;shiftMember(s,id,-2,'you paid the cheese tribute');s.npcs[id].attitude='friendly';
    say(s,`${NPCS[id].name} accepts the tribute. The Ratmen file you under “useful”.`);}
   return true;}
  if(id==='rat'){
   if(action==='Talk')say(s,'Ratman: “Cheese tax. Or go around. I am paid neither way.”');
-  if(action==='Offer cheese'){if(memberStanding(s,'rat')==='friendly')say(s,'The custodian has already accepted your tribute.');else if(!s.cheese)say(s,'You have no cheese. Try the crate in Lost Property.');else{s.cheese--;s.npcs.rat.attitude='friendly';s.npcs.rat.memory.helped=true;recordDeed(s,'persuasion');partyApproval(s,8,'you talked your way past a problem');shiftMember(s,'rat',-2,'you paid the cheese tribute');award(s,'Cheese diplomacy');say(s,'The ratman accepts. The only honest transaction in the building.');}}
+  if(action==='Offer cheese'){if(memberStanding(s,'rat')==='friendly')say(s,'The custodian has already accepted your tribute.');else if(!s.cheese)say(s,'You have no cheese. Try the crate in Food Storage.');else{s.cheese--;s.npcs.rat.attitude='friendly';s.npcs.rat.memory.helped=true;recordDeed(s,'persuasion');partyApproval(s,8,'you talked your way past a problem');shiftMember(s,'rat',-2,'you paid the cheese tribute');award(s,'Cheese diplomacy');say(s,'The ratman accepts. The only honest transaction in the building.');}}
   if(action==="Sneak past"){s.flags.sneaked=true;recordDeed(s,"stealth");partyApproval(s,8,'you avoided a fight');award(s,"Quiet quitting");say(s,'You slip along the wall. The custodian pretends not to see.');awardXp(s,30,'resolving the custodian without a fight');}
   if(action==='Fight')startCombat(s,'rat');
  }
- if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in The Holdout, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
+ if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in Records, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
  return true;
 }
 // Public action list: the base actions plus whatever the supply quest adds.
@@ -278,17 +350,18 @@ export const ACHIEVEMENTS={
 // Reward boxes. They only open in a safe room, and each tier rolls on its own
 // table. Every entry carries its own Dungeon AI line.
 export const BOX_TIERS=['bronze','silver','gold'];
-export const SAFE_ROOMS=[6];
+export const SAFE_ROOM=6;
+export const SAFE_ROOMS=[SAFE_ROOM];
 export function isSafeRoom(s){return SAFE_ROOMS.includes(s.room);}
 // Crossing into the break room: the noise stops at the doorway, the regulars
 // are already here, and the Dungeon AI cannot help itself.
-export function enterSafeRoom(s){s.room=6;s.x=9;s.y=5;
+export function enterSafeRoom(s){s.room=SAFE_ROOM;s.x=9;s.y=5;
  const first=!s.flags.safeRoomSeen;s.flags.safeRoomSeen=true;
  say(s,'SAFE ROOM ENTERED.');
  if(first){say(s,'Safe Room. No murder. No maiming. No intentionally creative interpretations of the phrase “No murder.” Try to enjoy yourselves.');}
  else say(s,'Safe Room. Try to enjoy yourselves.');
  if(s.combat){const enemy=s.combat.enemy;closeCombat(s);s.npcs[enemy].attitude='hostile';say(s,`${NPCS[enemy].name} stops at the threshold and does not cross. It is still out there, and it is still angry.`);}
- for(const id of ['tobin','vex']){if(s.npcs[id].condition!=='conscious')continue;if(placeOf(s,id).room===6)continue;setPlace(s,id,6,id==='tobin'?4:8,id==='tobin'?3:5);
+ for(const id of ['tobin','vex']){if(s.npcs[id].condition!=='conscious')continue;if(placeOf(s,id).room===SAFE_ROOM)continue;setPlace(s,id,SAFE_ROOM,id==='tobin'?4:8,id==='tobin'?3:5);
   if(first)say(s,`${NPCS[id].name} is already in here, ${id==='tobin'?'sorting a pile of things that are technically not his':'sitting with the patience of someone who has already read the room'}.`);}
  return true;}
 export function leaveSafeRoom(s){s.room=0;s.x=2;s.y=3;say(s,'You step back out into the concourse. The lights flicker like they missed you.');return true;}
