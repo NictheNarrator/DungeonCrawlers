@@ -1,5 +1,6 @@
 import {PEOPLE,ATTITUDES,CONDITIONS,ITEM_KEYS,STOCK_KEYS,NPCS,makeNPC,npcActions,actNPC,describeNPC,discoverThefts,memoryText,WITNESS_RANGE,recordWitness,confront,withPlayer,isWith,leaveParty} from './npcs.mjs';
 import {ABILITIES,STARTING_ABILITIES,STARTING_SKILLS,STARTING_SAVES,modifier,proficiencyBonus,check as d20} from './rules.mjs';
+import {blankCompanion,companionOf,isCompanion,adjustApproval,bandFor,relationshipText,conversationFor,remember,reactionLine,COMPANIONS,clampApproval} from './companions.mjs';
 export const rooms=['Intake','Lost Property','The Holdout','Pest Control','Departures'];
 export const props=[
  [{id:'fountain',name:'Recovery station',x:4,y:3},{id:'terminal',name:'Welcome terminal',x:8,y:3}],
@@ -8,7 +9,7 @@ export const props=[
  [{id:'rat',name:'Ratman scrapper',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6},{id:'brazier',name:'Burning brazier',x:10,y:6,hazard:true}],
  [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}]
 ];
-export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},gear:[],equipped:emptyEquipped(),standing:Object.fromEntries(Object.keys(NPCS).map(id=>[id,'neutral'])),factionGifts:{survivors:false,ratmen:false},factions:{survivors:'neutral',ratmen:'neutral'},quests:{supplies:'open',carried:false,promised:null},npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
+export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},gear:[],equipped:emptyEquipped(),standing:Object.fromEntries(Object.keys(NPCS).map(id=>[id,'neutral'])),companions:{mara:blankCompanion('mara')},factionGifts:{survivors:false,ratmen:false},factions:{survivors:'neutral',ratmen:'neutral'},quests:{supplies:'open',carried:false,promised:null},npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
 export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);
  const entry=ACHIEVEMENTS[id]||{description:'',condition:'',reward:'box',message:'Logged. The dungeon saw that.'};
@@ -95,7 +96,7 @@ export function ownedTake(s,id,text,keys){const prop=props[s.room].find(p=>p.id=
  if(!seer&&!watchers.length){say(s,'Nobody is watching.');return;}
  if(seer)confront(s,owner,say,startCombat);
  recordWitness(s,watchers,'theft',say);}
-function startCombat(s,id,intent='lethal'){const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';if(leaveParty(s,id,say,'was attacked by you')){recordDeed(s,'betrayal');award(s,'Severance Package');}shiftMember(s,id,2,'you attacked them');s.combat={enemy:id,enemies:[id],turn:'player',intent,range:1,cover:{},round:0,used:{}};
+function startCombat(s,id,intent='lethal'){const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';if(leaveParty(s,id,say,'was attacked by you')){recordDeed(s,'betrayal');award(s,'Severance Package');}witnessedApproval(s,'betray',id,-25,'you betrayed an ally');if(companionOf(s,id)){const c=companionOf(s,id);c.hostile=true;remember(c,'attacked');c.approval=Math.min(c.approval,-60);say(s,'Mara strongly disapproves.');leaveCompanion(s,id,'you attacked her');}shiftMember(s,id,2,'you attacked them');s.combat={enemy:id,enemies:[id],turn:'player',intent,range:1,cover:{},round:0,used:{}};
  say(s,`${NPCS[id].name} fights back. ${intent==='nonlethal'?'Nonlethal strikes will knock them unconscious.':'Lethal attacks can kill them.'} You can change intent during combat.`);
  const pack=NPCS[id].pack;
  if(pack)for(const other of Object.keys(NPCS)){if(other===id||NPCS[other].pack!==pack||s.npcs[other].condition!=='conscious')continue;if(placeOf(s,other).room!==placeOf(s,id).room)continue;s.combat.enemies.push(other);say(s,`${NPCS[other].name} joins the fight.`);}
@@ -113,7 +114,7 @@ function closeCombat(s){if(!s.combat)return;
  if(!s.dead&&s.combat.defeated&&!s.combat.attackUsed)award(s,'Hands Off');
  s.combat=null;s.conditions={};for(const id of Object.keys(s.allies||{})){s.allies[id]-=1;if(s.allies[id]<=0){delete s.allies[id];say(s,`${NPCS[id].name} has done what they promised and steps away. The temporary alliance is over.`);}}}
 function allyStrike(s,roll,rng){const enemy=s.combat?.enemy;if(!enemy)return false;const n=s.npcs[enemy],d=NPCS[enemy];
- for(const id of withPlayer(s)){const ally=s.npcs[id];if(ally.condition!=='conscious'||id===enemy)continue;const damage=roll(...NPCS[id].damage);n.hp=Math.max(0,n.hp-damage);say(s,`${NPCS[id].name} hits ${d.name} for ${damage}. ${n.hp} HP remain.`);
+ for(const id of withPlayer(s)){const ally=s.npcs[id];if(ally.condition!=='conscious'||id===enemy)continue;if(companionOf(s,id))continue;const damage=roll(...NPCS[id].damage);n.hp=Math.max(0,n.hp-damage);say(s,`${NPCS[id].name} hits ${d.name} for ${damage}. ${n.hp} HP remain.`);
   if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;say(s,`${d.name} is ${nonlethal?"unconscious":"dead"}. Your ally finished it.`);defeated(s,enemy);awardXp(s,NPCS[enemy].xp||20,`defeating ${NPCS[enemy].name}`);closeCombat(s);return true;}}
  return false;}
 // Who can see what happens where the player is standing: the same room, close
@@ -122,15 +123,16 @@ export function witnesses(s,targetId){return roomProps(s).filter(p=>NPCS[p.id]&&
 export function witnessed(s,event,targetId){return recordWitness(s,witnesses(s,targetId),event,say);}
 export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id===id)||!actions(s,id).includes(action))return false;
   if(action==='Promise the supplies'||action==='Hand over the supplies')return questAction(s,id,action);
+  if(companionOf(s,id)&&companionAction(s,id,action))return true;
   if(action==='Keep the supplies')return keepSupplies(s);
-  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id]){const handled=actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind),note:(who)=>factionOf(who)?factionLine(s,who):'',standing:(who,steps,reason)=>shiftMember(s,who,steps,reason),rng});return handled;}
+  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id]){const handled=actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind),note:(who)=>factionOf(who)?factionLine(s,who):'',standing:(who,steps,reason)=>shiftMember(s,who,steps,reason),approve:(who,delta,reason)=>witnessedApproval(s,'act',who,delta,reason),rng});if(action==='Recruit'&&handled&&s.party.includes(id)&&companionOf(s,id)&&!companionOf(s,id).recruited){companionOf(s,id).recruited=true;say(s,`name is travelling with you now.`);}return handled;}
  if(action==='Inspect'){say(s,s.npcs[id]?describeNPC(s,id)+(factionOf(id)?' '+factionLine(s,id):''):({fountain:'Free full healing. The plaque says “A healthy contestant is a renewable resource.”',terminal:'ANNEX: “The exit requires a key, not a body count.” Tobin scavenges in Lost Property; Mara shelters in The Holdout; Vex waits in Departures. Mara’s locker has a free spare key. Talk, help, deceive, steal, or fight. People remember.',chest:'An abandoned chest. Coins, medical supplies, and something useful for a broken satchel.',crate:'The label says “artisan survival accompaniment.” It smells like cheese committing a crime.',note:'A sponsor memo. Its slogan could support a convincing lie; its safety warning would interest Vex.',locker:'An emergency exit key. Accessible even if every other survivor dies.',pipe:'A loose pipe hides a cache. Tobin may know more.',brazier:'A barrel of burning fuel. Kick it over and something will catch fire.',satchel:'Tobin’s satchel, packed and counted. He watches it the way other people watch doors.',whetstone:'Vex’s whetstone, left within reach. Taking it is a statement.',stairs:'The exit accepts any exit key. No NPC is required to finish.',plaque:'ANNEX: “No exit survey today. Your behavior was the survey.”'}[id]||id));return true;}
  if(id==='fountain'){s.hp=s.maxHp;say(s,'Fully healed. The station bills someone else. Enjoy the novelty.');}
  if(id==='chest'){s.flags.chest=true;s.gold+=6;s.potions++;s.items.repairKits++;s.quests.carried=true;say(s,'Found 6 coins, a potion, and a repair kit. The survivors want this cache; so do the ratmen. Neither knows you have it yet.');}
  if(id==='crate'){s.flags.crate=true;s.cheese++;say(s,'Found pungent cheese. A diplomatic instrument, probably.');}
  if(id==='note'){s.flags.memo=true;say(s,'Memo: “Sponsor slogan: WE KEEP YOU IN THE PICTURE. Beware faulty exit machinery. Tell the crawler by the stairs. Custodian accepts cheese; Mara’s locker holds a spare key.” You can share this information with Vex or quote it in a lie.');}
  if(id==='locker'){s.flags.locker=true;s.key=true;say(s,'You take the emergency spare key. It belongs to the building, not Mara.');}
- if(id==='pipe'){let found=false;if(!s.flags.secret){s.flags.secret=true;s.gold+=4;award(s,'Pipe dream');say(s,'A hidden cache contains 4 coins.');found=true;}if(s.flags.tobinCache&&!s.flags.tobinCacheTaken){s.flags.tobinCacheTaken=true;s.gold+=3;say(s,'Tobin’s tip reveals a second compartment: 3 extra coins. Information can be worth more than pockets.');found=true;}if(!found)say(s,'The cache is empty.');}
+ if(id==='pipe'){let found=false;for(const who of Object.keys(s.companions)){const mate=companionOf(s,who);if(mate.quest.id!=='locket'||mate.quest.stage!=='searching')continue;mate.quest.stage='found';grantedItem(s,'Sable locket');found=true;say(s,'Wedged behind the pipe: a sable locket on a broken chain. Dell. Mara will want to know.');}if(!s.flags.secret){s.flags.secret=true;s.gold+=4;award(s,'Pipe dream');say(s,'A hidden cache contains 4 coins.');found=true;}if(s.flags.tobinCache&&!s.flags.tobinCacheTaken){s.flags.tobinCacheTaken=true;s.gold+=3;say(s,'Tobin’s tip reveals a second compartment: 3 extra coins. Information can be worth more than pockets.');found=true;}if(!found)say(s,'The cache is empty.');}
  if(id==='satchel'){s.flags.satchel=true;s.gold+=3;s.items.smokeBombs++;ownedTake(s,'satchel','3 coins and a smoke bomb',['gold','smokeBombs']);}
  if(id==='whetstone'){s.flags.whetstone=true;s.items.whetstones++;ownedTake(s,'whetstone','1 whetstone',['whetstones']);}
  if(NPCS[id]?.archetype&&id!=='rat'){if(action==='Fight')startCombat(s,id);
@@ -140,15 +142,28 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   return true;}
  if(id==='rat'){
   if(action==='Talk')say(s,'Ratman: “Cheese tax. Or go around. I am paid neither way.”');
-  if(action==='Offer cheese'){if(memberStanding(s,'rat')==='friendly')say(s,'The custodian has already accepted your tribute.');else if(!s.cheese)say(s,'You have no cheese. Try the crate in Lost Property.');else{s.cheese--;s.npcs.rat.attitude='friendly';s.npcs.rat.memory.helped=true;recordDeed(s,'persuasion');shiftMember(s,'rat',-2,'you paid the cheese tribute');award(s,'Cheese diplomacy');say(s,'The ratman accepts. The only honest transaction in the building.');}}
-  if(action==="Sneak past"){s.flags.sneaked=true;recordDeed(s,"stealth");award(s,"Quiet quitting");say(s,'You slip along the wall. The custodian pretends not to see.');awardXp(s,30,'resolving the custodian without a fight');}
+  if(action==='Offer cheese'){if(memberStanding(s,'rat')==='friendly')say(s,'The custodian has already accepted your tribute.');else if(!s.cheese)say(s,'You have no cheese. Try the crate in Lost Property.');else{s.cheese--;s.npcs.rat.attitude='friendly';s.npcs.rat.memory.helped=true;recordDeed(s,'persuasion');partyApproval(s,8,'you talked your way past a problem');shiftMember(s,'rat',-2,'you paid the cheese tribute');award(s,'Cheese diplomacy');say(s,'The ratman accepts. The only honest transaction in the building.');}}
+  if(action==="Sneak past"){s.flags.sneaked=true;recordDeed(s,"stealth");partyApproval(s,8,'you avoided a fight');award(s,"Quiet quitting");say(s,'You slip along the wall. The custodian pretends not to see.');awardXp(s,30,'resolving the custodian without a fight');}
   if(action==='Fight')startCombat(s,'rat');
  }
  if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in The Holdout, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
  return true;
 }
 // Public action list: the base actions plus whatever the supply quest adds.
-export function actions(s,id){const list=baseActions(s,id);for(const extra of questActionFor(s,id))if(!list.includes(extra))list.push(extra);return list;}
+export function actions(s,id){const list=baseActions(s,id);for(const extra of [...questActionFor(s,id),...companionActionsFor(s,id)])if(!list.includes(extra))list.push(extra);return list;}
+// What you can do for, with, or to a companion standing in front of you.
+export function companionActionsFor(s,id){const companion=companionOf(s,id);if(!companion||!companion.recruited||companion.left)return [];
+ const list=[],n=s.npcs[id];
+ if(n.condition==='unconscious'&&(s.items.bandages>0||s.potions>0))list.push('Tend to her wounds');
+ if(n.condition==='conscious'){
+  if(isSafeRoom(s)&&!s.combat)list.push('Check in with her');
+  if(s.items.bandages>0)list.push('Give her a bandage');
+  if(s.potions>0)list.push('Give her a potion');
+  if(n.inventory.bandages>0)list.push('Ask for a bandage back');
+  if(companion.gear.length&&bandFor(companion.approval).key!=='hostile'&&bandFor(companion.approval).key!=='resentful')list.push('Take back her spare gear');
+  for(const name of s.gear.slice(0,2))list.push('Give her '+name);
+  if(companion.quest.stage==='found')list.push('Give her the locket','Keep the locket','Lie about the locket');}
+ return list;}
 export function attackRange(s){const bonus=s.weapon+(s.flags.vexTraining?1:0)+classBonus(s)+gearBonus(s,'damage');return [5+bonus,7+bonus];}
 export function classBonus(s){return s.class==='bruiser'?2:0;}
 // Levelling. XP comes from fights, discoveries, peaceful resolutions and
@@ -194,6 +209,7 @@ export const ITEMS={
  'Last Laugh Boots':{rarity:'rare',type:'armor',description:'Sturdy, and slightly disappointed in you.',effects:{},trait:'lastlaugh',traitName:'Second Wind',traitText:'When damage leaves you below 20% HP, gain a temporary movement bonus.'},
  'Iron signet':{rarity:'rare',type:'accessory',description:'Heavy, official, and entirely self-issued.',effects:{damage:1},trait:null,traitName:null,traitText:null},
  'Improviser’s Grip':{rarity:'epic',type:'accessory',description:'A strap for people who fight with furniture.',effects:{},trait:'improviser',traitName:'Makeshift Artillery',traitText:'Thrown objects deal +2 damage.'}
+ ,'Sable locket':{rarity:'rare',type:'accessory',description:'Dell’s locket, scratched from a lot of waiting.',effects:{checks:1},trait:'keepsake',traitName:'Keepsake',traitText:'+1 on every check, while you are the one carrying it.'}
 };
 export const SLOTS=['weapon','armor','accessory'];
 // Two factions, one contested cache of supplies.
@@ -235,6 +251,63 @@ export function worsenStanding(s,faction,steps=1,reason=''){return shiftFaction(
 export function shiftAttitude(s,id,steps){const n=s.npcs[id];if(!n||n.attitude==='dead')return;
  const from=STANDING.indexOf(n.attitude),to=clamp(from+steps);if(to!==from)n.attitude=STANDING[to];}
 export function questState(s){return s.quests.supplies;}
+// Companions: approval moves quietly, and only loud events get a line.
+export function approvalEffect(s,id,delta,reason){const companion=companionOf(s,id);if(!companion)return null;
+ if(!companion.recruited&&!companion.separated)return null;
+ const result=adjustApproval(s,id,delta,reason);
+ if(result.moved&&result.reaction)say(s,result.reaction);
+ if(result.moved&&Math.abs(delta)>=20){remember(companion,delta<0?'betrayed':'impressed');say(s,reactionLine(companion));}
+ if(companion.approval<=-60&&!companion.left)leaveCompanion(s,id,'she has had enough of your decisions');
+ return result;}
+export function witnessedApproval(s,event,targetId,delta,reason){const seen=witnesses(s,targetId).filter(id=>companionOf(s,id));
+ for(const id of seen)approvalEffect(s,id,delta,reason);return seen;}
+export function partyApproval(s,delta,reason){for(const id of Object.keys(s.companions))if(s.companions[id].recruited||s.companions[id].separated)approvalEffect(s,id,delta,reason);}
+export function leaveCompanion(s,id,reason){const companion=companionOf(s,id);if(!companion||companion.left)return false;
+ companion.left=true;companion.recruited=false;companion.separated=false;
+ s.party=(s.party||[]).filter(member=>member!==id);if(s.allies)delete s.allies[id];
+ say(s,`${NPCS[id].name} leaves the party: ${reason}. She keeps everything she is carrying.`);return true;}
+export function relationshipOf(s,id){const companion=companionOf(s,id);return companion?relationshipText(companion):'';}
+// Everything the player can do with a companion who is standing in front of
+// them: talk, patch up, share supplies, hand over gear, settle her locket.
+export function companionAction(s,id,action){const companion=companionOf(s,id);if(!companion)return false;
+ const band=bandFor(companion.approval).key,cold=band==='hostile'||band==='resentful';
+ if(action==='Check in with her'){const talk=conversationFor(s,id);if(!talk)return false;
+  if(talk.key==='talked1')remember(companion,'talked1');
+  else if(talk.key==='talked2')remember(companion,'talked2');
+  else if(talk.key==='quest')companion.quest.stage='searching';
+  say(s,talk.line);return true;}
+ if(action==='Tend to her wounds'){const bandage=s.items.bandages>0;if(bandage)s.items.bandages--;else s.potions--;
+  s.npcs[id].condition='conscious';s.npcs[id].hp=Math.max(1,Math.ceil(NPCS[id].hp/2));
+  remember(companion,'savedMe');approvalEffect(s,id,25,'you patched her up');
+  say(s,`You patch Mara up with a ${bandage?'bandage':'potion'}. She is upright again at ${s.npcs[id].hp} HP.`);return true;}
+ if(action==='Give her a bandage'||action==='Give her a potion'){const key=action.endsWith('bandage')?'bandages':'potions';
+  if(key==='bandages')s.items.bandages--;else s.potions--;
+  s.npcs[id].inventory[key]=(s.npcs[id].inventory[key]||0)+1;remember(companion,'sharedLoot');
+  approvalEffect(s,id,6,'you shared supplies');say(s,`You hand Mara a ${key==='bandages'?'bandage':'potion'}. She stows it without a speech.`);return true;}
+ if(action==='Ask for a bandage back'){if(cold){(approvalEffect(s,id,-4,'you pushed your luck'));say(s,'Mara: “No.”');return true;}
+  s.npcs[id].inventory.bandages--;s.items.bandages++;say(s,'Mara hands over a bandage with a look that says she is counting.');return true;}
+ if(action.startsWith('Give her ')&&itemOf(action.slice(9))){const name=action.slice(9);if(!s.gear.includes(name))return false;
+  s.gear=s.gear.filter(item=>item!==name);const slot=itemSlot(name);
+  if(slot&&!companion.equipped[slot]){companion.equipped[slot]=name;say(s,`Mara equips ${name} (${rarityOf(name)}).`);}
+  else companion.gear.push(name);
+  remember(companion,'sharedLoot');approvalEffect(s,id,6,'you shared gear');return true;}
+ if(action==='Take back her spare gear'){const name=companion.gear[0];if(!name||cold)return false;
+  companion.gear=companion.gear.filter(item=>item!==name);s.gear.push(name);say(s,`You take back ${name}. Mara does not object.`);return true;}
+ if(action==='Give her the locket'){const has=s.gear.includes('Sable locket')||Object.values(s.equipped).includes('Sable locket');
+  if(!has)return false;s.gear=s.gear.filter(item=>item!=='Sable locket');
+  for(const slot of SLOTS)if(s.equipped[slot]==='Sable locket')s.equipped[slot]=null;
+  companion.gear.push('Sable locket');companion.equipped.accessory=companion.equipped.accessory||'Sable locket';
+  if(companion.equipped.accessory==='Sable locket')companion.gear=companion.gear.filter(item=>item!=='Sable locket');
+  companion.quest.outcome='returned';remember(companion,'questHelped');remember(companion,'sharedLoot');
+  approvalEffect(s,id,25,'you gave her back the locket');
+  say(s,'Mara takes the locket and holds it a moment longer than she needs to. “Thank you. That is all I am going to say about it.”');return true;}
+ if(action==='Keep the locket'){companion.quest.outcome='kept';remember(companion,'questRefused');
+  approvalEffect(s,id,-15,'you kept what she asked for');
+  say(s,'Mara watches you pocket the locket. “Right. Noted.”');return true;}
+ if(action==='Lie about the locket'){companion.quest.outcome='lied';remember(companion,'lied');remember(companion,'questRefused');
+  approvalEffect(s,id,-10,'you lied about the locket');
+  say(s,'You tell Mara the pipe was empty. She nods slowly, the way people do when they are deciding whether to believe you.');return true;}
+ return false;}
 export function factionLine(s,id){const faction=factionOf(id);if(!faction)return '';
  return `${NPCS[id].name} is ${memberStanding(s,id)} of you. The ${FACTIONS[faction].name} overall: ${standingOf(s,faction)}.`;}
 export function questOpen(s){return s.quests.supplies==='open';}
@@ -254,8 +327,8 @@ export function questAction(s,id,action){const faction=factionOf(id),quest=s.que
   if(betrayed){worsenStanding(s,betrayed,2,'you broke your word');
    for(const member of factionMembers(betrayed)){s.npcs[member].memory.lied=true;shiftAttitude(s,member,1);}
    say(s,`The ${FACTIONS[betrayed].name} find out where the supplies went. That is remembered.`);}
-  if(faction==='survivors'){s.potions+=2;s.items.bandages++;awardXp(s,40,'supplies delivered to the survivors');say(s,'Mara divides the cache and hands you the surplus. She counts it twice, then stops pretending.');}
-  else{s.gold+=15;s.items.smokeBombs++;awardXp(s,40,'supplies delivered to the ratmen');say(s,'The ratmen drag the cache into the dark and pay you in the only currency they keep.');}
+ if(faction==='survivors'){s.potions+=2;s.items.bandages++;awardXp(s,40,'supplies delivered to the survivors');partyApproval(s,10,'you gave the cache to the survivors');say(s,'Mara divides the cache and hands you the surplus. She counts it twice, then stops pretending.');}
+  else{s.gold+=15;s.items.smokeBombs++;awardXp(s,40,'supplies delivered to the ratmen');partyApproval(s,-10,'you gave the survivors’ cache to the ratmen');say(s,'The ratmen drag the cache into the dark and pay you in the only currency they keep.');}
   return true;}
  return false;}
 export function keepSupplies(s){const quest=s.quests;if(!questOpen(s)||!quest.carried)return false;
@@ -387,6 +460,8 @@ function dropEnemy(s,id){s.combat.enemies=s.combat.enemies.filter(enemy=>enemy!=
  if(s.combat.enemy===id){const next=s.combat.enemies.find(enemy=>s.npcs[enemy].condition==='conscious');if(next)s.combat.enemy=next;}
  if(!s.combat.enemies.some(enemy=>s.npcs[enemy].condition==='conscious'))closeCombat(s);}
 export function combatActions(s){if(!s.combat)return [];
+ if(s.combat.pendingCompanion){const who=NPCS[s.combat.pendingCompanion].name;
+  return [`${who}: Strike`,`${who}: Finish the wounded`,`${who}: Cover`,`${who}: Bandage you`,`${who}: Hold`];}
  const id=s.combat.enemy,table=conditionsOf(s,'player');
  if(table.stunned>0)return ['Shake it off'];   // a stunned crawler can only clear their head
  const move=s.combat.range>1?['Close in']:['Back off'];
@@ -435,6 +510,24 @@ function enemyTurn(s,id,roll,rng,playerAction){const d=NPCS[id],n=s.npcs[id],rul
    return;}}
  hitPlayer(s,id,damageRoll(roll,d.damage,me.prone>0?'advantage':(cond.poisoned>0||cond.prone>0)?'disadvantage':'none'),roll,rng,playerAction,d);}
 export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.turn!=='player'||!combatActions(s).includes(action))return false;const id=s.combat.enemy,n=s.npcs[id],d=NPCS[id];const roll=(a,b)=>a+Math.floor(Math.min(.999999,Math.max(0,rng()))*(b-a+1));
+ // A recruited companion takes her turn when the player calls it.
+ if(s.combat.pendingCompanion&&action.startsWith(NPCS[s.combat.pendingCompanion].name+': ')){
+  const mate=s.combat.pendingCompanion,name=NPCS[mate].name,what=action.slice(name.length+2);
+  const gear=(s.companions[mate]?.equipped?Object.values(s.companions[mate].equipped):[]).filter(Boolean).reduce((sum,item)=>sum+(ITEMS[item]?.effects?.damage||0),0);
+  s.combat.companionActed={...s.combat.companionActed,[mate]:true};delete s.combat.pendingCompanion;
+  if(what==='Strike'||what==='Finish the wounded'){const wounded=n.hp*2<=d.hp;
+   if(what==='Finish the wounded'&&!wounded)say(s,`${name} looks for an opening that is not there.`);
+   const base=NPCS[mate].damage,raw=damageRoll(roll,base,what==='Finish the wounded'&&wounded?'advantage':'none')+gear;
+   n.hp=Math.max(0,n.hp-raw);say(s,`${name} hits ${d.name} for ${raw}. ${n.hp} HP remain.`);
+   if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;
+    say(s,`${d.name} is ${nonlethal?'unconscious':'dead'}. ${name} finished it.`);defeated(s,id);dropEnemy(s,id);if(!s.combat)return true;}}
+  else if(what==='Cover'){s.combat.cover[mate]=true;say(s,`${name} takes cover and waits.`);}
+  else if(what==='Bandage you'){const bandage=s.npcs[mate].inventory.bandages>0,potion=s.npcs[mate].inventory.potions>0;
+   if(!bandage&&!potion){say(s,`${name} has nothing to patch you with. She covers instead.`);s.combat.cover[mate]=true;}
+   else{const heal=bandage?6:10;if(bandage)s.npcs[mate].inventory.bandages--;else s.npcs[mate].inventory.potions--;
+    s.hp=Math.min(s.maxHp,s.hp+heal);say(s,`${name} patches you up. ${s.hp} HP.`);approvalEffect(s,mate,4,'she helped you in a fight');}}
+  else{s.combat.cover[mate]=true;say(s,`${name} holds position.`);}
+ }
  const me=(name)=>conditionsOf(s,'player')[name]>0,theirs=(name)=>conditionsOf(s,id)[name]>0;
  const dc=10+modifier(d.abilities.strength)+((d.skills||[]).includes('athletics')?proficiencyBonus(d.level||1):0);
  if(action.startsWith('Switch to')){s.combat.intent=action==='Switch to nonlethal'?'nonlethal':'lethal';say(s,s.combat.intent==='nonlethal'?'Nonlethal mode: attacks deal 1 less damage and knock out instead of killing. Switching intent does not consume a turn.':'Lethal mode: a finishing attack kills. Switching intent does not consume a turn.');return true;}
@@ -471,6 +564,10 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
    if(action==='Attack'&&traitOf(s,'wounded')&&n.hp*2<=NPCS[id].hp){raw+=1;say(s,'Ratfang Shiv: the wound makes the opening.');}
    if(n.hp===0){const nonlethal=s.combat.intent==='nonlethal';n.condition=nonlethal?'unconscious':'dead';n.memory[nonlethal?'knockedOut':'killed']=true;if(id==='rat'){s.gold+=n.inventory.gold;n.inventory.gold=0;}say(s,nonlethal?`${d.name} is unconscious, not dead. You can loot, wake, or kill them. They do not wake automatically.`:`${d.name} is dead and will stay dead. Loot their remaining possessions if you choose.`);defeated(s,id);awardXp(s,NPCS[id].xp||20,"defeating "+NPCS[id].name);if(!nonlethal)witnessed(s,'kill',id);dropEnemy(s,id);if(!s.combat)return true;}if(s.combat&&allyStrike(s,roll,rng))return true;}
  if(action==='Use potion'){s.potions--;const old=s.hp;s.hp=Math.min(s.maxHp,s.hp+10);say(s,`Potion restored ${s.hp-old} HP.`);}
+   // Companions get a called turn before the enemies answer.
+   const mate=Object.keys(s.companions).find(who=>s.companions[who].recruited&&s.npcs[who].condition==='conscious'&&!(s.combat.companionActed||{})[who]&&!s.combat.enemies.includes(who));
+   if(mate&&!s.dead){s.combat.pendingCompanion=mate;s.combat.turn='player';say(s,`${NPCS[mate].name} is waiting on your call.`);return true;}
+   s.combat.companionActed={};
    s.combat.round++;
    for(const enemyId of [...s.combat.enemies]){if(!s.combat)break;if(s.npcs[enemyId].condition!=='conscious')continue;enemyTurn(s,enemyId,roll,rng,action);}
    if(!s.combat)return true;
@@ -508,6 +605,11 @@ function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...ST
  for(const name of legacy){const slot=itemSlot(name);if(slot&&!s.equipped[slot])s.equipped[slot]=name;else if(!s.gear.includes(name))s.gear.push(name);}
  delete s.accessories;
  s.standing=dictionary(s.standing)?s.standing:{};for(const id of Object.keys(NPCS))if(!STANDING.includes(s.standing[id]))s.standing[id]='neutral';
+ s.companions=dictionary(s.companions)?s.companions:{};
+ for(const id of Object.keys(s.companions)){const base=blankCompanion(id),held=s.companions[id];
+  if(!dictionary(held)){s.companions[id]=base;continue;}
+  s.companions[id]={...base,...held,approval:Number.isFinite(held.approval)?clampApproval(Math.round(held.approval)):0,memories:dictionary(held.memories)?held.memories:{},quest:dictionary(held.quest)?{...base.quest,...held.quest}:base.quest,equipped:dictionary(held.equipped)?{...base.equipped,...held.equipped}:base.equipped,gear:Array.isArray(held.gear)?held.gear.filter(name=>!!ITEMS[name]):[]};}
+ if(!s.companions.mara)s.companions.mara=blankCompanion('mara');
  s.factionGifts=dictionary(s.factionGifts)?s.factionGifts:{survivors:false,ratmen:false};for(const faction of Object.keys(FACTIONS))s.factionGifts[faction]=!!s.factionGifts[faction];
  s.factions=dictionary(s.factions)?s.factions:{survivors:'neutral',ratmen:'neutral'};
  for(const faction of Object.keys(FACTIONS)){refreshFaction(s,faction);if(!STANDING.includes(s.factions[faction]))s.factions[faction]='neutral';}
