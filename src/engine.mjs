@@ -1,6 +1,7 @@
 import {PEOPLE,ATTITUDES,CONDITIONS,ITEM_KEYS,STOCK_KEYS,NPCS,makeNPC,npcActions,actNPC,describeNPC,discoverThefts,memoryText,WITNESS_RANGE,recordWitness,confront,withPlayer,isWith,leaveParty} from './npcs.mjs';
 import {ABILITIES,STARTING_ABILITIES,STARTING_SKILLS,STARTING_SAVES,modifier,proficiencyBonus,check as d20} from './rules.mjs';
-import {blankCompanion,companionOf,isCompanion,adjustApproval,bandFor,relationshipText,conversationFor,remember,reactionLine,COMPANIONS,clampApproval} from './companions.mjs';
+import {blankCompanion,companionOf,isCompanion,adjustApproval,bandFor,relationshipText,conversationFor,remember,reactionLine,COMPANIONS,clampApproval,approvalReaction} from './companions.mjs';
+import {nodeFor,startNodeFor,optionsFor} from './dialogue.mjs';
 export const rooms=['The Concourse','Lost Property','The Holdout','Pest Control','Departures','Surface'];
 export const SURFACE=5;
 // The prologue: an ordinary street, seconds after everything stopped being ordinary.
@@ -10,9 +11,9 @@ export const props=[
  [{id:'fountain',name:'Recovery station',x:4,y:3},{id:'terminal',name:'Welcome terminal',x:8,y:3},
   {id:'sign',name:'Wayfinding sign',x:2,y:2},{id:'vending',name:'Vending machine',x:6,y:2},{id:'tickets',name:'Ticket dispenser',x:7,y:5},
   {id:'bin',name:'Overflowing bin',x:10,y:6},{id:'bag',name:'Abandoned bag',x:2,y:6},{id:'service',name:'Service door',x:11,y:3},
-  {id:'help',name:'Help point',x:9,y:5},{id:'debris',name:'Scattered debris',x:5,y:6}],
+  {id:'help',name:'Help point',x:9,y:5},{id:'debris',name:'Scattered debris',x:5,y:6},{id:'cart',name:'Overturned cart',x:2,y:4},{id:'mara',name:'Mara, survivor',x:3,y:4}],
  [{id:'chest',name:'Abandoned chest',x:4,y:3},{id:'crate',name:'Cracked crate',x:8,y:6},{id:'note',name:'Folded memo',x:8,y:3},{id:'tobin',name:'Tobin, scavenger',x:6,y:6},{id:'satchel',name:'Tobin’s satchel',x:5,y:5,owner:'tobin'},{id:'skulker',name:'Ratman skulker',x:10,y:2}],
- [{id:'mara',name:'Mara, survivor',x:6,y:4},{id:'locker',name:'Emergency locker',x:9,y:3},{id:'brute',name:'Ratman brute',x:2,y:6}],
+ [{id:'locker',name:'Emergency locker',x:9,y:3},{id:'brute',name:'Ratman brute',x:2,y:6}],
  [{id:'rat',name:'Ratman scrapper',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6},{id:'brazier',name:'Burning brazier',x:10,y:6,hazard:true}],
  [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}]
  ,[{id:'wreck',name:'Wrecked car',x:3,y:3},{id:'awning',name:'Collapsed awning',x:7,y:3},{id:'stranger1',name:'Panicked man',x:5,y:6},{id:'stranger2',name:'Panicked woman',x:9,y:6},{id:'stairwell',name:'The stairwell',x:10,y:5}]
@@ -157,7 +158,7 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   if(action==='Promise the supplies'||action==='Hand over the supplies')return questAction(s,id,action);
   if(companionOf(s,id)&&companionAction(s,id,action))return true;
   if(action==='Keep the supplies')return keepSupplies(s);
-  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id]){const handled=actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind)+(kind==='persuasion'?companionRespect(s):0),note:(who)=>factionOf(who)?factionLine(s,who):'',standing:(who,steps,reason)=>shiftMember(s,who,steps,reason),approve:(who,delta,reason)=>witnessedApproval(s,'act',who,delta,reason),rng});if(action==='Recruit'&&handled&&s.party.includes(id)&&companionOf(s,id)&&!companionOf(s,id).recruited){companionOf(s,id).recruited=true;say(s,`name is travelling with you now.`);}return handled;}
+  if(action==='Talk'&&startNodeFor(s,id))return !!openDialogue(s,id);  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id]){const handled=actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind)+(kind==='persuasion'?companionRespect(s):0),note:(who)=>factionOf(who)?factionLine(s,who):'',standing:(who,steps,reason)=>shiftMember(s,who,steps,reason),approve:(who,delta,reason)=>witnessedApproval(s,'act',who,delta,reason),rng});if(action==='Recruit'&&handled&&s.party.includes(id)&&companionOf(s,id)&&!companionOf(s,id).recruited){companionOf(s,id).recruited=true;say(s,`name is travelling with you now.`);}return handled;}
   if(id==='stairwell'&&action==='Inspect'){say(s,'A staircase that was not here this morning. Above it a bright sign counts down: '+clockText(s.surfaceTime)+' until the doors close. People are drifting towards it because it is the only sign with a number on it.');return true;}
   if(id==='tickets'&&action==='Press the button'){s.flags.ticketPressed=(s.flags.ticketPressed||0)+1;say(s,'NOW SERVING: 8,421,991');award(s,'Patient Customer');return true;}
   if(id==='bag'&&action==='Search the bag'){s.flags.bag=true;s.gold+=2;s.items.bandages++;say(s,'A handbag: two coins, a bandage, and a phone with 41 missed calls from the same number.');return true;}
@@ -338,6 +339,29 @@ export function leaveCompanion(s,id,reason){const companion=companionOf(s,id);if
 export function relationshipOf(s,id){const companion=companionOf(s,id);return companion?relationshipText(companion):'';}
 // Everything the player can do with a companion who is standing in front of
 // them: talk, patch up, share supplies, hand over gear, settle her locket.
+// Player-choice dialogue, shared by every conversation in the game. The engine
+// owns the effects; the dialogue module only describes them.
+export function openDialogue(s,id,key){const wanted=key||startNodeFor(s,id),node=nodeFor(s,id,wanted);if(!node)return null;
+ s.npcs[id].memory.met=true;s.npcs[id].memory.answeredFirst=true;
+ s.pendingDialogue={id,key:wanted};
+ say(s,`${NPCS[id].name}: ${node.prompt}`);return node;}
+export function dialogueOptions(s){if(!s.pendingDialogue)return [];const node=nodeFor(s,s.pendingDialogue.id,s.pendingDialogue.key);return optionsFor(node);}
+export function chooseDialogue(s,index,rng=Math.random){const pending=s.pendingDialogue;if(!pending)return null;
+ const node=nodeFor(s,pending.id,pending.key),option=optionsFor(node)[index];if(!option)return null;
+ const id=pending.id,n=s.npcs[id];delete s.pendingDialogue;
+ if(option.lie){const result=d20({actor:s,skill:'deception',dc:option.dc||12,modifiers:skillBonus(s,'deception'),rng});
+  if(result.success){n.memory.lied=true;say(s,`Deception ${result.total} against DC ${option.dc||12}. She believes you.`);}
+  else{n.memory.lieExposed=true;n.attitude='suspicious';say(s,`Deception ${result.total} against DC ${option.dc||12}. She does not believe you.`);}}
+ if(option.memory)n.memory[option.memory]=true;
+ const mate=companionOf(s,id);
+ if(option.memory&&mate)mate.memories[option.memory]=true;
+ if(option.approval&&mate){mate.approval=clampApproval(mate.approval+option.approval);
+  const reaction=approvalReaction(option.approval);if(reaction)say(s,reaction);}
+ if(option.suspicious&&n.attitude!=='hostile')n.attitude='suspicious';
+ n.memory.answeredFirst=true;n.memory.met=true;
+ say(s,option.line||`${NPCS[id].name} nods.`);
+ return {option,line:option.line};}
+export function dialoguePrompt(s){if(!s.pendingDialogue)return '';const node=nodeFor(s,s.pendingDialogue.id,s.pendingDialogue.key);return node?`${NPCS[s.pendingDialogue.id].name}: ${node.prompt}`:'';}
 export function companionAction(s,id,action){const companion=companionOf(s,id);if(!companion)return false;
  const band=bandFor(companion.approval).key,cold=band==='hostile'||band==='resentful';
  if(action==='Ask her to rejoin'){const band=bandFor(companion.approval).key;

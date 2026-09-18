@@ -1,4 +1,4 @@
-import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,itemOf,equipItem,unequipItem,rarityOf,SLOTS,FACTIONS,standingOf,memberStanding,questState,questCarried,relationshipOf,prologue,register,advanceClock,clockText} from './engine.mjs?v=npc1';
+import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,itemOf,equipItem,unequipItem,rarityOf,SLOTS,FACTIONS,standingOf,memberStanding,questState,questCarried,relationshipOf,prologue,register,advanceClock,clockText,dialogueOptions,dialoguePrompt,chooseDialogue} from './engine.mjs?v=npc1';
 import {COMPANIONS,companionOf} from './companions.mjs';
 import {PEOPLE,NPCS,tradePrice,itemName,memoryText,stockText,withPlayer} from './npcs.mjs';
 import {bindHoldControls} from './controls.mjs';
@@ -70,7 +70,7 @@ function load(){const s=saved();if(!s){modal('No living save found','Your save i
 function newGame(){state=prologue();resetView();save();render();toast('Something is wrong with the skyline.');}
 function restart(){modal('Start a new shift?','This replaces your saved progress on this device.',[['Keep playing',()=>{if(state.dead||state.complete)endScreen();}],['Start new game',newGame]]);}
 function endScreen(){if(state.dead)modal('Employment terminated.','Congratulations. You have discovered what zero hit points means. Your last living save is safe.',[['Load save',load],['New game',restart]]);if(state.complete)modal('You clocked out alive.','ANNEX: “You escaped. Your reputation went ahead.”\n\n'+outcome(state)+'\n\nAchievements: '+(state.achievements.join(', ')||'None this time'),[['Load save',load],['New game',restart]]);}
-function changed(){if(!state.dead&&!state.combat)save();snapshotSafeRoom();render();endScreen();promptEvents();}
+function changed(){if(!state.dead&&!state.combat)save();snapshotSafeRoom();render();endScreen();promptEvents();dialogueFlow();}
 // The level-up screen: +5 maximum HP is already applied, then one ability point.
 function pickStat(ability){chooseStat(state,ability);save();render();toast(ability+' increased.');promptLevel();}
 function promptLevel(){if(state.combat||state.dead||state.complete||!(state.pending>0)||anyDialog())return;
@@ -171,3 +171,9 @@ setInterval(()=>{if(!clockRunning())return;const wasRegistered=state.registered,
  if(!wasRegistered&&state.registered){registerFlow();return;}
  if(state.dead&&!wasDead){collapseFlow();return;}
  render();},1000);
+// Any pending player-choice conversation opens as a modal with one button per
+// reply. The engine owns what each reply does; this only presents them.
+function dialogueFlow(){if(!state.pendingDialogue||anyDialog())return;const options=dialogueOptions(state);if(!options.length)return;
+ const who=state.pendingDialogue.id;
+ modal(NPCS[who].name,dialoguePrompt(state),options.map((option,index)=>[option.label,()=>{
+  chooseDialogue(state,index);save();render();toast(state.log.at(-1));promptEvents();}]));}
