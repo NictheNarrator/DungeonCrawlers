@@ -264,5 +264,49 @@ test('Milestone 5: the map points down and rest costs time',()=>{const s=fresh()
 test('Rooms without doorways do not leak into the corridor',()=>{const surface=prologue();surface.x=1;surface.y=4;assert.equal(move(surface,-1,0),false,'the surface has no west door');assert.equal(surface.room,SURFACE,'and walking at the edge does not drop you into the dungeon');assert.equal(surface.registered,false);surface.x=3;surface.y=5;assert(move(surface,0,-1),'but the surface is walkable');const roomy=fresh();roomy.room=6;roomy.x=1;roomy.y=4;assert.equal(move(roomy,-1,0),false,'the break room has no west door either');assert.equal(roomy.room,6);const corridor=fresh();for(let i=0;i<4;i++){walk(corridor,11,4);assert(move(corridor,1,0),'the corridor still connects');}assert.equal(corridor.room,4);});
 test('The field notes stay hidden until the player learns something',()=>{const s=fresh();assert.equal(journalUnlocked(s),false,'a brand new crawler has nothing to write down');assert.equal(knownPeople(s).length,0);assert(!knowsFaction(s,'survivors')&&!knowsFaction(s,'ratmen'),'factions are unknown');assert(!knowsSupplies(s),'so is the supply cache');assert(!profileKnown(s.npcs.mara),'and Mara is a stranger');const vague=describeNPC(s,'mara');assert(vague.includes('You do not know much else'),'inspecting a stranger gives almost nothing');assert(!vague.includes('Carries:'),'no inventory');assert(!vague.includes('HP'),'and no exact numbers');approach(s,'mara');interact(s,'mara','Talk');chooseDialogue(s,0,()=>0.5);assert(journalUnlocked(s),'talking to someone unlocks the notes');assert.deepEqual(knownPeople(s),['mara']);assert(knowsFaction(s,'survivors'),'and her faction');assert(!knowsFaction(s,'ratmen'),'but not the other one');s.npcs.mara.memory.helped=true;const full=describeNPC(s,'mara');assert(full.includes('Carries:')&&full.includes('HP'),'helping earns the details');assert(profileKnown(s.npcs.mara));});
 test('Every room has a palette so the renderer can draw it',()=>{const source=readFileSync('src/app.mjs','utf8');const block=source.match(/const palettes=(\[[\s\S]*?\]\]);/);assert(block,'the palette table should exist');const palettes=JSON.parse(block[1].replace(/'/g,'"'));assert(palettes.length>=rooms.length,`${rooms.length} rooms but only ${palettes.length} palettes: a missing one throws inside draw()`);for(const palette of palettes)assert.equal(palette.length,3,'each palette is three colours');assert((source.match(/palettes\[state\.room\]\|\|palettes\[0\]/)||[]).length===1,'and draw() still falls back to the first palette');});
+// The renderer is the one system the automated checks used to miss. This stub
+// runs app.mjs for real: if a sprite calls itself, or a prop silently falls back
+// to the generic box, the signatures below stop being unique.
+const drawn=[];
+let stubFill='#000000';
+const stubCtx=new Proxy({},{get:(t,prop)=>prop==='canvas'?{width:832,height:576}:(prop==='fillRect'?()=>drawn.push(stubFill):()=>{}),set:(t,prop,value)=>{if(prop==='fillStyle'&&typeof value==='string')stubFill=value;return true;}});
+function stubEl(id){return {id,hidden:false,disabled:false,textContent:'',className:'',width:832,height:576,children:[],dataset:{},open:false,style:new Proxy({},{get:()=>'',set:()=>true}),classList:{add(){},remove(){},toggle(){},contains:()=>false},append(...n){this.children.push(...n);},appendChild(n){this.children.push(n);return n;},replaceChildren(...n){this.children=n;},remove(){},addEventListener(){},removeEventListener(){},setAttribute(){},getAttribute:()=>null,showModal(){this.open=true;},close(){this.open=false;},querySelector:()=>stubEl('child'),querySelectorAll:()=>[],getBoundingClientRect:()=>({left:0,top:0,width:832,height:576}),getContext:()=>stubCtx,focus(){},setPointerCapture(){}};}
+const stubEls=new Map();
+let stubKeydown=null;
+globalThis.document={body:stubEl('body'),getElementById:id=>{if(!stubEls.has(id))stubEls.set(id,stubEl(id));return stubEls.get(id);},querySelector:()=>stubEl('q'),querySelectorAll:()=>[],createElement:tag=>stubEl(tag),addEventListener(type,fn){if(type==='keydown')stubKeydown=fn;},visibilityState:'visible'};
+globalThis.window=globalThis;globalThis.devicePixelRatio=1;globalThis.location={protocol:'http:',href:'http://localhost/'};
+globalThis.navigator={serviceWorker:{register:()=>Promise.resolve()}};globalThis.matchMedia=()=>({matches:false,addEventListener(){}});
+globalThis.ResizeObserver=class{observe(){}};globalThis.addEventListener=()=>{};globalThis.setInterval=()=>0;globalThis.setTimeout=()=>0;globalThis.clearTimeout=()=>{};
+const stubFrames=[];
+globalThis.requestAnimationFrame=fn=>{stubFrames.push(fn);return stubFrames.length;};
+const stubStore=new Map();
+globalThis.localStorage={getItem:k=>stubStore.get(k)??null,setItem:(k,v)=>stubStore.set(k,v),removeItem:k=>stubStore.delete(k)};
+async function stubFrame(){const f=stubFrames.shift();if(f)f(performance.now());await Promise.resolve();}
+test('Every prop draws its own sprite and no sprite recurses into itself',async()=>{
+ const appEngine=await import('./src/engine.mjs?v=npc1');
+ const ids=[...new Set(appEngine.props.flat().map(p=>p.id))];
+ const spare=appEngine.props[6];
+ // One empty room, one occupant. A prop is drawn from the room's prop list and
+ // a person from their saved place, so the setup only differs in that one line.
+ const signature=async id=>{
+  appEngine.props[6]=id&&!NPCS[id]?[{id,name:'test prop',x:4,y:4}]:[];
+  const state=appEngine.fresh();
+  for(const key of Object.keys(state.places))state.places[key]={room:1,x:1,y:1};
+  if(id&&NPCS[id])state.places[id]={room:6,x:4,y:4};
+  state.room=6;state.x=1;state.y=1;
+  const raw=appEngine.encode(state);
+  assert(raw,'the spare room state should encode');
+  stubStore.set('dungeoncrawlers.floor1.v1',raw);reload();
+  drawn.length=0;await stubFrame();return drawn.join(',');
+ };
+ await import('./src/app.mjs?test=sprites');
+ assert(stubKeydown,'the app should still bind the keyboard');assert(!stubKeydown({key:'Escape',preventDefault(){}}),'Escape only redraws');
+ const reload=()=>{stubEls.get('load').onclick();const b=stubEls.get('modalbuttons').children.find(x=>x.textContent==='Load save');assert(b,'the load button should offer a save');b.onclick();};
+ const empty=await signature(null),fallback=await signature('__not_a_real_prop__');
+ assert.notEqual(empty,fallback,'an unknown type still has to draw something');
+ const seen=new Map();
+ for(const id of ids){const sig=await signature(id);assert.notEqual(sig,fallback,`${id} falls through to the generic box instead of its own sprite`);assert.notEqual(sig,empty,`${id} draws nothing`);assert(!seen.has(sig),`${id} and ${seen.get(sig)} share one sprite; the guide wants distinct world objects`);seen.set(sig,id);}
+ appEngine.props[6]=spare;
+});
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));

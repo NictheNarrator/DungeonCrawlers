@@ -143,13 +143,48 @@ function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(x,y,w,h);}
 // Characters. One light direction (top-left highlight, bottom-right shade),
 // hard short shadows, and a silhouette that reads at phone size. Guide palette:
 // AUTODIRECTION.md, art/floor1-style-guide.png.
+// Props. Each interactable gets its own readable silhouette — the guide forbids
+// reusing one generic icon for unrelated objects. Light stays top-left.
+function propSprite(px,py,type){
+ if(type==='vending'||type==='machines'){const live=type==='vending';
+  rect(px+12,py+8,40,52,'#3c4a63');rect(px+12,py+8,40,5,'#4f5f7d');rect(px+15,py+16,34,26,'#1b1f21');
+  if(live){rect(px+18,py+20,28,4,'#4fc4d8');rect(px+18,py+27,18,3,'#4fc4d8');}else rect(px+18,py+22,20,4,'#8a5a34');
+  rect(px+34,py+48,14,6,'#b0a184');return;}
+ if(type==='tickets'){rect(px+14,py+14,36,46,'#6d6a62');rect(px+14,py+14,36,5,'#8b877c');
+  rect(px+19,py+22,26,14,'#4fc4d8');rect(px+23,py+44,18,4,'#b0a184');rect(px+23,py+51,10,4,'#26292b');return;}
+ if(type==='bin'){rect(px+17,py+26,30,34,'#4a453f');rect(px+14,py+21,36,7,'#6d6a62');rect(px+20,py+34,6,20,'#8a5a34');return;}
+ if(type==='bag'){rect(px+20,py+32,24,26,'#8a5a34');rect(px+20,py+32,24,4,'#a06a3c');rect(px+26,py+24,12,8,'#1b1f21');return;}
+ if(type==='cart'){rect(px+8,py+34,48,12,'#6d6a62');rect(px+8,py+34,48,3,'#8b877c');rect(px+13,py+46,6,10,'#26292b');rect(px+45,py+46,6,10,'#26292b');rect(px+26,py+24,14,10,'#4a453f');return;}
+ if(type==='sofa'){rect(px+8,py+26,48,26,'#5d7f7a');rect(px+8,py+26,48,5,'#7d9a94');rect(px+14,py+32,16,14,'#6f7a4a');rect(px+34,py+32,16,14,'#6f7a4a');return;}
+ if(type==='kettle'){rect(px+20,py+32,24,20,'#b0a184');rect(px+20,py+32,24,4,'#c8bb9c');rect(px+44,py+36,7,10,'#b0a184');rect(px+27,py+27,10,5,'#6d6a62');return;}
+ if(type==='brazier'){rect(px+18,py+34,28,26,'#8a5a34');rect(px+18,py+34,28,4,'#a06a3c');rect(px+24,py+22,16,12,'#d97a34');rect(px+28,py+16,8,8,'#e8c14a');return;}
+ if(type==='satchel'){rect(px+16,py+28,32,28,'#8a5a34');rect(px+16,py+28,32,5,'#a06a3c');rect(px+22,py+20,20,9,'#b0a184');rect(px+28,py+36,8,8,'#e8c14a');return;}
+ if(type==='locker'){rect(px+16,py+8,32,52,'#3c4a63');rect(px+16,py+8,32,5,'#4f5f7d');rect(px+20,py+16,24,3,'#26292b');rect(px+42,py+30,5,5,'#e8c14a');return;}
+ if(type==='plaque'){rect(px+12,py+24,40,22,'#b0a184');rect(px+12,py+24,40,4,'#c8bb9c');rect(px+18,py+33,28,3,'#6d6a62');rect(px+18,py+39,18,3,'#6d6a62');return;}
+ if(type==='sign'){rect(px+6,py+12,52,28,'#b0a184');rect(px+6,py+12,52,4,'#c8bb9c');rect(px+12,py+20,20,4,'#3c4a63');rect(px+12,py+29,30,4,'#3c4a63');rect(px+40,py+26,12,8,'#a8332e');return;}
+ if(type==='service'||type==='breakdoor'||type==='staffdoor'||type==='exitdoor'){const band=type==='breakdoor'?'#4b8fd0':(type==='exitdoor'?'#6f7a4a':(type==='staffdoor'?'#a8332e':'#e8c14a'));
+  rect(px+16,py+4,32,56,'#6d6a62');rect(px+16,py+4,32,5,'#8b877c');rect(px+40,py+30,6,6,'#b0a184');
+  rect(px+18,py+46,28,7,band);rect(px+18,py+46,4,7,'#26292b');
+  if(type==='exitdoor'){rect(px+20,py+18,24,9,'#b0a184');rect(px+27,py+20,4,5,'#26292b');rect(px+33,py+20,3,3,'#26292b');}
+  return;}
+ if(type==='stairwell'){rect(px+6,py+10,52,48,'#1b1f21');for(let i=0;i<5;i++)rect(px+8+i*4,py+50-i*9,48-i*7,8,'#2a2f33');
+  rect(px+4,py+4,56,12,'#26292b');rect(px+8,py+8,48,4,'#4fc4d8');rect(px+8,py+15,22,3,'#4fc4d8');return;}
+ if(type==='map'){rect(px+10,py+12,44,42,'#b0a184');rect(px+10,py+12,44,4,'#c8bb9c');rect(px+15,py+22,16,3,'#3c4a63');rect(px+15,py+29,24,3,'#3c4a63');rect(px+15,py+36,12,3,'#3c4a63');rect(px+40,py+30,9,9,'#4fc4d8');return;}
+ if(type==='help'){rect(px+22,py+14,20,48,'#4b8fd0');rect(px+22,py+14,20,5,'#6ba3dd');rect(px+26,py+22,12,14,'#e6e2d6');rect(px+26,py+42,12,4,'#e6e2d6');return;}
+ if(type==='wreck'){rect(px+4,py+30,56,20,'#8a5a34');rect(px+14,py+20,30,12,'#6d6a62');rect(px+18,py+22,12,8,'#3c4a63');rect(px+8,py+50,10,6,'#26292b');rect(px+46,py+50,10,6,'#26292b');return;}
+ if(type==='awning'){rect(px+6,py+32,52,20,'#3c4a63');rect(px+6,py+32,52,4,'#4f5f7d');for(let i=0;i<4;i++)rect(px+10+i*12,py+38,6,12,'#b0a184');return;}
+ if(type==='debris'){rect(px+14,py+44,14,7,'#6d6a62');rect(px+32,py+40,16,10,'#4a453f');rect(px+22,py+34,10,6,'#8a5a34');return;}
+ if(type==='terminal'){rect(px+14,py+11,37,44,'#687b76');rect(px+18,py+15,29,29,'#283e35');rect(px+22,py+20,20,3,'#4fc4d8');rect(px+22,py+27,13,3,'#4fc4d8');rect(px+17,py+53,7,5,'#172725');rect(px+43,py+53,7,5,'#172725');return;}
+ rect(px+14,py+11,37,44,'#687b76');rect(px+18,py+15,29,29,'#424f4a');rect(px+39,py+32,4,7,'#b0a184');rect(px+17,py+53,7,5,'#172725');rect(px+43,py+53,7,5,'#172725');}
 const look={
  player:{skin:'#b0a184',coat:'#6f7a4a',trim:'#b6c187',head:'#3c4a63'},
  mara:{skin:'#b0a184',coat:'#8a5a34',trim:'#b0a184',pack:'#3c4a63'},
  tobin:{skin:'#b0a184',coat:'#6f7a4a',trim:'#8a5a34',hat:'#8a5a34'},
  vex:{skin:'#b0a184',coat:'#3c4a63',trim:'#b0a184',blade:'#cfd6d2'},
- skrit:{fur:'#5d7f7a',skin:'#5d7f7a',coat:'#5d7f7a',trim:'#b0a184',bandage:'#e6e2d6'},
- rat:{fur:'#6d6a62',skin:'#6d6a62',coat:'#5d7f7a',trim:'#b0a184'},
+skrit:{fur:'#5d7f7a',skin:'#5d7f7a',coat:'#5d7f7a',trim:'#b0a184',bandage:'#e6e2d6'},
+rat:{fur:'#6d6a62',skin:'#6d6a62',coat:'#5d7f7a',trim:'#b0a184'},
+ skulker:{fur:'#7d8a74',coat:'#3c4a63',trim:'#b0a184',sling:'#8a5a34'},
+ brute:{fur:'#6b6b58',coat:'#8a5a34',trim:'#b0a184',plate:'#4a453f'},
  stranger1:{skin:'#b0a184',coat:'#6d6a62',trim:'#9a978c'},
  stranger2:{skin:'#b0a184',coat:'#8a5a34',trim:'#9a978c'}
 };
@@ -158,7 +193,7 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64;
  if(condition==='dead'||condition==='unconscious'){rect(px+14,py+38,38,13,'#4a453f');rect(px+17,py+40,32,5,'#6d6a62');rect(px+44,py+34,11,9,'#b0a184');
   ctx.font='13px monospace';ctx.fillStyle=condition==='dead'?'#a8332e':'#4fc4d8';ctx.fillText(condition==='dead'?'×':'Zz',px+24,py+26);return;}
  const c=look[type];
- if(c&&type!=='rat'&&type!=='skrit'){const coat=c.coat;
+ if(c&&!['rat','skrit','skulker','brute'].includes(type)){const coat=c.coat;
   rect(px+22,py+12,20,17,c.skin);
   rect(px+22,py+12,20,4,'#c8bb9c');rect(px+37,py+25,5,4,'#8d8168');
   rect(px+31,py+19,3,4,'#26292b');rect(px+39,py+19,3,4,'#26292b');
@@ -171,7 +206,8 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64;
   if(type==='vex'){rect(px+49,py+12,3,34,c.blade);rect(px+45,py+42,11,4,'#b0a184');}
   if(type.startsWith('stranger')){rect(px+24,py+18,14,3,'#a8332e');}
   return;}
- if(type==='rat'||type==='skrit'){const fur=c.fur,coat=c.coat;
+ if(type==='rat'||type==='skrit'||type==='skulker'||type==='brute'){const fur=c.fur,coat=c.coat;
+  if(type==='brute'){rect(px+15,py+28,8,20,fur);rect(px+43,py+28,8,20,fur);rect(px+18,py+8,8,8,fur);rect(px+40,py+8,8,8,fur);}
   rect(px+21,py+14,21,17,fur);rect(px+21,py+14,21,4,'#7d9a94');
   rect(px+15,py+8,9,10,fur);rect(px+39,py+8,9,10,fur);
   rect(px+30,py+20,3,3,'#a8332e');rect(px+39,py+20,3,3,'#a8332e');
@@ -181,14 +217,16 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64;
   rect(px+21,py+48,8,8,'#26292b');rect(px+35,py+48,8,8,'#26292b');
   rect(px+45,py+34,4,20,fur);
   if(type==='skrit'){rect(px+35,py+44,9,6,c.bandage,'#a8332e');}
+  if(type==='brute'){rect(px+19,py+29,28,7,c.plate);rect(px+19,py+29,28,3,'#5f6355');}
+  if(type==='skulker'){rect(px+14,py+30,5,18,c.coat);rect(px+47,py+22,3,20,c.sling);rect(px+23,py+9,17,5,c.coat);}
   return;}
  if(type==='chest'||type==='crate'){rect(px+12,py+24,42,29,'#665036');rect(px+12,py+18,42,13,'#a6804e');rect(px+15,py+23,36,3,'#bc9963');rect(px+16,py+33,34,3,'#493b2c');rect(px+30,py+28,7,12,'#dfc782');if(type==='crate'){rect(px+17,py+20,5,33,'#bb9461');rect(px+45,py+20,5,33,'#bb9461');}return;}
  if(type==='fountain'){rect(px+9,py+27,47,25,'#697d76');rect(px+14,py+22,37,24,'#92a599');rect(px+19,py+27,27,13,'#6bc1b0');rect(px+23,py+30,10,3,'#a4e2c7');rect(px+27,py+10,10,16,'#8ba79d');return;}
  if(type==='stairs'){for(let i=0;i<5;i++){rect(px+5+i*5,py+51-i*9,53-i*7,8,i%2?'#abb6a1':'#849483');}return;}
  if(type==='pipe'){rect(px+9,py+22,45,12,'#70867d');rect(px+40,py+22,12,28,'#70867d');rect(px+15,py+19,5,18,'#a0aba0');rect(px+38,py+40,16,5,'#a0aba0');return;}
  if(type==='note'){rect(px+19,py+21,28,33,'#cabd8d');for(let i=0;i<4;i++)rect(px+24,py+28+i*5,16,2,'#786c4c');return;}
- rect(px+14,py+11,37,44,'#687b76');rect(px+18,py+15,29,29,type==='terminal'?'#283e35':'#424f4a');if(type==='terminal'){rect(px+22,py+20,20,3,'#c9e896');rect(px+22,py+27,13,3,'#c9e896');}else{rect(px+39,py+32,4,7,'#d1b97b');}rect(px+17,py+53,7,5,'#172725');rect(px+43,py+53,7,5,'#172725');
-}
+ if(type==='whetstone'){rect(px+13,py+41,38,12,'#6d6a62');rect(px+13,py+41,38,3,'#8b877c');rect(px+19,py+35,26,8,'#b0a184');rect(px+19,py+35,26,3,'#c8bb9c');rect(px+44,py+45,9,4,'#4a453f');return;}
+ propSprite(px,py,type);}
 // Environment tiles: clean, dirty, cracked, bloodstained, grate, hazard stripe
 // and sludge, layered deterministically so a room reads the same every visit.
 // Walls get damaged chunks and a subway band; the base palette stays dirty and
