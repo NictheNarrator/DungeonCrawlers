@@ -45,6 +45,19 @@ export function award(s,id){if(s.achievements.includes(id))return;s.achievements
  awardXp(s,40,`achievement: ${id}`);
  return entry;}
 export function achievementFor(id){return ACHIEVEMENTS[id]||null;}
+// Doorways are declared per room rather than assumed: an edge tile and where it
+// leads. This is what lets the floor be a hub with branches, loops and a service
+// bypass instead of one corridor. A room with no entry here has walled edges and
+// is entered through a prop, like the Surface shaft and the break room.
+export const EXITS=[
+ [{x:12,y:4,to:1,tx:1,ty:4}],
+ [{x:0,y:4,to:0,tx:11,ty:4},{x:12,y:4,to:2,tx:1,ty:4}],
+ [{x:0,y:4,to:1,tx:11,ty:4},{x:12,y:4,to:3,tx:1,ty:4}],
+ [{x:0,y:4,to:2,tx:11,ty:4},{x:12,y:4,to:4,tx:1,ty:4}],
+ [{x:0,y:4,to:3,tx:11,ty:4}],
+ [],
+ []];
+export function exitAt(room,x,y){return(EXITS[room]||[]).find(exit=>exit.x===x&&exit.y===y)||null;}
 export function blocked(s,x,y){if(x<1||x>11||y<1||y>7)return true;
  if(props[s.room].some(p=>p.x===x&&p.y===y&&!NPCS[p.id]))return true;
  return Object.keys(NPCS).filter(id=>!isWith(s,id)).some(id=>{const place=placeOf(s,id);return place.room===s.room&&place.x===x&&place.y===y;});}
@@ -94,11 +107,8 @@ export function worldTurn(s){for(const id of Object.keys(NPCS)){const n=s.npcs[i
  if(d.routine==='patrol'){if(noise||n.attitude==='hostile')moveTo(s,id,room+Math.sign(s.room-room),say);else moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);continue;}
  if(d.routine==='scavenge')moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);}}
 export function move(s,dx,dy){if(s.combat||s.dead||s.complete||!Number.isInteger(dx)||!Number.isInteger(dy)||Math.abs(dx)+Math.abs(dy)!==1)return false;const x=s.x+dx,y=s.y+dy;
- // Only the five-room corridor has doorways; the surface and the break room
- // are entered through their own props, so their edges are simply walls.
- const corridor=s.room>=0&&s.room<=4;
- const exit=corridor&&y===4&&((x===12&&s.room<4)||(x===0&&s.room>0));
- if(exit){discoverThefts(s,PEOPLE.filter(id=>roomOf(s,id)===s.room),say,award);s.room+=x===12?1:-1;s.x=x===12?1:11;s.y=4;say(s,`Entered ${rooms[s.room]}.`);
+ const exit=exitAt(s.room,x,y);
+ if(exit){discoverThefts(s,PEOPLE.filter(id=>roomOf(s,id)===s.room),say,award);s.room=exit.to;s.x=exit.tx;s.y=exit.ty;say(s,`Entered ${rooms[s.room]}.`);
   const seen='seen'+s.room;if(!s.flags[seen]){s.flags[seen]=true;awardXp(s,20,`finding ${rooms[s.room]}`);}
   worldTurn(s);return true;}
  if(blocked(s,x,y))return false;s.x=x;s.y=y;return true;

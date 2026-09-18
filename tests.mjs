@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {bindHoldControls} from './src/controls.mjs';
-import {fresh,prologue,register,advanceClock,clockText,SURFACE,FLOOR_SECONDS,SURFACE_SECONDS,rooms,props,move,blocked,nearby,placeOf,setPlace,interact,fight,actions,encode,decode,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,attackRange,combatActions,outcome,character,conditionText,applyCondition,clearCondition,hasCondition,coverNear,playerNearHazard,awardXp,chooseStat,xpForNext} from './src/engine.mjs';
+import {fresh,prologue,register,advanceClock,clockText,SURFACE,FLOOR_SECONDS,SURFACE_SECONDS,rooms,props,move,blocked,nearby,placeOf,setPlace,interact,fight,actions,encode,decode,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,attackRange,combatActions,outcome,character,conditionText,applyCondition,clearCondition,hasCondition,coverNear,playerNearHazard,awardXp,chooseStat,xpForNext,EXITS,exitAt} from './src/engine.mjs';
 import {recordDeed,classOptions,classReady,chooseClass,CLASSES,RACES,activeAbility,abilityReady} from './src/engine.mjs';
 import {bandFor,relationshipText,companionOf,blankCompanion,COMPANIONS} from './src/companions.mjs';
 import {companionRespect,companionEpilogue,separateCompanions,journalUnlocked,knownPeople,knowsFaction,knowsSupplies,dialogueOptions,dialoguePrompt,chooseDialogue} from './src/engine.mjs';
@@ -335,6 +335,36 @@ test('Map markers speak one language by category',async()=>{
  s.npcs.mara.attitude='neutral';s.npcs.mara.condition='unconscious';assert.equal(app.markerOf(s,'mara'),'enemy','so does one face down on the floor');
  const seen=new Map();for(const category of ['person','enemy','loot','door','safe','stairs','objective','prop']){drawn.length=0;const chip=app.markerIcon(category);const sig=chip?drawn.join(','):null;assert(sig,`${category} should draw a marker`);assert(!seen.has(sig),`${category} and ${seen.get(sig)} share one marker; the guide wants one shape per category`);seen.set(sig,category);}
  assert.equal(app.markerIcon('cheese'),null,'an item is not a map category');
+});
+test('Doorways are declared, walkable, and connect the whole floor',()=>{
+ const start=0;
+ for(let room=0;room<rooms.length;room++){
+  assert(EXITS[room],`${rooms[room]} should declare its doorways, even if it has none`);
+  for(const exit of EXITS[room]){
+   assert(exit.to>=0&&exit.to<rooms.length,`${rooms[room]} leads somewhere real`);
+   assert([0,12].includes(exit.x)||[0,8].includes(exit.y),'a doorway sits on the edge of the room');
+   assert(exit.tx>=1&&exit.tx<=11&&exit.ty>=1&&exit.ty<=7,`${rooms[exit.to]} has an arrival tile inside the room`);
+   const arriving={...fresh(),room:exit.to,x:exit.tx,y:exit.ty};
+   assert(!blocked(arriving,exit.tx,exit.ty),`arriving in ${rooms[exit.to]} must not drop you inside furniture`);
+   assert.equal(exitAt(room,exit.x,exit.y),exit,'the doorway is findable from the tile next to it');
+  }
+ }
+ // Walking out of a room must land you on the doorway that walks you back.
+ for(let room=0;room<rooms.length;room++)for(const exit of EXITS[room]){
+  const back=(EXITS[exit.to]||[]).find(other=>other.to===room);
+  assert(back,`${rooms[room]} and ${rooms[exit.to]} should connect both ways`);
+  if(exit.x===12)assert(back.x===0&&back.tx===11,`${rooms[exit.to]} should send you back out of its west doorway`);
+  else if(exit.x===0)assert(back.x===12&&back.tx===1,`${rooms[exit.to]} should send you back out of its east doorway`);
+  else if(exit.y===8)assert(back.y===0&&back.ty===7,`${rooms[exit.to]} should send you back out of its north doorway`);
+  else assert(back.y===8&&back.ty===1,`${rooms[exit.to]} should send you back out of its south doorway`);
+ }
+ // Every room you can walk to from the entrance is reachable, and the exit is too.
+ const stairs=props.findIndex(list=>list.some(p=>p.id==='stairs'||p.id==='stairwell'));
+ assert(stairs>=0,'the floor has a way down');
+ const seen=new Set([start]),queue=[start];
+ while(queue.length){const room=queue.shift();for(const exit of EXITS[room]||[])if(!seen.has(exit.to)){seen.add(exit.to);queue.push(exit.to);}}
+ assert(seen.has(stairs),'the stairwell is reachable on foot from the entrance');
+ assert(seen.size>=5,'the floor is a branching level, not a single corridor');
 });
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));
