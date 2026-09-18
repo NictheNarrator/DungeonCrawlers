@@ -1,5 +1,10 @@
 import {check,modifier,proficiencyBonus} from './rules.mjs';
 export function pickpocketDC(id){const d=NPCS[id];return 10+modifier(d.abilities.wisdom)+((d.skills||[]).includes('perception')?proficiencyBonus(d.level||1):0);}
+// Who is travelling with the player: permanent party members plus temporary
+// allies that still have encounters left on their agreement.
+export const RECRUIT={mara:{dc:12,encounters:0},tobin:{dc:14,encounters:2},vex:{dc:16,encounters:0}};
+export function withPlayer(s){return [...(s.party||[]),...Object.keys(s.allies||{}).filter(id=>s.allies[id]>0)];}
+export function isWith(s,id){return (s.party||[]).includes(id)||(s.allies?.[id]||0)>0;}
 export const PEOPLE = ['mara','tobin','vex'];
 export const ATTITUDES = ['friendly','neutral','suspicious','hostile'];
 export const CONDITIONS = ['conscious','unconscious','dead'];
@@ -13,11 +18,11 @@ export const NPCS = {
 };
 export const itemName={gold:'coins',potions:'healing potion',key:'exit key',bandages:'bandage',repairKits:'repair kit',smokeBombs:'smoke bomb',whetstones:'whetstone'};
 export function makeNPC(id){const d=NPCS[id];return {hp:d.hp,attitude:d.attitude,condition:'conscious',memory:{},inventory:Object.fromEntries(STOCK_KEYS.map(k=>[k,d.stock[k]||0]))};}
-export function memoryText(n){const names={helped:'helped',befriended:'befriended',threatened:'threatened',lied:'lied to',lieExposed:'lie exposed',stolen:'pickpocketed',theftDetected:'theft discovered',robbed:'robbed',robberyAttempt:'robbery attempted',attacked:'attacked',knockedOut:'knocked unconscious',killed:'killed',looted:'looted',betrayed:'betrayed',woken:'woken up',sawAttack:'saw an attack',sawKill:'saw a killing',sawRob:'saw a robbery',sawTheft:'saw a theft',sawHelp:'saw you help someone',sawRescue:'saw you rescue someone'};return Object.entries(names).filter(([key])=>n.memory[key]).map(([,label])=>label).join(', ')||'No shared history yet';}
+export function memoryText(n){const names={helped:'helped',befriended:'befriended',recruited:'joined you',abandoned:'left the party',returned:'got their goods back',threatened:'threatened',lied:'lied to',lieExposed:'lie exposed',stolen:'pickpocketed',theftDetected:'theft discovered',robbed:'robbed',robberyAttempt:'robbery attempted',attacked:'attacked',knockedOut:'knocked unconscious',killed:'killed',looted:'looted',betrayed:'betrayed',woken:'woken up',sawAttack:'saw an attack',sawKill:'saw a killing',sawRob:'saw a robbery',sawTheft:'saw a theft',sawHelp:'saw you help someone',sawRescue:'saw you rescue someone'};return Object.entries(names).filter(([key])=>n.memory[key]).map(([,label])=>label).join(', ')||'No shared history yet';}
 export function stockText(n){return STOCK_KEYS.filter(k=>n.inventory[k]>0).map(k=>`${n.inventory[k]} ${itemName[k]}`).join(', ')||'nothing left';}
 export function tradePrice(s,id){const n=s.npcs[id];return Math.max(1,NPCS[id].price+(n.attitude==='suspicious'?1:0)-(n.attitude==='friendly'?1:0)-(n.memory.distracted?1:0));}
 export function describeNPC(s,id){const n=s.npcs[id],d=NPCS[id];return `${d.name} · ${n.attitude} · ${n.condition} · ${n.hp}/${d.hp} HP. Damage ${d.damage.join('–')}. Carries: ${stockText(n)}. Remembers: ${memoryText(n)}.`;}
-export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];const owed=Object.keys(s.stolen||{}).some(key=>s.stolen[key]===id);return ['Inspect','Talk','Help','Befriend','Threaten','Lie','Trade','Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
+export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];const owed=Object.keys(s.stolen||{}).some(key=>s.stolen[key]===id);return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),'Threaten','Lie','Trade','Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
 function transfer(s,n,key,count){const amount=Math.min(n.inventory[key],count);if(!amount)return 0;n.inventory[key]-=amount;if(key==='key')s.key=true;else if(ITEM_KEYS.includes(key))s.items[key]+=amount;else s[key]+=amount;return amount;}
 function takeAll(s,n,id){const got=[];for(const key of STOCK_KEYS){const amount=transfer(s,n,key,n.inventory[key]);if(amount){got.push(`${amount} ${itemName[key]}`);if(id)s.stolen[key]=id;}}return got.join(', ')||'nothing';}
 function betray(n){if(n.memory.helped||n.memory.befriended||n.attitude==='friendly')n.memory.betrayed=true;}
@@ -94,6 +99,7 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Mat
   m.lied=true;if(!m.met||(!s.flags.memo&&n.attitude!=='friendly')){m.lieExposed=true;n.attitude='suspicious';say(s,`${d.name}: “Sponsor rescue team? You don’t even know their slogan.” Read the memo before trying a cover story. The lie is remembered.`);return true;}
   m.distracted=true;say(s,`You claim a sponsor rescue team is coming and quote the memo’s slogan. ${d.name} checks the radio: one pickpocket opportunity and a 1-coin trade discount. Talking again will expose the lie.`);return true;
  }
+ if(action==='Recruit'){recruit(s,id,say,rng);return true;}
  if(action==='Trade'){
   if(n.attitude==='hostile'||m.lieExposed){say(s,`${d.name} refuses to trade with you.`);return true;}
   const key=d.trade,price=tradePrice(s,id);if(!n.inventory[key]){say(s,`${d.name} is out of ${itemName[key]}s. Stock is finite.`);return true;}
@@ -118,15 +124,36 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Mat
  }
  if(action==='Rob openly'){
   betray(n);m.robberyAttempt=true;n.attitude='hostile';if(id==='vex'){say(s,'Vex: “You have badly misread the room.” Vex fights back; defeat them before looting.');startCombat(s,id,'lethal');return true;}
-  m.robbed=true;say(s,`${d.name} surrenders ${takeAll(s,n,id)} rather than die. They remain alive, hostile, and remember the robbery. ${id==='tobin'?'Tobin reaches for a radio.':''}`);witness('rob',id);return true;
+  leaveParty(s,id,say,'was robbed by you');m.robbed=true;say(s,`${d.name} surrenders ${takeAll(s,n,id)} rather than die. They remain alive, hostile, and remember the robbery. ${id==='tobin'?'Tobin reaches for a radio.':''}`);witness('rob',id);return true;
  }
  if(['Attack','Knock unconscious','Kill'].includes(action)){startCombat(s,id,action==='Knock unconscious'?'nonlethal':'lethal');return true;}
  return false;
 }
 // Being caught taking something. How the owner reacts depends on who they are:
 // Vex attacks, Mara and Tobin demand it back, and everyone remembers.
-export function confront(s,id,say,startCombat){const n=s.npcs[id],d=NPCS[id];n.memory.stolen=true;n.memory.theftDetected=true;n.memory.demanded=true;n.attitude='hostile';
+export function confront(s,id,say,startCombat){const n=s.npcs[id],d=NPCS[id];leaveParty(s,id,say,'was stolen from by you');n.memory.stolen=true;n.memory.theftDetected=true;n.memory.demanded=true;n.attitude='hostile';
  if(id==='vex'){say(s,'Vex: “Put it down. You can keep the memory, not the whetstone.” Vex draws a weapon.');startCombat(s,id,'lethal');return;}
  if(id==='mara'){say(s,'Mara: “That is mine. Put it back and we can both pretend this stayed civil.”');return;}
  if(id==='tobin'){say(s,'Tobin: “I counted those twice. You will hand them back.”');return;}
  say(s,`${d.name} demands their belongings back.`);}
+// Recruitment. The relationship has to justify it: a finished request opens
+// the conversation, a friendly attitude or a shared enemy makes it easier,
+// and a Persuasion check decides the answer.
+export function recruit(s,id,say,rng=Math.random){const n=s.npcs[id],m=n.memory,d=NPCS[id],terms=RECRUIT[id];
+ if(!terms){say(s,`${d.name} has no interest in travelling with you.`);return false;}
+ if(isWith(s,id)){say(s,`${d.name} is already with you.`);return false;}
+ if(m.betrayed||m.lieExposed||m.robbed||m.theftDetected||m.attacked||m.sawKill){n.attitude='suspicious';say(s,`${d.name} refuses. They have seen what you do to people who trust you.`);return false;}
+ const sharedEnemy=Object.keys(NPCS).some(other=>other!==id&&s.npcs[other].attitude==='hostile'&&(s.npcs[other].memory.attacked||s.npcs[other].memory.killed));
+ const asked=id==='vex'?!!m.befriended||sharedEnemy:terms.encounters?!!m.helped:!!m.befriended;
+ if(!asked){say(s,id==='tobin'?`${d.name} refuses until you have done something for them first.`:`${d.name}: “I do not travel with strangers. Help me first, then ask.”`);return false;}
+ const result=check({actor:s,skill:'persuasion',dc:terms.dc,advantage:sharedEnemy||n.attitude==='friendly',disadvantage:n.attitude==='suspicious',modifiers:m.befriended?2:m.helped?1:0,rng});
+ const line=`Persuasion ${result.total} (d20 ${result.rawRoll}${result.rolls.length>1?` from ${result.rolls.join(' and ')}`:''} + ${result.abilityModifier} charisma${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${m.befriended?' +2 finished request':m.helped?' +1 helped':''}${result.advantage?' with advantage':result.disadvantage?' with disadvantage':''}) against DC ${terms.dc}. ${result.success?'Success.':'Failure.'}`;
+ if(!result.success){n.attitude='suspicious';say(s,`${line} ${d.name} turns you down.`);return false;}
+ m.recruited=true;n.attitude='friendly';
+ if(terms.encounters){s.allies[id]=terms.encounters;say(s,`${line} ${d.name} agrees to help for ${terms.encounters} fights, then goes their own way.`);}
+ else{s.party=[...(s.party||[]),id];say(s,`${line} ${d.name} joins you.`);}
+ return true;}
+export function leaveParty(s,id,say,reason){if(!isWith(s,id))return false;
+ if((s.party||[]).includes(id))s.party=s.party.filter(member=>member!==id);else delete s.allies[id];
+ s.npcs[id].memory.abandoned=true;s.npcs[id].attitude='hostile';
+ say(s,`${NPCS[id].name} ${reason} and is no longer with you.`);return true;}
