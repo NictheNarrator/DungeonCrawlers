@@ -14,6 +14,7 @@ Verified on the recovered working copy, then committed and pushed as `be7a10b`.
 - Sprite checks pass: the renderer runs for real against a stub DOM and every world object — each prop, loot item, survivor and creature — must draw its own unique sprite rather than the generic fallback, and no sprite may call itself.
 - Item-icon checks pass: every pack entry, equipment row and reward result draws a chip whose silhouette is the item type and whose frame is its rarity, while plain numbers get no chip at all.
 - Marker checks pass: the eight map categories (person, enemy, loot, door, safe, stairs, objective, prop) each draw a distinct 16px shape, the objective becomes ordinary loot once the errand is settled, a neutral survivor reads as a person while a hostile or downed one reads as a threat, and an item is never mistaken for a map category.
+- Animation checks pass: the world keeps drawing while the player stands still, idle frames are throttled to a slow tick rather than screen rate, the loop rests whenever a dialog is open or the run has ended, and rendering rooms at two different ticks changes only the living things and the brazier — nothing else.
 - The static build passes (`npm run build`) and every runtime file, including `src/npcs.mjs`, is served over HTTP with the expected contents by the local preview server.
 
 Not verified in this pass: no browser click-through of the NPC tabs, relationship panel, or completion summary was performed, and no physical phone testing was done.

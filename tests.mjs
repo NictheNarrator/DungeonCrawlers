@@ -281,7 +281,10 @@ const stubFrames=[];
 globalThis.requestAnimationFrame=fn=>{stubFrames.push(fn);return stubFrames.length;};
 const stubStore=new Map();
 globalThis.localStorage={getItem:k=>stubStore.get(k)??null,setItem:(k,v)=>stubStore.set(k,v),removeItem:k=>stubStore.delete(k)};
-async function stubFrame(){const f=stubFrames.shift();if(f)f(performance.now());await Promise.resolve();}
+// Idle frames are throttled against the timestamp the browser hands the draw
+// loop, so the stub clock has to move for a frame to paint.
+let stubTime=1e6;
+async function stubFrame(){stubTime+=200;const f=stubFrames.shift();if(f)f(stubTime);await Promise.resolve();}
 test('Every prop draws its own sprite and no sprite recurses into itself',async()=>{
  const appEngine=await import('./src/engine.mjs?v=npc1');
  const ids=[...new Set(appEngine.props.flat().map(p=>p.id))];
@@ -309,7 +312,7 @@ test('Every prop draws its own sprite and no sprite recurses into itself',async(
  appEngine.props[6]=spare;
 });
 test('Item icons read by type and rarity at a glance',async()=>{
- const app=await import('./src/app.mjs?test=items');
+ const app=await import('./src/app.mjs?test=sprites');
  const mark=label=>{drawn.length=0;const chip=app.itemIcon(label);return chip?drawn.join(','):null;};
  assert.equal(mark('Attack: 2–4'),null,'a plain number gets no chip');
  const kinds={potion:'Healing potion',cheese:'2 × Cheese',bandage:'1 × Bandage',whetstone:'1 × Whetstone',bronze:'1 × Bronze box',gold:'1 × Gold box',key:'1 × Exit key'};
@@ -318,7 +321,7 @@ test('Item icons read by type and rarity at a glance',async()=>{
  assert.notEqual(mark('Lucky charm'),mark('Improviser’s Grip'),'rarity changes the frame on the same silhouette');
 });
 test('Map markers speak one language by category',async()=>{
- const app=await import('./src/app.mjs?test=markers');
+ const app=await import('./src/app.mjs?test=sprites');
  const s=fresh();
  assert.equal(app.markerOf(s,'stairs'),'stairs');assert.equal(app.markerOf(s,'stairwell'),'stairs');
  assert.equal(app.markerOf(s,'breakdoor'),'safe','the way into the safe room is the safe marker');

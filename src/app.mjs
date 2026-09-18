@@ -139,7 +139,16 @@ function render(){
   const pips=$('rooms').children;if(pips)for(let i=0;i<pips.length;i++)pips[i].classList?.toggle('safe',i===state.room&&isSafeRoom(state));}
  scheduleDraw();
 }
-function scheduleDraw(){if(!frame)frame=requestAnimationFrame(t=>{frame=0;if(motion){const p=Math.min(1,(t-motion.start)/140),e=1-(1-p)*(1-p);visual.x=motion.from.x+(motion.to.x-motion.from.x)*e;visual.y=motion.from.y+(motion.to.y-motion.from.y)*e;if(p===1)motion=null;}draw();if(motion)scheduleDraw();});}
+// The world keeps breathing while the player stands still: characters bob, the
+// brazier flickers, the stairwell sign pulses. Idle frames are throttled to a
+// slow tick instead of running at screen rate, the loop rests whenever a dialog
+// is open, and the browser stops requestAnimationFrame on its own when the tab
+// is hidden, so nothing animates off-screen.
+let tick=0,lastPaint=0;
+function lively(){return !document.hidden&&!anyDialog()&&!state.dead&&!state.complete;}
+function scheduleDraw(){if(!frame)frame=requestAnimationFrame(t=>{frame=0;if(motion){const p=Math.min(1,(t-motion.start)/140),e=1-(1-p)*(1-p);visual.x=motion.from.x+(motion.to.x-motion.from.x)*e;visual.y=motion.from.y+(motion.to.y-motion.from.y)*e;if(p===1)motion=null;}
+ if(motion||t-lastPaint>140){lastPaint=t;tick++;draw();}
+ if(motion||lively())scheduleDraw();});}
 function present(){const r=canvas.getBoundingClientRect();if(!r.width||!r.height)return;const dpr=Math.min(devicePixelRatio||1,2),w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}const scale=Math.max(r.width/832,r.height/576,.82);const x=Math.max(0,Math.min(832-r.width/scale,visual.x*64+32-r.width/scale/2)),y=Math.max(0,Math.min(576-r.height/scale,visual.y*64+32-r.height/scale/2));camera={x,y,scale};screen.setTransform(dpr,0,0,dpr,0,0);screen.imageSmoothingEnabled=false;screen.clearRect(0,0,r.width,r.height);screen.drawImage(world,x,y,r.width/scale,r.height/scale,0,0,r.width,r.height);}
 // One palette per room: the corridor, then the street above it, then the break
 // room. A missing entry always falls back to the first so a new area can never
@@ -163,7 +172,7 @@ function propSprite(px,py,type){
  if(type==='cart'){rect(px+8,py+34,48,12,'#6d6a62');rect(px+8,py+34,48,3,'#8b877c');rect(px+13,py+46,6,10,'#26292b');rect(px+45,py+46,6,10,'#26292b');rect(px+26,py+24,14,10,'#4a453f');return;}
  if(type==='sofa'){rect(px+8,py+26,48,26,'#5d7f7a');rect(px+8,py+26,48,5,'#7d9a94');rect(px+14,py+32,16,14,'#6f7a4a');rect(px+34,py+32,16,14,'#6f7a4a');return;}
  if(type==='kettle'){rect(px+20,py+32,24,20,'#b0a184');rect(px+20,py+32,24,4,'#c8bb9c');rect(px+44,py+36,7,10,'#b0a184');rect(px+27,py+27,10,5,'#6d6a62');return;}
- if(type==='brazier'){rect(px+18,py+34,28,26,'#8a5a34');rect(px+18,py+34,28,4,'#a06a3c');rect(px+24,py+22,16,12,'#d97a34');rect(px+28,py+16,8,8,'#e8c14a');return;}
+ if(type==='brazier'){const flame=tick%4===0?2:0;rect(px+18,py+34,28,26,'#8a5a34');rect(px+18,py+34,28,4,'#a06a3c');rect(px+24,py+22-flame,16,12+flame,'#d97a34');rect(px+28,py+16-flame,8,8+flame,'#e8c14a');return;}
  if(type==='satchel'){rect(px+16,py+28,32,28,'#8a5a34');rect(px+16,py+28,32,5,'#a06a3c');rect(px+22,py+20,20,9,'#b0a184');rect(px+28,py+36,8,8,'#e8c14a');return;}
  if(type==='locker'){rect(px+16,py+8,32,52,'#3c4a63');rect(px+16,py+8,32,5,'#4f5f7d');rect(px+20,py+16,24,3,'#26292b');rect(px+42,py+30,5,5,'#e8c14a');return;}
  if(type==='plaque'){rect(px+12,py+24,40,22,'#b0a184');rect(px+12,py+24,40,4,'#c8bb9c');rect(px+18,py+33,28,3,'#6d6a62');rect(px+18,py+39,18,3,'#6d6a62');return;}
@@ -173,8 +182,8 @@ function propSprite(px,py,type){
   rect(px+18,py+46,28,7,band);rect(px+18,py+46,4,7,'#26292b');
   if(type==='exitdoor'){rect(px+20,py+18,24,9,'#b0a184');rect(px+27,py+20,4,5,'#26292b');rect(px+33,py+20,3,3,'#26292b');}
   return;}
- if(type==='stairwell'){rect(px+6,py+10,52,48,'#1b1f21');for(let i=0;i<5;i++)rect(px+8+i*4,py+50-i*9,48-i*7,8,'#2a2f33');
-  rect(px+4,py+4,56,12,'#26292b');rect(px+8,py+8,48,4,'#4fc4d8');rect(px+8,py+15,22,3,'#4fc4d8');return;}
+ if(type==='stairwell'){const pulse=tick%2?'#4fc4d8':'#8fe3f0';rect(px+6,py+10,52,48,'#1b1f21');for(let i=0;i<5;i++)rect(px+8+i*4,py+50-i*9,48-i*7,8,'#2a2f33');
+  rect(px+4,py+4,56,12,'#26292b');rect(px+8,py+8,48,4,pulse);rect(px+8,py+15,22,3,pulse);return;}
  if(type==='map'){rect(px+10,py+12,44,42,'#b0a184');rect(px+10,py+12,44,4,'#c8bb9c');rect(px+15,py+22,16,3,'#3c4a63');rect(px+15,py+29,24,3,'#3c4a63');rect(px+15,py+36,12,3,'#3c4a63');rect(px+40,py+30,9,9,'#4fc4d8');return;}
  if(type==='help'){rect(px+22,py+14,20,48,'#4b8fd0');rect(px+22,py+14,20,5,'#6ba3dd');rect(px+26,py+22,12,14,'#e6e2d6');rect(px+26,py+42,12,4,'#e6e2d6');return;}
  if(type==='wreck'){rect(px+4,py+30,56,20,'#8a5a34');rect(px+14,py+20,30,12,'#6d6a62');rect(px+18,py+22,12,8,'#3c4a63');rect(px+8,py+50,10,6,'#26292b');rect(px+46,py+50,10,6,'#26292b');return;}
@@ -272,7 +281,10 @@ function floorMark(id,x,y){const band=FLOOR_MARKS[id];if(!band)return;const px=x
  rect(px+5,py+55,54,6,band[0]);
  if(id==='stairs'){for(let i=0;i<4;i++)rect(px+9+i*13,py+55,6,6,band[1]);}
  else rect(px+13,py+56,38,4,band[1]);}
-function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64;
+// Living things breathe: a one-pixel dip, offset per tile so a crowd never moves
+// in lockstep. Scenery stands perfectly still.
+function breathing(x,y,type,condition){return condition==='conscious'&&look[type]&&(tick+(x*3+y*5)%5)%8<4?-1:0;}
+function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(x,y,type,condition);
  floorMark(type,x,y);
  rect(px+13,py+47,40,8,'#1b1f21');
  if(condition==='dead'||condition==='unconscious'){rect(px+14,py+38,38,13,'#4a453f');rect(px+17,py+40,32,5,'#6d6a62');rect(px+44,py+34,11,9,'#b0a184');
