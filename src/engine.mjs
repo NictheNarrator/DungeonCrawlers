@@ -1,4 +1,5 @@
 import {PEOPLE,ATTITUDES,CONDITIONS,ITEM_KEYS,STOCK_KEYS,NPCS,makeNPC,npcActions,actNPC,describeNPC,discoverThefts,memoryText,WITNESS_RANGE,recordWitness} from './npcs.mjs';
+import {ABILITIES,STARTING_ABILITIES,STARTING_SKILLS,STARTING_SAVES,modifier,proficiencyBonus} from './rules.mjs';
 export const rooms=['Intake','Lost Property','The Holdout','Pest Control','Departures'];
 export const props=[
  [{id:'fountain',name:'Recovery station',x:4,y:3},{id:'terminal',name:'Welcome terminal',x:8,y:3}],
@@ -7,7 +8,7 @@ export const props=[
  [{id:'rat',name:'Ratman custodian',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6}],
  [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5}]
 ];
-export function fresh(){return {version:2,room:0,x:3,y:5,hp:30,maxHp:30,potions:2,gold:0,cheese:0,key:false,weapon:0,items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:0,npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
+export function fresh(){return {version:2,room:0,x:3,y:5,hp:30,maxHp:30,potions:2,gold:0,cheese:0,key:false,weapon:0,level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:0,npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
 export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);s.boxes++;say(s,`Achievement: ${id}. One loot box added to your pack.`);}
 export function blocked(s,x,y){return x<1||x>11||y<1||y>7||props[s.room].some(p=>p.x===x&&p.y===y);}
@@ -65,6 +66,10 @@ export function useWhetstone(s){if(s.dead||s.complete||s.combat||!s.items.whetst
 export function openBox(s){if(s.combat||s.dead||s.complete||!s.boxes)return false;s.boxes--;s.potions++;say(s,'Loot box: one healing potion. Corporate generosity, measured with a pipette.');return true;}
 export function outcome(s){return PEOPLE.map(id=>{const n=s.npcs[id];return `${NPCS[id].name}: ${n.condition}, ${n.attitude}. ${memoryText(n)}.`;}).join('\n');}
 export function encode(s){if(s.dead||s.combat)return null;return JSON.stringify(s);}
+// The bridge between a saved character and the d20 rules: pass the result as
+// check({actor:character(s), skill:'stealth', dc:12}).
+export function character(s,id='player'){if(id==='player')return {name:'Crawler 01',level:s.level,abilities:s.abilities,skills:s.skills,saves:s.saves};const d=NPCS[id];return {name:d.name,level:d.level||1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
+function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!Number.isInteger(s.level))s.level=1;return s;}
 function dictionary(v){return v&&typeof v==='object'&&!Array.isArray(v);}
 function bools(v){return dictionary(v)&&Object.values(v).every(x=>typeof x==='boolean');}
 function count(v){return Number.isInteger(v)&&v>=0&&v<=100000;}
@@ -78,7 +83,9 @@ export function decode(raw){try{let s=JSON.parse(raw);if(!dictionary(s)||![1,2].
  for(const key of ['potions','gold','cheese','boxes','weapon'])if(!count(s[key]))return null;
  if(typeof s.key!=='boolean'||!bools(s.flags)||!Array.isArray(s.achievements)||s.achievements.some(x=>typeof x!=='string')||!Array.isArray(s.log)||s.log.some(x=>typeof x!=='string'))return null;
  if(s.version===1){s=migrate(s);if(!s)return null;}
+ s=withCharacter(s);
  if(!dictionary(s.items)||ITEM_KEYS.some(k=>!count(s.items[k]))||!Number.isSafeInteger(s.logSerial)||s.logSerial<0)return null;
  for(const id of Object.keys(NPCS)){const n=s.npcs?.[id];if(!dictionary(n)||!Number.isInteger(n.hp)||n.hp<0||n.hp>NPCS[id].hp||!ATTITUDES.includes(n.attitude)||!CONDITIONS.includes(n.condition)||(n.condition==='conscious')!==(n.hp>0)||!bools(n.memory)||!dictionary(n.inventory)||STOCK_KEYS.some(k=>!count(n.inventory[k])))return null;}
+ if(!ABILITIES.every(ability=>Number.isInteger(s.abilities[ability])&&s.abilities[ability]>=1&&s.abilities[ability]<=30)||!Number.isInteger(s.level)||s.level<1||s.level>20||s.skills.some(x=>typeof x!=='string')||s.saves.some(x=>typeof x!=='string'))return null;
  if(blocked(s,s.x,s.y))return null;return s;
  }catch{return null;}}

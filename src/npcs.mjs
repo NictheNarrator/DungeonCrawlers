@@ -4,10 +4,10 @@ export const CONDITIONS = ['conscious','unconscious','dead'];
 export const ITEM_KEYS = ['bandages','repairKits','smokeBombs','whetstones'];
 export const STOCK_KEYS = ['gold','potions','key',...ITEM_KEYS];
 export const NPCS = {
- mara:{name:'Mara',role:'Cautious survivor',hp:20,damage:[4,6],attitude:'neutral',trade:'potions',price:3,pick:'key',help:'1 bandage or potion',stock:{gold:3,potions:2,key:1}},
- tobin:{name:'Tobin',role:'Suspicious scavenger',hp:16,damage:[2,4],attitude:'suspicious',trade:'smokeBombs',price:4,pick:'smokeBombs',help:'1 repair kit or 2 coins',stock:{gold:6,potions:2,smokeBombs:2}},
- vex:{name:'Vex',role:'Dangerous rival',hp:28,damage:[5,7],attitude:'neutral',trade:'whetstones',price:4,pick:'whetstones',help:'Read the memo, or give 1 potion',stock:{gold:5,potions:1,whetstones:1}},
- rat:{name:'Ratman custodian',role:'Unpaid sanitation',hp:12,damage:[2,3],attitude:'neutral',stock:{gold:2}}
+ mara:{name:'Mara',role:'Cautious survivor',hp:20,damage:[4,6],attitude:'neutral',trade:'potions',price:3,pick:'key',help:'1 bandage or potion',stock:{gold:3,potions:2,key:1},abilities:{strength:14,dexterity:12,constitution:14,intelligence:12,wisdom:15,charisma:13},skills:['medicine','insight'],saves:['wisdom','constitution']},
+ tobin:{name:'Tobin',role:'Suspicious scavenger',hp:16,damage:[2,4],attitude:'suspicious',trade:'smokeBombs',price:4,pick:'smokeBombs',help:'1 repair kit or 2 coins',stock:{gold:6,potions:2,smokeBombs:2},abilities:{strength:11,dexterity:15,constitution:12,intelligence:14,wisdom:13,charisma:12},skills:['sleight of hand','stealth','investigation'],saves:['dexterity','intelligence']},
+ vex:{name:'Vex',role:'Dangerous rival',hp:28,damage:[5,7],attitude:'neutral',trade:'whetstones',price:4,pick:'whetstones',help:'Read the memo, or give 1 potion',stock:{gold:5,potions:1,whetstones:1},abilities:{strength:17,dexterity:16,constitution:15,intelligence:11,wisdom:12,charisma:14},skills:['athletics','intimidation','perception'],saves:['strength','constitution']},
+ rat:{name:'Ratman custodian',role:'Unpaid sanitation',hp:12,damage:[2,3],attitude:'neutral',stock:{gold:2},abilities:{strength:8,dexterity:14,constitution:10,intelligence:8,wisdom:12,charisma:6},skills:['stealth','perception'],saves:['dexterity']}
 };
 export const itemName={gold:'coins',potions:'healing potion',key:'exit key',bandages:'bandage',repairKits:'repair kit',smokeBombs:'smoke bomb',whetstones:'whetstone'};
 export function makeNPC(id){const d=NPCS[id];return {hp:d.hp,attitude:d.attitude,condition:'conscious',memory:{},inventory:Object.fromEntries(STOCK_KEYS.map(k=>[k,d.stock[k]||0]))};}

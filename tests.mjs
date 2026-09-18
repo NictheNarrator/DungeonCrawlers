@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {bindHoldControls} from './src/controls.mjs';
-import {fresh,rooms,props,move,blocked,interact,fight,actions,encode,decode,usePotion,useBandage,useWhetstone,openBox,attackRange,combatActions,outcome} from './src/engine.mjs';
+import {fresh,rooms,props,move,blocked,interact,fight,actions,encode,decode,usePotion,useBandage,useWhetstone,openBox,attackRange,combatActions,outcome,character} from './src/engine.mjs';
 import {PEOPLE,NPCS,STOCK_KEYS} from './src/npcs.mjs';
+import {check,modifier,proficiencyBonus,SKILLS,ABILITIES} from './src/rules.mjs';
 let passed=0;const pending=[];function test(name,fn){const result=fn();if(result&&typeof result.then==='function')pending.push(result.then(()=>{passed++;console.log('PASS '+name);}));else{passed++;console.log('PASS '+name);}}
 function walk(s,tx,ty){const q=[[s.x,s.y,[]]],seen=new Set([s.x+','+s.y]);while(q.length){const [x,y,path]=q.shift();if(x===tx&&y===ty){for(const [dx,dy] of path)assert(move(s,dx,dy));return;}for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=nx+','+ny;if(!seen.has(k)&&!blocked(s,nx,ny)){seen.add(k);q.push([nx,ny,[...path,[dx,dy]]]);}}}assert.fail(`No route in ${rooms[s.room]} to ${tx},${ty}`);}
 function travel(s,room){while(s.room<room){walk(s,11,4);assert(move(s,1,0));}while(s.room>room){walk(s,1,4);assert(move(s,-1,0));}}
@@ -60,8 +61,19 @@ test('Touch hold repeats and release stops; click does not double-step',()=>{con
 test('Cancelled touches and app pause stop held movement',()=>{const h=holdHarness();for(const type of ['pointercancel','lostpointercapture']){h.fire('pointerdown');h.fire(type);assert.equal(h.pending.size,0);}h.fire('pointerdown');h.controls.stop();assert.equal(h.pending.size,0);h.fire('pointerdown');h.lock();h.tick();assert.equal(h.pending.size,0);});
 test('Only the active finger owns direction and disabled controls do not move',()=>{const h=holdHarness();h.fire('pointerdown');h.fire('pointerdown',{pointerId:2},h.other);h.fire('pointerup',{pointerId:1});h.tick();assert.deepEqual(h.steps.at(-1),[0,-1]);h.fire('pointerup',{pointerId:2},h.other);assert.equal(h.pending.size,0);h.button.disabled=true;const before=h.steps.length;h.fire('pointerdown');h.fire('click',{detail:0});assert.equal(h.steps.length,before);});
 
+const fixed=(...values)=>{let index=0;return()=>values[Math.min(index++,values.length-1)];};
+test('Ability scores convert to the standard modifiers',()=>{assert.equal(modifier(16),3);assert.equal(modifier(15),2);assert.equal(modifier(10),0);assert.equal(modifier(8),-1);assert.equal(modifier(1),-5);assert.equal(modifier(20),5);assert.equal(proficiencyBonus(1),2);assert.equal(proficiencyBonus(5),3);assert.equal(Object.keys(SKILLS).length,18);assert.equal(ABILITIES.length,6);assert.equal(character(fresh(),'vex').abilities.strength,17);});
+test('Stealth check uses Dexterity and the character proficiency',()=>{const s=fresh();const r=check({actor:character(s),skill:'stealth',dc:12,rng:fixed(0.5)});assert.equal(r.kind,'skill');assert.equal(r.ability,'dexterity');assert.equal(r.rawRoll,11);assert.equal(r.abilityModifier,3);assert.equal(r.proficiency,true);assert.equal(r.proficiencyBonus,2);assert.equal(r.total,16);assert.equal(r.dc,12);assert.equal(r.success,true);});
+test('Sleight of Hand check matches the worked example',()=>{const win=check({score:16,skill:'sleight of hand',dc:14,proficient:true,rng:fixed(0.5)});assert.equal(win.rawRoll,11);assert.equal(win.abilityModifier,3);assert.equal(win.proficiencyBonus,2);assert.equal(win.total,16);assert.equal(win.success,true);const lose=check({score:16,skill:'sleight of hand',dc:14,proficient:true,rng:fixed(0)});assert.equal(lose.rawRoll,1);assert.equal(lose.total,6);assert.equal(lose.success,false);});
+test('Persuasion check omits proficiency the character lacks',()=>{const s=fresh();const r=check({actor:character(s),skill:'persuasion',dc:13,rng:fixed(0.5)});assert.equal(r.ability,'charisma');assert.equal(r.abilityModifier,2);assert.equal(r.proficiency,false);assert.equal(r.total,13);assert.equal(r.success,true);});
+test('Intimidation check adds proficiency when it applies',()=>{const s=fresh();const r=check({actor:character(s),skill:'intimidation',dc:15,proficient:true,rng:fixed(0.5)});assert.equal(r.ability,'charisma');assert.equal(r.proficiency,true);assert.equal(r.otherModifiers,0);assert.equal(r.total,15);assert.equal(r.success,true);});
+test('Perception check uses Wisdom and includes extra modifiers',()=>{const s=fresh();const r=check({actor:character(s),skill:'perception',dc:18,modifiers:[2,-1],rng:fixed(0.5)});assert.equal(r.ability,'wisdom');assert.equal(r.abilityModifier,1);assert.equal(r.otherModifiers,1);assert.equal(r.total,15);assert.equal(r.success,false);});
+test('Saving throws use the character save proficiencies',()=>{const s=fresh();const dex=check({actor:character(s),ability:'dexterity',save:true,dc:13,rng:fixed(0.5)});assert.equal(dex.kind,'save');assert.equal(dex.proficiency,true);assert.equal(dex.total,16);assert.equal(dex.success,true);const con=check({actor:character(s),ability:'constitution',save:true,dc:13,rng:fixed(0.5)});assert.equal(con.proficiency,false);assert.equal(con.total,13);assert.equal(con.success,true);});
+test('Advantage keeps the higher die, disadvantage the lower, and they cancel',()=>{const actor=character(fresh());const adv=check({actor,skill:'stealth',advantage:true,rng:fixed(0.1,0.9)});assert.deepEqual(adv.rolls,[3,19]);assert.equal(adv.rawRoll,19);assert.equal(adv.advantage,true);assert.equal(adv.disadvantage,false);const dis=check({actor,skill:'stealth',disadvantage:true,rng:fixed(0.1,0.9)});assert.equal(dis.rawRoll,3);assert.equal(dis.disadvantage,true);const both=check({actor,skill:'stealth',advantage:true,disadvantage:true,rng:fixed(0.5,0.9)});assert.equal(both.rolls.length,1);assert.equal(both.rawRoll,11);assert.equal(both.advantage,false);assert.equal(both.disadvantage,false);});
+test('Characters keep abilities through a save and old saves gain the defaults',()=>{const s=fresh();const kept=checkpoint(s);assert.deepEqual(kept.abilities,s.abilities);assert.deepEqual(kept.skills,s.skills);const old={...fresh()};delete old.abilities;delete old.skills;delete old.saves;delete old.level;const restored=decode(JSON.stringify(old));assert(restored);assert.deepEqual(restored.abilities,s.abilities);assert.deepEqual(restored.skills,s.skills);assert.equal(restored.level,1);});
 function quotedList(source,pattern){const block=source.match(pattern);assert(block,`Could not find a list to read: ${pattern}`);return block[1].split(',').map(part=>part.trim()).filter(part=>part.startsWith("'")).map(part=>part.slice(1,-1));}
 const swSource=readFileSync('sw.js','utf8');
+const swCache=swSource.match(/CACHE = '([^']+)'/)[1];
 const buildSource=readFileSync('build.mjs','utf8');
 const shipped=quotedList(buildSource,/for\(const file of \[([\s\S]*?)\]\)/);
 const precached=quotedList(swSource,/const ASSETS = \[([\s\S]*?)\];/);
@@ -107,7 +119,7 @@ test('The worker precaches the whole shell, then clears stale caches and takes c
  const h=workerHarness();
  h.store('dungeoncrawlers-v0').set('http://localhost:4173/old.js',h.response('http://localhost:4173/old.js'));
  await h.fire('install');
- const cached=h.store('dungeoncrawlers-v1');
+ const cached=h.store(swCache);
  for(const asset of precached){const href=h.url(asset);assert(cached.has(href),`install did not precache ${asset}`);assert.equal(cached.get(href).ok,true);}
  await h.fire('activate');
  assert.equal(h.stores.has('dungeoncrawlers-v0'),false,'the previous cache version must be removed');
@@ -121,8 +133,8 @@ test('Network-first serving falls back to the cache, then to the shell for navig
  assert.equal(online.responded.length,1,'a same-origin GET must be answered by the worker');
  const live=await online.responded[0];
  assert.equal(live.url,'http://localhost:4173/style.css');
- assert(h.store('dungeoncrawlers-v1').has('http://localhost:4173/style.css'),'a successful response must be cached for later');
- h.store('dungeoncrawlers-v1').set('http://localhost:4173/style.css',h.response('http://localhost:4173/style.css?cached'));
+ assert(h.store(swCache).has('http://localhost:4173/style.css'),'a successful response must be cached for later');
+ h.store(swCache).set('http://localhost:4173/style.css',h.response('http://localhost:4173/style.css?cached'));
  h.setOnline(false);
  const offline=await h.fire('fetch',{request:get('http://localhost:4173/style.css')});
  assert.equal((await offline.responded[0]).url,'http://localhost:4173/style.css?cached','offline requests must be served from the cache');
