@@ -3,6 +3,7 @@
 // this module never needs to reach into game systems.
 export const DIALOGUE={
  mara:{
+  safe:{prompt:'“The creatures will not cross into this room. I watched one stop at the doorway like it hit glass.”',options:[{label:'“That is the first good news today.”',memory:'shared',line:'Mara: “Do not spend it all at once.”'},{label:'“How do you know it is not a trap?”',memory:'shared',line:'Mara: “I do not. I am choosing to sleep anyway.”'}]},
   first:{
    prompt:'“Did you see what happened up there?”',
    options:[
@@ -18,6 +19,20 @@ export const DIALOGUE={
     {label:'“That is more than I had.”',approval:4,line:'Mara: “Then we are both guessing. We can guess together or separately.”'},
     {label:'“Where was the room?”',line:'Mara: “Further in. Blue lights. You will know it.”'},
     {label:'“You are lying to me.”',approval:-6,suspicious:true,line:'Mara: “I am not. You are just frightened, and it is making you unpleasant.”'}
+   ]}
+ },
+ tobin:{
+  safe:{prompt:'“Killing things gave me experience. The numbers went up. Nobody told me what the numbers are for.”',
+   options:[
+    {label:'“So keep killing things.”',memory:'shared',line:'Tobin: “That is what I said. Out loud. To myself. In a safe room.”'},
+    {label:'“What else have you found?”',memory:'shared',line:'Tobin: “Rooms that want things from you. I do not have a better word for it than rooms.”'}
+   ]}
+ },
+ vex:{
+  safe:{prompt:'“Achievements pay out. I got a reward for something stupid I did, and the reward was useful.”',
+   options:[
+    {label:'“What kind of reward?”',memory:'shared',line:'Vex: “A box. It opened here. That is the only place it opens, so do not get comfortable.”'},
+    {label:'“That is not a system. That is bribery.”',memory:'shared',line:'Vex: “Everything down here is a system. Bribery is the honest one.”'}
    ]}
  },
  skrit:{
@@ -38,6 +53,6 @@ export function nodeFor(s,id,key){const tree=DIALOGUE[id];if(!tree)return null;c
  if(key==='knows')return tree.knows;
  return tree[key]||null;}
 export function startNodeFor(s,id){const tree=DIALOGUE[id];if(!tree)return null;const memory=s.npcs[id]?.memory||{};
- if(!memory.answeredFirst)return 'first';
+ if(tree.first&&!memory.answeredFirst)return 'first';
  return null;}
 export function optionsFor(node){return node?node.options:[];}

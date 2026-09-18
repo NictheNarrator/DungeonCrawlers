@@ -2,7 +2,7 @@ import {PEOPLE,ATTITUDES,CONDITIONS,ITEM_KEYS,STOCK_KEYS,NPCS,makeNPC,npcActions
 import {ABILITIES,STARTING_ABILITIES,STARTING_SKILLS,STARTING_SAVES,modifier,proficiencyBonus,check as d20} from './rules.mjs';
 import {blankCompanion,companionOf,isCompanion,adjustApproval,bandFor,relationshipText,conversationFor,remember,reactionLine,COMPANIONS,clampApproval,approvalReaction} from './companions.mjs';
 import {nodeFor,startNodeFor,optionsFor} from './dialogue.mjs';
-export const rooms=['The Concourse','Lost Property','The Holdout','Pest Control','Departures','Surface'];
+export const rooms=['The Concourse','Lost Property','The Holdout','Pest Control','Departures','Surface','Break Room'];
 export const SURFACE=5;
 // The prologue: an ordinary street, seconds after everything stopped being ordinary.
 export const FLOOR_SECONDS=48*60*60;
@@ -11,12 +11,14 @@ export const props=[
  [{id:'fountain',name:'Recovery station',x:4,y:3},{id:'terminal',name:'Welcome terminal',x:8,y:3},
   {id:'sign',name:'Wayfinding sign',x:2,y:2},{id:'vending',name:'Vending machine',x:6,y:2},{id:'tickets',name:'Ticket dispenser',x:7,y:5},
   {id:'bin',name:'Overflowing bin',x:10,y:6},{id:'bag',name:'Abandoned bag',x:2,y:6},{id:'service',name:'Service door',x:11,y:3},
-  {id:'help',name:'Help point',x:9,y:5},{id:'debris',name:'Scattered debris',x:5,y:6},{id:'cart',name:'Overturned cart',x:2,y:4},{id:'mara',name:'Mara, survivor',x:3,y:4},{id:'skrit',name:'Skrit',x:6,y:3}],
+  {id:'help',name:'Help point',x:9,y:5},{id:'debris',name:'Scattered debris',x:5,y:6},{id:'cart',name:'Overturned cart',x:2,y:4},
+  {id:'mara',name:'Mara, survivor',x:3,y:4},{id:'skrit',name:'Skrit',x:6,y:3},{id:'staffdoor',name:'Employees only door',x:1,y:3}],
  [{id:'chest',name:'Abandoned chest',x:4,y:3},{id:'crate',name:'Cracked crate',x:8,y:6},{id:'note',name:'Folded memo',x:8,y:3},{id:'tobin',name:'Tobin, scavenger',x:6,y:6},{id:'satchel',name:'Tobin’s satchel',x:5,y:5,owner:'tobin'},{id:'skulker',name:'Ratman skulker',x:10,y:2}],
  [{id:'locker',name:'Emergency locker',x:9,y:3},{id:'brute',name:'Ratman brute',x:2,y:6}],
  [{id:'rat',name:'Ratman scrapper',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6},{id:'brazier',name:'Burning brazier',x:10,y:6,hazard:true}],
- [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}]
- ,[{id:'wreck',name:'Wrecked car',x:3,y:3},{id:'awning',name:'Collapsed awning',x:7,y:3},{id:'stranger1',name:'Panicked man',x:5,y:6},{id:'stranger2',name:'Panicked woman',x:9,y:6},{id:'stairwell',name:'The stairwell',x:10,y:5}]
+ [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}],
+ [{id:'wreck',name:'Wrecked car',x:3,y:3},{id:'awning',name:'Collapsed awning',x:7,y:3},{id:'stranger1',name:'Panicked man',x:5,y:6},{id:'stranger2',name:'Panicked woman',x:9,y:6},{id:'stairwell',name:'The stairwell',x:10,y:5}],
+ [{id:'breakdoor',name:'Employees only door',x:1,y:3},{id:'map',name:'Transit map',x:5,y:2},{id:'sofa',name:'Sagging sofa',x:8,y:5},{id:'kettle',name:'Staff kettle',x:3,y:5},{id:'machines',name:'Dead vending machine',x:1,y:6},{id:'exitdoor',name:'Back to the concourse',x:10,y:4}]
 ];
 // A brand new crawler starts upstairs, unregistered, with no idea what is coming.
 export function prologue(){const s=fresh();s.registered=false;s.room=SURFACE;s.x=2;s.y=5;s.timer=0;s.surfaceTime=SURFACE_SECONDS;return s;}
@@ -54,7 +56,7 @@ export function setPlace(s,id,room,x,y){s.places[id]={room,x,y};}
 export function startingPlaces(){const places={};for(const room of props)for(const prop of room)if(NPCS[prop.id])places[prop.id]={room:props.indexOf(room),x:prop.x,y:prop.y};return places;}
 function normalisePlaces(places){const defaults=startingPlaces(),out={};
  for(const id of Object.keys(defaults)){const place=dictionary(places)?places[id]:null;
-  const ok=dictionary(place)&&Number.isInteger(place.room)&&place.room>=0&&place.room<=4&&Number.isInteger(place.x)&&place.x>=1&&place.x<=11&&Number.isInteger(place.y)&&place.y>=1&&place.y<=7;
+  const ok=dictionary(place)&&Number.isInteger(place.room)&&place.room>=0&&place.room<rooms.length&&Number.isInteger(place.x)&&place.x>=1&&place.x<=11&&Number.isInteger(place.y)&&place.y>=1&&place.y<=7;
   out[id]=ok?{room:place.room,x:place.x,y:place.y}:{...defaults[id]};}
  return out;}
 function normaliseConditions(table){const out={};if(!dictionary(table))return out;
@@ -101,7 +103,7 @@ export function move(s,dx,dy){if(s.combat||s.dead||s.complete||!Number.isInteger
 // The phone is carried rather than placed, so it only exists in the prologue.
 export function nearby(s){const found=roomProps(s).filter(p=>Math.abs(p.x-s.x)+Math.abs(p.y-s.y)<=1);
  if(!s.registered&&s.room===SURFACE)found.push({id:'phone',name:'Your phone',x:s.x,y:s.y});return found;}
-function baseActions(s,id){if(s.dead||s.complete||s.combat)return [];if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return npcActions(s,id);
+function baseActions(s,id){if(id==='staffdoor'&&!s.dead&&!s.complete)return ['Inspect','Enter the break room'];if(s.dead||s.complete||s.combat)return [];if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return npcActions(s,id);
  if(id==='skrit')return ['Inspect','Talk','Help with the machine','Pickpocket','Leave him alone','Fight'];
  if(NPCS[id]?.archetype&&id!=='rat')return ['Inspect','Fight',...(s.cheese?['Offer cheese']:[])];
  switch(id){
@@ -114,6 +116,8 @@ function baseActions(s,id){if(s.dead||s.complete||s.combat)return [];if(PEOPLE.i
  case 'bin':return ['Inspect',...(s.flags.bin?[]:['Search the bin'])];
  case 'bag':return ['Inspect',...(s.flags.bag?[]:['Search the bag'])];
  case 'service':return ['Inspect','Try the handle'];
+ case 'staffdoor':case 'breakdoor':return ['Inspect','Enter the break room'];case 'exitdoor':return ['Inspect','Head back out'];
+ case 'map':return ['Inspect'];case 'sofa':case 'kettle':return ['Inspect','Rest for a while'];case 'machines':return ['Inspect'];
  case 'note':return ['Inspect','Read'];case 'locker':return ['Inspect',...(s.flags.locker?[]:['Open'])];
  case 'rat':return ['Inspect','Talk','Offer cheese','Sneak past','Fight'];
  case 'pipe':return ['Inspect','Search'];
@@ -130,7 +134,7 @@ export function ownedTake(s,id,text,keys){const prop=props[s.room].find(p=>p.id=
  if(!seer&&!watchers.length){say(s,'Nobody is watching.');return;}
  if(seer)confront(s,owner,say,startCombat);
  recordWitness(s,watchers,'theft',say);}
-function startCombat(s,id,intent='lethal'){const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';if(leaveParty(s,id,say,'was attacked by you')){recordDeed(s,'betrayal');award(s,'Severance Package');}witnessedApproval(s,'betray',id,-25,'you betrayed an ally');if(companionOf(s,id)){const c=companionOf(s,id);c.hostile=true;remember(c,'attacked');c.approval=Math.min(c.approval,-60);say(s,'Mara strongly disapproves.');leaveCompanion(s,id,'you attacked her');}shiftMember(s,id,2,'you attacked them');s.combat={enemy:id,enemies:[id],turn:'player',intent,range:1,cover:{},round:0,used:{}};
+function startCombat(s,id,intent='lethal'){if(isSafeRoom(s)){say(s,'Nothing in here is allowed to kill you, and that includes you. The room does not permit it.');return;}const n=s.npcs[id];if(n.condition!=='conscious')return;n.memory.betrayed=!!(n.memory.betrayed||n.memory.helped||n.memory.befriended||n.attitude==='friendly');n.memory.attacked=true;n.memory.distracted=false;n.attitude='hostile';if(leaveParty(s,id,say,'was attacked by you')){recordDeed(s,'betrayal');award(s,'Severance Package');}witnessedApproval(s,'betray',id,-25,'you betrayed an ally');if(companionOf(s,id)){const c=companionOf(s,id);c.hostile=true;remember(c,'attacked');c.approval=Math.min(c.approval,-60);say(s,'Mara strongly disapproves.');leaveCompanion(s,id,'you attacked her');}shiftMember(s,id,2,'you attacked them');s.combat={enemy:id,enemies:[id],turn:'player',intent,range:1,cover:{},round:0,used:{}};
  say(s,`${NPCS[id].name} fights back. ${intent==='nonlethal'?'Nonlethal strikes will knock them unconscious.':'Lethal attacks can kill them.'} You can change intent during combat.`);
  const pack=NPCS[id].pack;
  if(pack)for(const other of Object.keys(NPCS)){if(other===id||NPCS[other].pack!==pack||s.npcs[other].condition!=='conscious')continue;if(placeOf(s,other).room!==placeOf(s,id).room)continue;s.combat.enemies.push(other);say(s,`${NPCS[other].name} joins the fight.`);}
@@ -159,9 +163,15 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   if(action==='Promise the supplies'||action==='Hand over the supplies')return questAction(s,id,action);
   if(companionOf(s,id)&&companionAction(s,id,action))return true;
   if(action==='Keep the supplies')return keepSupplies(s);
-  if(action==='Talk'&&startNodeFor(s,id))return !!openDialogue(s,id);  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id]){const handled=actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind)+(kind==='persuasion'?companionRespect(s):0),note:(who)=>factionOf(who)?factionLine(s,who):'',standing:(who,steps,reason)=>shiftMember(s,who,steps,reason),approve:(who,delta,reason)=>witnessedApproval(s,'act',who,delta,reason),rng});if(action==='Recruit'&&handled&&s.party.includes(id)&&companionOf(s,id)&&!companionOf(s,id).recruited){companionOf(s,id).recruited=true;say(s,`name is travelling with you now.`);}return handled;}
+  if(action==='Talk'){const talkKey=dialogueKeyFor(s,id);if(talkKey&&openDialogue(s,id,talkKey))return true;}  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id]){const handled=actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind)+(kind==='persuasion'?companionRespect(s):0),note:(who)=>factionOf(who)?factionLine(s,who):'',standing:(who,steps,reason)=>shiftMember(s,who,steps,reason),approve:(who,delta,reason)=>witnessedApproval(s,'act',who,delta,reason),rng});if(action==='Recruit'&&handled&&s.party.includes(id)&&companionOf(s,id)&&!companionOf(s,id).recruited){companionOf(s,id).recruited=true;say(s,`name is travelling with you now.`);}return handled;}
   if(id==='stairwell'&&action==='Inspect'){say(s,'A staircase that was not here this morning. Above it a bright sign counts down: '+clockText(s.surfaceTime)+' until the doors close. People are drifting towards it because it is the only sign with a number on it.');return true;}
-  if(id==='tickets'&&action==='Press the button'){s.flags.ticketPressed=(s.flags.ticketPressed||0)+1;say(s,'NOW SERVING: 8,421,991');award(s,'Patient Customer');return true;}
+  if((id==='staffdoor'||id==='breakdoor')&&action==='Enter the break room')return enterSafeRoom(s);
+  if(id==='exitdoor'&&action==='Head back out')return leaveSafeRoom(s);
+  if(id==='map'&&action==='Inspect'){if(!s.flags.foundStairwell){s.flags.foundStairwell=true;say(s,'A transit map, mostly nonsense, except for one symbol that is unmistakable: STAIRWELL, with an arrow pointing down. Somebody has circled it in marker.');}else say(s,'STAIRWELL, down. Still circled. Still down.');return true;}
+  if(id==='breakdoor'&&action==='Enter the break room')return enterSafeRoom(s);
+  if(id==='exitdoor'&&action==='Head back out')return leaveSafeRoom(s);
+  if(id==='map'&&action==='Inspect'){if(!s.flags.foundStairwell){s.flags.foundStairwell=true;say(s,'A transit map, mostly nonsense, except for one symbol that is unmistakable: STAIRWELL, with an arrow pointing down. Somebody has circled it in marker.');}else say(s,'STAIRWELL, down. Still circled. Still down.');return true;}
+  if((id==='sofa'||id==='kettle')&&action==='Rest for a while'){advanceClock(s,30*60);s.hp=s.maxHp;say(s,'You sit for a while. The clock keeps moving without asking, and you feel better, which is its own kind of trap.');return true;}  if(id==='tickets'&&action==='Press the button'){s.flags.ticketPressed=(s.flags.ticketPressed||0)+1;say(s,'NOW SERVING: 8,421,991');award(s,'Patient Customer');return true;}
   if(id==='bag'&&action==='Search the bag'){s.flags.bag=true;s.gold+=2;s.items.bandages++;say(s,'A handbag: two coins, a bandage, and a phone with 41 missed calls from the same number.');return true;}
   if(id==='bin'&&action==='Search the bin'){s.flags.bin=true;const found=s.gold+=1;s.items.smokeBombs++;say(s,'Under the cups: a coin and a smoke bomb somebody threw away. Their loss.');return true;}
   if(id==='vending'&&action==='Pry the panel'){const result=d20({actor:s,skill:'athletics',dc:12,rng});const line='Athletics '+result.total+' against DC 12. '+(result.success?'Success.':'Failure.');
@@ -255,8 +265,20 @@ export const ACHIEVEMENTS={
 // Reward boxes. They only open in a safe room, and each tier rolls on its own
 // table. Every entry carries its own Dungeon AI line.
 export const BOX_TIERS=['bronze','silver','gold'];
-export const SAFE_ROOMS=[0];
+export const SAFE_ROOMS=[6];
 export function isSafeRoom(s){return SAFE_ROOMS.includes(s.room);}
+// Crossing into the break room: the noise stops at the doorway, the regulars
+// are already here, and the Dungeon AI cannot help itself.
+export function enterSafeRoom(s){s.room=6;s.x=9;s.y=5;
+ const first=!s.flags.safeRoomSeen;s.flags.safeRoomSeen=true;
+ say(s,'SAFE ROOM ENTERED.');
+ if(first){say(s,'Safe Room. No murder. No maiming. No intentionally creative interpretations of the phrase “No murder.” Try to enjoy yourselves.');}
+ else say(s,'Safe Room. Try to enjoy yourselves.');
+ if(s.combat){const enemy=s.combat.enemy;closeCombat(s);s.npcs[enemy].attitude='hostile';say(s,`${NPCS[enemy].name} stops at the threshold and does not cross. It is still out there, and it is still angry.`);}
+ for(const id of ['tobin','vex']){if(s.npcs[id].condition!=='conscious')continue;if(placeOf(s,id).room===6)continue;setPlace(s,id,6,id==='tobin'?4:8,id==='tobin'?3:5);
+  if(first)say(s,`${NPCS[id].name} is already in here, ${id==='tobin'?'sorting a pile of things that are technically not his':'sitting with the patience of someone who has already read the room'}.`);}
+ return true;}
+export function leaveSafeRoom(s){s.room=0;s.x=2;s.y=3;say(s,'You step back out into the concourse. The lights flicker like they missed you.');return true;}
 // Item catalogue. Every item carries its rarity, type, description, stat
 // effects and an optional special trait the engine knows how to run.
 export const RARITIES=['common','uncommon','rare','epic'];
@@ -357,9 +379,13 @@ export function relationshipOf(s,id){const companion=companionOf(s,id);return co
 // Player-choice dialogue, shared by every conversation in the game. The engine
 // owns the effects; the dialogue module only describes them.
 export function openDialogue(s,id,key){const wanted=key||startNodeFor(s,id),node=nodeFor(s,id,wanted);if(!node)return null;
+ if(key==='safe')s.npcs[id].memory.shared=true;
  s.npcs[id].memory.met=true;s.npcs[id].memory.answeredFirst=true;
  s.pendingDialogue={id,key:wanted};
  say(s,`${NPCS[id].name}: ${node.prompt}`);return node;}
+export function dialogueKeyFor(s,id){const first=startNodeFor(s,id);if(first)return first;
+ if(isSafeRoom(s)&&s.npcs[id]&&!s.npcs[id].memory.shared&&DIALOGUE_SAFE.includes(id))return 'safe';return null;}
+ const DIALOGUE_SAFE=['mara','tobin','vex'];
 export function dialogueOptions(s){if(!s.pendingDialogue)return [];const node=nodeFor(s,s.pendingDialogue.id,s.pendingDialogue.key);return optionsFor(node);}
 export function chooseDialogue(s,index,rng=Math.random){const pending=s.pendingDialogue;if(!pending)return null;
  const node=nodeFor(s,pending.id,pending.key),option=optionsFor(node)[index];if(!option)return null;
@@ -728,7 +754,8 @@ function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...ST
  for(const slot of SLOTS){const name=s.equipped[slot];if(!ITEMS[name]){s.equipped[slot]=null;continue;}if(itemSlot(name)!==slot){s.equipped[slot]=null;if(!s.gear.includes(name))s.gear.push(name);}}
  for(const name of legacy){const slot=itemSlot(name);if(slot&&!s.equipped[slot])s.equipped[slot]=name;else if(!s.gear.includes(name))s.gear.push(name);}
  delete s.accessories;
- s.standing=dictionary(s.standing)?s.standing:{};for(const id of Object.keys(NPCS))if(!STANDING.includes(s.standing[id]))s.standing[id]='neutral';
+ s.standing=dictionary(s.standing)?s.standing:{};if(s.room===SURFACE&&s.registered)return null;
+ for(const id of Object.keys(NPCS))if(!STANDING.includes(s.standing[id]))s.standing[id]='neutral';
  s.registered=s.registered!==false;s.collapsed=!!s.collapsed;s.timer=Number.isFinite(s.timer)?Math.max(0,Math.floor(s.timer)):FLOOR_SECONDS;s.surfaceTime=Number.isFinite(s.surfaceTime)?Math.max(0,Math.floor(s.surfaceTime)):SURFACE_SECONDS;
  s.companions=dictionary(s.companions)?s.companions:{};
  for(const id of Object.keys(s.companions)){const base=blankCompanion(id),held=s.companions[id];
@@ -751,7 +778,7 @@ function migrate(s){const old=s.npcs;for(const id of ['mara','rat']){const n=old
  s.version=2;s.items={bandages:1,repairKits:0,smokeBombs:0,whetstones:0};s.logSerial=s.log.length;
  if(blocked(s,s.x,s.y)){const candidates=[];for(let y=1;y<=7;y++)for(let x=1;x<=11;x++)if(!blocked(s,x,y))candidates.push({x,y,d:Math.abs(x-s.x)+Math.abs(y-s.y)});candidates.sort((a,b)=>a.d-b.d);s.x=candidates[0].x;s.y=candidates[0].y;}return s;
 }
-export function decode(raw){try{let s=JSON.parse(raw);if(!dictionary(s)||![1,2].includes(s.version)||!Number.isInteger(s.room)||s.room<0||s.room>5||!Number.isInteger(s.x)||!Number.isInteger(s.y)||s.x<1||s.x>11||s.y<1||s.y>7||!Number.isInteger(s.maxHp)||s.maxHp<30||s.maxHp>200||!Number.isInteger(s.hp)||s.hp<1||s.hp>s.maxHp||s.combat!==null||s.dead!==false||typeof s.complete!=='boolean')return null;
+export function decode(raw){try{let s=JSON.parse(raw);if(!dictionary(s)||![1,2].includes(s.version)||!Number.isInteger(s.room)||s.room<0||s.room>=rooms.length||!Number.isInteger(s.x)||!Number.isInteger(s.y)||s.x<1||s.x>11||s.y<1||s.y>7||!Number.isInteger(s.maxHp)||s.maxHp<30||s.maxHp>200||!Number.isInteger(s.hp)||s.hp<1||s.hp>s.maxHp||s.combat!==null||s.dead!==false||typeof s.complete!=='boolean')return null;
  for(const key of ['potions','gold','cheese','weapon'])if(!count(s[key]))return null;
  if(!count(s.xp)||!Number.isInteger(s.pending)||s.pending<0||s.pending>9)return null;
  if(typeof s.key!=='boolean'||!bools(s.flags)||!Array.isArray(s.achievements)||s.achievements.some(x=>typeof x!=='string')||!Array.isArray(s.log)||s.log.some(x=>typeof x!=='string'))return null;
