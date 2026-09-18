@@ -82,7 +82,7 @@ function talk(s,id,say){const n=s.npcs[id],m=n.memory;m.met=true;
   vex:m.befriended?'Vex: “I wanted a rival. The producers wanted a corpse. Stay alive and we both get to disappoint somebody.”':m.helped?'Vex: “Useful information beats loud confidence. You brought something useful. That puts you ahead of most of this room.”':'Vex rests a blade across one knee. “Don’t mistake a shared exit for a team. Read the maintenance memo in Lost Property and tell me what it says. Or spare a potion. Then we’ll see.”'
  };say(s,lines[id]);
 }
-export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()=>{},rng=Math.random}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
+export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()=>{},bonus=()=>0,rng=Math.random}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
  if(action==='Inspect'){say(s,describeNPC(s,id));return true;}
  if(action==='Loot'){const got=takeAll(s,n,id);m.looted=true;if(got!=='nothing'&&n.condition==='unconscious'){betray(n);m.robbed=true;n.attitude='hostile';}say(s,got==='nothing'?`${d.name} has nothing left. Possessions do not respawn.`:`You take ${got} from ${d.name}. ${n.condition==='unconscious'?'They remain alive and unconscious.':'They remain dead.'}`);return true;}
  if(action==='Wake up'){n.condition='conscious';n.hp=Math.max(1,Math.ceil(d.hp/4));m.woken=true;n.attitude='hostile';say(s,`${d.name} wakes at ${n.hp} HP. They remember the attack${m.looted?' and the missing possessions':''}. Waking them does not restore their inventory or trust.`);return true;}
@@ -157,7 +157,7 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()
   // A distracted or friendly target is easier; an alert one is harder. The
   // roll is the central d20 check, so the result line shows its working.
   const alert=!m.distracted&&n.attitude!=='friendly',dc=pickpocketDC(id);
-  const result=check({actor:s,skill:'sleight of hand',dc,advantage:!alert,disadvantage:alert,rng});
+  const result=check({actor:s,skill:'sleight of hand',dc,advantage:!alert,disadvantage:alert,modifiers:bonus('checks'),rng});
   const odds=result.advantage?' with advantage':result.disadvantage?' with disadvantage':'';
   const spread=result.rolls.length>1?` from ${result.rolls.join(' and ')}`:'';
   const line=`Sleight of hand ${result.total} (d20 ${result.rawRoll}${spread} + ${result.abilityModifier} dexterity${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${odds}) against DC ${dc}. ${result.success?'Success.':'Failure.'}`;

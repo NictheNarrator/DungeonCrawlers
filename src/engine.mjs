@@ -8,11 +8,11 @@ export const props=[
  [{id:'rat',name:'Ratman scrapper',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6},{id:'brazier',name:'Burning brazier',x:10,y:6,hazard:true}],
  [{id:'stairs',name:'Exit stairs',x:9,y:4},{id:'plaque',name:'Departure plaque',x:5,y:3},{id:'vex',name:'Vex, rival crawler',x:5,y:5},{id:'whetstone',name:'Vex’s sharpening kit',x:8,y:6,owner:'vex'}]
 ];
-export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:0,npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
+export function fresh(){return {version:2,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},accessories:[],npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
 export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);
  const entry=ACHIEVEMENTS[id]||{description:'',condition:'',reward:'box',message:'Logged. The dungeon saw that.'};
- if(entry.reward==='box')s.boxes++;
+ if(entry.reward==='box')s.boxes[entry.tier||'bronze']++;
  else if(entry.reward==='xp')awardXp(s,50,`achievement: ${id}`);
  say(s,`NEW ACHIEVEMENT: ${id}. ${entry.message}`);
  awardXp(s,40,`achievement: ${id}`);
@@ -115,7 +115,7 @@ function allyStrike(s,roll,rng){const enemy=s.combat?.enemy;if(!enemy)return fal
 export function witnesses(s,targetId){return roomProps(s).filter(p=>NPCS[p.id]&&p.id!==targetId&&s.npcs[p.id]?.condition==='conscious'&&Math.abs(p.x-s.x)+Math.abs(p.y-s.y)<=WITNESS_RANGE).map(p=>p.id);}
 export function witnessed(s,event,targetId){return recordWitness(s,witnesses(s,targetId),event,say);}
 export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id===id)||!actions(s,id).includes(action))return false;
-  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),rng});
+  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind),rng});
  if(action==='Inspect'){say(s,s.npcs[id]?describeNPC(s,id):({fountain:'Free full healing. The plaque says “A healthy contestant is a renewable resource.”',terminal:'ANNEX: “The exit requires a key, not a body count.” Tobin scavenges in Lost Property; Mara shelters in The Holdout; Vex waits in Departures. Mara’s locker has a free spare key. Talk, help, deceive, steal, or fight. People remember.',chest:'An abandoned chest. Coins, medical supplies, and something useful for a broken satchel.',crate:'The label says “artisan survival accompaniment.” It smells like cheese committing a crime.',note:'A sponsor memo. Its slogan could support a convincing lie; its safety warning would interest Vex.',locker:'An emergency exit key. Accessible even if every other survivor dies.',pipe:'A loose pipe hides a cache. Tobin may know more.',brazier:'A barrel of burning fuel. Kick it over and something will catch fire.',satchel:'Tobin’s satchel, packed and counted. He watches it the way other people watch doors.',whetstone:'Vex’s whetstone, left within reach. Taking it is a statement.',stairs:'The exit accepts any exit key. No NPC is required to finish.',plaque:'ANNEX: “No exit survey today. Your behavior was the survey.”'}[id]||id));return true;}
  if(id==='fountain'){s.hp=s.maxHp;say(s,'Fully healed. The station bills someone else. Enjoy the novelty.');}
  if(id==='chest'){s.flags.chest=true;s.gold+=6;s.potions++;s.items.repairKits++;say(s,'Found 6 coins, a potion, and a repair kit. Tobin could use the kit.');}
@@ -135,7 +135,7 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
  if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in The Holdout, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
  return true;
 }
-export function attackRange(s){const bonus=s.weapon+(s.flags.vexTraining?1:0)+classBonus(s);return [5+bonus,7+bonus];}
+export function attackRange(s){const bonus=s.weapon+(s.flags.vexTraining?1:0)+classBonus(s)+gearBonus(s,'damage');return [5+bonus,7+bonus];}
 export function classBonus(s){return s.class==='bruiser'?2:0;}
 // Levelling. XP comes from fights, discoveries, peaceful resolutions and
 // achievements; each level adds max HP and one stat increase to spend.
@@ -146,20 +146,52 @@ export const RACES={human:{name:'Human',description:'Adaptable, unremarkable, an
 // Achievements carry their own Dungeon AI line. Rewards are a loot box, bonus
 // XP, or nothing but the memory.
 export const ACHIEVEMENTS={
- 'First Blood':{description:'Defeat your first crawler.',condition:'Win any fight.',reward:'box',message:'Someone had to go first. It was not you. Statistically, that is a win.'},
- 'Occupational Hazard':{description:'Finish someone with fire or blood loss.',condition:'Kill an enemy with burning or bleeding.',reward:'box',message:'You shoved a Ratman into a fire. Congratulations on your exciting new career in workplace safety.'},
+ 'First Blood':{description:'Defeat your first crawler.',condition:'Win any fight.',reward:'box',tier:'bronze',message:'Someone had to go first. It was not you. Statistically, that is a win.'},
+ 'Occupational Hazard':{description:'Finish someone with fire or blood loss.',condition:'Kill an enemy with burning or bleeding.',reward:'box',tier:'silver',message:'You shoved a Ratman into a fire. Congratulations on your exciting new career in workplace safety.'},
  'Hands Off':{description:'Win a fight without a normal attack.',condition:'Win without using Attack.',reward:'xp',message:'You won without swinging properly. Filed under interpretive dance.'},
- 'Terminal Optimism':{description:'Win a fight at death’s door.',condition:'Survive a fight at a quarter health or less.',reward:'box',message:'Held together by adrenaline and poor decisions. Management is impressed. Management is also concerned.'},
+ 'Terminal Optimism':{description:'Win a fight at death’s door.',condition:'Survive a fight at a quarter health or less.',reward:'box',tier:'gold',message:'Held together by adrenaline and poor decisions. Management is impressed. Management is also concerned.'},
  'Five-Finger Discount':{description:'Steal something successfully.',condition:'Pick a pocket or rob someone without being caught.',reward:'xp',message:'Property is a social construct. So is trust, and you just deleted both.'},
  'Sticky Fingers':{description:'Get caught stealing.',condition:'Be caught picking a pocket, or have a theft discovered.',reward:'none',message:'You reached for something and found consequences instead. Fascinating.'},
  'Severance Package':{description:'Betray someone who trusted you.',condition:'Attack, rob or loot a recruited ally.',reward:'none',message:'They trusted you. You have chosen a different retirement plan. Yours.'},
- 'Pack Tactics':{description:'Beat two enemies in one fight.',condition:'Defeat two or more enemies in a single fight.',reward:'box',message:'Two against one, and you still won. The dungeon suggests you stop while the odds look like that.'},
- 'Cheese diplomacy':{description:'Pay the custodian in cheese.',condition:'Offer the ratman cheese.',reward:'box',message:'You bribed a civil servant with dairy. That is how the building works. You are learning.'},
- 'Quiet quitting':{description:'Slip past a problem.',condition:'Sneak past the ratman.',reward:'box',message:'You avoided a fight by walking quietly. Your performance review notes “technically employed”.'},
- 'Pipe dream':{description:'Find a hidden cache.',condition:'Search the loose pipe.',reward:'box',message:'Hidden coins behind a pipe. Inspirational. Send a postcard from your retirement.'},
- 'People person':{description:'Make a friend in the dungeon.',condition:'Befriend a survivor.',reward:'box',message:'You made a friend. In here. Adorable. Try not to outlive them.'},
- 'Mutual inventory':{description:'Earn a scavenger’s trust.',condition:'Befriend Tobin.',reward:'box',message:'Tobin likes you now. He has a strange way of showing it, involving assets and dividends.'},
- 'Worthy rival':{description:'Earn a rival’s respect.',condition:'Befriend Vex.',reward:'box',message:'Vex respects you. That is not friendship, it is a future grievance with better posture.'}
+ 'Pack Tactics':{description:'Beat two enemies in one fight.',condition:'Defeat two or more enemies in a single fight.',reward:'box',tier:'gold',message:'Two against one, and you still won. The dungeon suggests you stop while the odds look like that.'},
+ 'Cheese diplomacy':{description:'Pay the custodian in cheese.',condition:'Offer the ratman cheese.',reward:'box',tier:'bronze',message:'You bribed a civil servant with dairy. That is how the building works. You are learning.'},
+ 'Quiet quitting':{description:'Slip past a problem.',condition:'Sneak past the ratman.',reward:'box',tier:'bronze',message:'You avoided a fight by walking quietly. Your performance review notes “technically employed”.'},
+ 'Pipe dream':{description:'Find a hidden cache.',condition:'Search the loose pipe.',reward:'box',tier:'bronze',message:'Hidden coins behind a pipe. Inspirational. Send a postcard from your retirement.'},
+ 'People person':{description:'Make a friend in the dungeon.',condition:'Befriend a survivor.',reward:'box',tier:'silver',message:'You made a friend. In here. Adorable. Try not to outlive them.'},
+ 'Mutual inventory':{description:'Earn a scavenger’s trust.',condition:'Befriend Tobin.',reward:'box',tier:'silver',message:'Tobin likes you now. He has a strange way of showing it, involving assets and dividends.'},
+ 'Worthy rival':{description:'Earn a rival’s respect.',condition:'Befriend Vex.',reward:'box',tier:'silver',message:'Vex respects you. That is not friendship, it is a future grievance with better posture.'}
+};
+// Reward boxes. They only open in a safe room, and each tier rolls on its own
+// table. Every entry carries its own Dungeon AI line.
+export const BOX_TIERS=['bronze','silver','gold'];
+export const SAFE_ROOMS=[0];
+export function isSafeRoom(s){return SAFE_ROOMS.includes(s.room);}
+export const ACCESSORIES={
+ 'Lucky charm':{bonus:'checks',value:1,description:'+1 on every check and saving throw.'},
+ 'Iron signet':{bonus:'damage',value:1,description:'+1 melee damage.'}
+};
+export const BOX_LOOT={
+ bronze:[
+  {weight:3,text:'Bandage',message:'A bandage. Planning ahead for another terrible decision?',apply:s=>{s.items.bandages++;}},
+  {weight:3,text:'Healing potion',message:'A healing potion. Optimism in a bottle.',apply:s=>{s.potions++;}},
+  {weight:2,text:'Cheese',message:'Food. It is cheese. Try not to think about where it has been.',apply:s=>{s.cheese++;}},
+  {weight:2,text:'20 XP',message:'Twenty experience points. Barely a rounding error, and you earned every one.',apply:s=>awardXp(s,20,'a bronze box')},
+  {weight:2,text:'Whetstone',message:'A basic weapon upgrade. The dungeon is impressed by your standards. It is not.',apply:s=>{s.items.whetstones++;}}
+ ],
+ silver:[
+  {weight:3,text:'Honed blade',message:'A better blade. You will still swing it the same way.',apply:s=>{s.weapon++;s.gold+=10;}},
+  {weight:3,text:'Padded vest',message:'Congratulations. Pants with armor. Civilization has peaked.',apply:s=>{s.maxHp+=5;s.hp=Math.min(s.maxHp,s.hp+5);}},
+  {weight:3,text:'Field kit',message:'Useful consumables. Now you can be reckless with a budget.',apply:s=>{s.potions+=2;s.items.smokeBombs++;}},
+  {weight:2,text:'60 XP',message:'Sixty experience points. Try to spend them somewhere less fatal.',apply:s=>awardXp(s,60,'a silver box')},
+  {weight:2,text:'Lucky charm',message:'Lucky charm acquired. Finally, a strategy.',apply:s=>{if(!s.accessories.includes('Lucky charm'))s.accessories.push('Lucky charm');}}
+ ],
+ gold:[
+  {weight:3,text:'Masterwork blade',message:'Strong equipment. It will not fix your footwork, but it will hide it.',apply:s=>{s.weapon+=2;}},
+  {weight:3,text:'Iron signet',message:'A rare accessory. It does nothing visible and everything quietly.',apply:s=>{if(!s.accessories.includes('Iron signet'))s.accessories.push('Iron signet');}},
+  {weight:3,text:'150 XP',message:'A large pile of experience. Statistically, you have survived more of the building than most.',apply:s=>awardXp(s,150,'a gold box')},
+  {weight:2,text:'Sponsor parcel',message:'A special delivery from a sponsor who has not read your file.',apply:s=>{s.gold+=25;s.potions+=2;s.items.repairKits++;}},
+  {weight:2,text:'Training token',message:'A class-related token. Somebody believes in you. That must be exhausting.',apply:s=>{s.pending=(s.pending||0)+1;}}
+ ]
 };
 export const CLASSES={
  bruiser:{name:'Bruiser',description:'You solve rooms the direct way.',primary:'strength',passive:'Heavy hands: +2 melee damage.',active:'Cleave',deeds:['melee','environment']},
@@ -248,7 +280,7 @@ export function combatActions(s){if(!s.combat)return [];
 // every archetype attacks through exactly the same rules.
 function hitPlayer(s,id,damage,roll,rng,playerAction,d){const me=conditionsOf(s,'player');let total=damage;
  if(playerAction==='Defend'){total=Math.floor(total/2);say(s,'You defend: incoming damage is halved, rounded down.');}
- if(damage===d.damage[1]&&d.onHit&&!me[d.onHit]){const save=d20({actor:s,ability:'constitution',save:true,dc:11,modifiers:s.race==='human'?2:0,rng});say(s,`Constitution save ${save.total} against DC 11. ${save.success?'Success.':'Failure.'}`);if(!save.success)applyCondition(s,'player',d.onHit,3,say);}
+ if(damage===d.damage[1]&&d.onHit&&!me[d.onHit]){const save=d20({actor:s,ability:'constitution',save:true,dc:11,modifiers:(s.race==='human'?2:0)+gearBonus(s,'checks'),rng});say(s,`Constitution save ${save.total} against DC 11. ${save.success?'Success.':'Failure.'}`);if(!save.success)applyCondition(s,'player',d.onHit,3,say);}
  const guard=withPlayer(s).filter(member=>member!==id&&s.npcs[member].condition==='conscious').sort((a,b)=>s.npcs[a].hp-s.npcs[b].hp)[0];
  if(total>0&&guard){s.npcs[guard].hp=Math.max(0,s.npcs[guard].hp-total);say(s,`${d.name} hits ${NPCS[guard].name} for ${total}. ${s.npcs[guard].hp} HP remain.`);
   if(s.npcs[guard].hp===0){s.npcs[guard].condition='unconscious';say(s,`${NPCS[guard].name} is knocked out and can no longer help.`);}}
@@ -291,7 +323,7 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
  if(action==='Pat out flames'){clearCondition(s,'player','burning',say);say(s,'You smother the flames.');}
  if(action==='Treat bleeding'){if(!s.items.bandages){say(s,'No bandages. The wound keeps bleeding.');return false;}s.items.bandages--;clearCondition(s,'player','bleeding',say);say(s,'You bind the wound. It stops, for now.');}
  if(action==='Tip the brazier'){s.flags.brazier=true;recordDeed(s,'fire');recordDeed(s,'environment');applyCondition(s,id,'burning',3,say);say(s,'You kick the brazier over. Burning fuel spreads across the floor.');}
- if(action==='Shove'||action==='Grapple'||action==='Break free'){const result=d20({actor:s,skill:'athletics',dc,disadvantage:me('poisoned'),advantage:s.class==='trapper',modifiers:skillBonus(s,'athletics'),rng});
+ if(action==='Shove'||action==='Grapple'||action==='Break free'){const result=d20({actor:s,skill:'athletics',dc,disadvantage:me('poisoned'),advantage:s.class==='trapper',modifiers:skillBonus(s,'athletics')+gearBonus(s,'checks'),rng});
   const line=`Athletics ${result.total} (d20 ${result.rawRoll}${result.rolls.length>1?` from ${result.rolls.join(' and ')}`:''} + ${result.abilityModifier}${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}) against DC ${dc}. ${result.success?'Success.':'Failure.'}`;
   if(action!=='Break free')recordDeed(s,'environment');
   if(action==='Break free'){if(result.success){clearCondition(s,'player','grappled',say);say(s,`${line} You tear free.`);}else say(s,`${line} You are still held.`);}
@@ -324,13 +356,26 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
 export function usePotion(s){if(s.dead||s.complete||s.combat||s.hp>=s.maxHp||!s.potions)return false;s.potions--;const old=s.hp;s.hp=Math.min(s.maxHp,s.hp+10);say(s,`Recovered ${s.hp-old} HP.`);return true;}
 export function useBandage(s){if(s.dead||s.complete||s.combat||s.hp>=s.maxHp||!s.items.bandages)return false;s.items.bandages--;const old=s.hp;s.hp=Math.min(s.maxHp,s.hp+6);say(s,`Bandage restored ${s.hp-old} HP. It can also be given to Mara.`);return true;}
 export function useWhetstone(s){if(s.dead||s.complete||s.combat||!s.items.whetstones)return false;s.items.whetstones--;s.weapon++;say(s,'Sharpened your weapon: permanent +1 attack damage.');return true;}
-export function openBox(s){if(s.combat||s.dead||s.complete||!s.boxes)return false;s.boxes--;s.potions++;say(s,'Loot box: one healing potion. Corporate generosity, measured with a pipette.');return true;}
+// Opening a reward box. Only in a safe room, only one at a time, and the box
+// is gone whether you like the roll or not.
+export function openRewardBox(s,tier,rng=Math.random){if(!BOX_TIERS.includes(tier))return {ok:false,reason:'unknown'};
+ if(s.combat||s.dead||s.complete)return {ok:false,reason:'busy'};
+ if(!isSafeRoom(s))return {ok:false,reason:'unsafe'};
+ if(!(s.boxes[tier]>0))return {ok:false,reason:'empty'};
+ s.boxes[tier]--;
+ const table=BOX_LOOT[tier],total=table.reduce((sum,entry)=>sum+entry.weight,0);
+ let pick=rng()*total,entry=table[table.length-1];
+ for(const row of table){pick-=row.weight;if(pick<=0){entry=row;break;}}
+ entry.apply(s);
+ say(s,`${tier} box: ${entry.text}. ${entry.message}`);
+ return {ok:true,tier,reward:entry.text,message:entry.message};}
+export function gearBonus(s,kind){return (s.accessories||[]).reduce((total,name)=>{const item=ACCESSORIES[name];return total+(item&&item.bonus===kind?item.value:0);},0);}
 export function outcome(s){return PEOPLE.map(id=>{const n=s.npcs[id];return `${NPCS[id].name}: ${n.condition}, ${n.attitude}. ${memoryText(n)}.`;}).join('\n');}
 export function encode(s){if(s.dead||s.combat)return null;return JSON.stringify(s);}
 // The bridge between a saved character and the d20 rules: pass the result as
 // check({actor:character(s), skill:'stealth', dc:12}).
 export function character(s,id='player'){if(id==='player')return {name:'Crawler 01',level:s.level,abilities:s.abilities,skills:s.skills,saves:s.saves};const d=NPCS[id];return {name:d.name,level:d.level||1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
-function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!dictionary(s.stolen))s.stolen={};s.places=normalisePlaces(s.places);s.conditions=normaliseConditions(s.conditions);if(!Array.isArray(s.party))s.party=[];if(!dictionary(s.allies))s.allies={};if(!Number.isInteger(s.level))s.level=1;if(!Number.isInteger(s.maxHp)||s.maxHp<30)s.maxHp=30;if(!Number.isInteger(s.xp)||s.xp<0)s.xp=0;s.deeds=dictionary(s.deeds)?s.deeds:{};for(const deed of DEEDS)if(!Number.isInteger(s.deeds[deed])||s.deeds[deed]<0)s.deeds[deed]=0;if(!RACES[s.race])s.race="human";if(s.class!=="crawler"&&!CLASSES[s.class])s.class="crawler";if(typeof s.classOffered!=="boolean")s.classOffered=false;if(!Number.isInteger(s.pending)||s.pending<0)s.pending=0;return s;}
+function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!dictionary(s.stolen))s.stolen={};s.places=normalisePlaces(s.places);s.conditions=normaliseConditions(s.conditions);if(!Array.isArray(s.party))s.party=[];if(!dictionary(s.allies))s.allies={};if(!Number.isInteger(s.level))s.level=1;if(!Number.isInteger(s.maxHp)||s.maxHp<30)s.maxHp=30;if(!Number.isInteger(s.xp)||s.xp<0)s.xp=0;s.deeds=dictionary(s.deeds)?s.deeds:{};if(typeof s.boxes==='number')s.boxes={bronze:Math.max(0,s.boxes),silver:0,gold:0};if(!dictionary(s.boxes))s.boxes={bronze:0,silver:0,gold:0};for(const tier of BOX_TIERS)if(!Number.isInteger(s.boxes[tier])||s.boxes[tier]<0)s.boxes[tier]=0;if(!Array.isArray(s.accessories))s.accessories=[];s.accessories=s.accessories.filter(name=>!!ACCESSORIES[name]);for(const deed of DEEDS)if(!Number.isInteger(s.deeds[deed])||s.deeds[deed]<0)s.deeds[deed]=0;if(!RACES[s.race])s.race="human";if(s.class!=="crawler"&&!CLASSES[s.class])s.class="crawler";if(typeof s.classOffered!=="boolean")s.classOffered=false;if(!Number.isInteger(s.pending)||s.pending<0)s.pending=0;return s;}
 function dictionary(v){return v&&typeof v==='object'&&!Array.isArray(v);}
 function bools(v){return dictionary(v)&&Object.values(v).every(x=>typeof x==='boolean');}
 function count(v){return Number.isInteger(v)&&v>=0&&v<=100000;}
@@ -341,11 +386,12 @@ function migrate(s){const old=s.npcs;for(const id of ['mara','rat']){const n=old
  if(blocked(s,s.x,s.y)){const candidates=[];for(let y=1;y<=7;y++)for(let x=1;x<=11;x++)if(!blocked(s,x,y))candidates.push({x,y,d:Math.abs(x-s.x)+Math.abs(y-s.y)});candidates.sort((a,b)=>a.d-b.d);s.x=candidates[0].x;s.y=candidates[0].y;}return s;
 }
 export function decode(raw){try{let s=JSON.parse(raw);if(!dictionary(s)||![1,2].includes(s.version)||!Number.isInteger(s.room)||s.room<0||s.room>4||!Number.isInteger(s.x)||!Number.isInteger(s.y)||s.x<1||s.x>11||s.y<1||s.y>7||!Number.isInteger(s.maxHp)||s.maxHp<30||s.maxHp>200||!Number.isInteger(s.hp)||s.hp<1||s.hp>s.maxHp||s.combat!==null||s.dead!==false||typeof s.complete!=='boolean')return null;
- for(const key of ['potions','gold','cheese','boxes','weapon'])if(!count(s[key]))return null;
+ for(const key of ['potions','gold','cheese','weapon'])if(!count(s[key]))return null;
  if(!count(s.xp)||!Number.isInteger(s.pending)||s.pending<0||s.pending>9)return null;
  if(typeof s.key!=='boolean'||!bools(s.flags)||!Array.isArray(s.achievements)||s.achievements.some(x=>typeof x!=='string')||!Array.isArray(s.log)||s.log.some(x=>typeof x!=='string'))return null;
  if(s.version===1){s=migrate(s);if(!s)return null;}
  s=withCharacter(s);
+ if(!dictionary(s.boxes)||BOX_TIERS.some(tier=>!count(s.boxes[tier])))return null;
  if(!RACES[s.race]||(s.class!=='crawler'&&!CLASSES[s.class])||typeof s.classOffered!=='boolean')return null;
  if(!dictionary(s.deeds)||DEEDS.some(deed=>!count(s.deeds[deed])))return null;
  if(!dictionary(s.items)||ITEM_KEYS.some(k=>!count(s.items[k]))||!Number.isSafeInteger(s.logSerial)||s.logSerial<0)return null;
