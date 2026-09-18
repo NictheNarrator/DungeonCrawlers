@@ -17,9 +17,9 @@ export function memoryText(n){const names={helped:'helped',befriended:'befriende
 export function stockText(n){return STOCK_KEYS.filter(k=>n.inventory[k]>0).map(k=>`${n.inventory[k]} ${itemName[k]}`).join(', ')||'nothing left';}
 export function tradePrice(s,id){const n=s.npcs[id];return Math.max(1,NPCS[id].price+(n.attitude==='suspicious'?1:0)-(n.attitude==='friendly'?1:0)-(n.memory.distracted?1:0));}
 export function describeNPC(s,id){const n=s.npcs[id],d=NPCS[id];return `${d.name} · ${n.attitude} · ${n.condition} · ${n.hp}/${d.hp} HP. Damage ${d.damage.join('–')}. Carries: ${stockText(n)}. Remembers: ${memoryText(n)}.`;}
-export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];return ['Inspect','Talk','Help','Befriend','Threaten','Lie','Trade','Pickpocket','Rob openly','Attack','Knock unconscious','Kill'];}
+export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];const owed=Object.keys(s.stolen||{}).some(key=>s.stolen[key]===id);return ['Inspect','Talk','Help','Befriend','Threaten','Lie','Trade','Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
 function transfer(s,n,key,count){const amount=Math.min(n.inventory[key],count);if(!amount)return 0;n.inventory[key]-=amount;if(key==='key')s.key=true;else if(ITEM_KEYS.includes(key))s.items[key]+=amount;else s[key]+=amount;return amount;}
-function takeAll(s,n){const got=[];for(const key of STOCK_KEYS){const amount=transfer(s,n,key,n.inventory[key]);if(amount)got.push(`${amount} ${itemName[key]}`);}return got.join(', ')||'nothing';}
+function takeAll(s,n,id){const got=[];for(const key of STOCK_KEYS){const amount=transfer(s,n,key,n.inventory[key]);if(amount){got.push(`${amount} ${itemName[key]}`);if(id)s.stolen[key]=id;}}return got.join(', ')||'nothing';}
 function betray(n){if(n.memory.helped||n.memory.befriended||n.attitude==='friendly')n.memory.betrayed=true;}
 export function discoverThefts(s,ids,say){for(const id of ids){const n=s.npcs[id];if(!n||n.condition!=='conscious'||!n.memory.stolen||n.memory.theftDetected)continue;n.memory.theftDetected=true;n.memory.distracted=false;n.attitude='hostile';say(s,`${NPCS[id].name} notices the missing belongings as you leave. The theft is remembered.`);}}
 // Witnessing. An NPC only learns about a major event by being in the room and
@@ -59,10 +59,19 @@ function talk(s,id,say){const n=s.npcs[id],m=n.memory;m.met=true;
 }
 export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Math.random}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
  if(action==='Inspect'){say(s,describeNPC(s,id));return true;}
- if(action==='Loot'){const got=takeAll(s,n);m.looted=true;if(got!=='nothing'&&n.condition==='unconscious'){betray(n);m.robbed=true;n.attitude='hostile';}say(s,got==='nothing'?`${d.name} has nothing left. Possessions do not respawn.`:`You take ${got} from ${d.name}. ${n.condition==='unconscious'?'They remain alive and unconscious.':'They remain dead.'}`);return true;}
+ if(action==='Loot'){const got=takeAll(s,n,id);m.looted=true;if(got!=='nothing'&&n.condition==='unconscious'){betray(n);m.robbed=true;n.attitude='hostile';}say(s,got==='nothing'?`${d.name} has nothing left. Possessions do not respawn.`:`You take ${got} from ${d.name}. ${n.condition==='unconscious'?'They remain alive and unconscious.':'They remain dead.'}`);return true;}
  if(action==='Wake up'){n.condition='conscious';n.hp=Math.max(1,Math.ceil(d.hp/4));m.woken=true;n.attitude='hostile';say(s,`${d.name} wakes at ${n.hp} HP. They remember the attack${m.looted?' and the missing possessions':''}. Waking them does not restore their inventory or trust.`);return true;}
   if(action==='Kill'&&n.condition==='unconscious'){betray(n);n.condition='dead';n.hp=0;m.killed=true;n.attitude='hostile';say(s,`${d.name} is dead. Their remaining possessions can be looted. ANNEX: “One fewer unresolved relationship.”`);witness('kill',id);return true;}
  if(action==='Talk'){talk(s,id,say);return true;}
+ if(action==='Hand it back'){
+  const owed=Object.keys(s.stolen||{}).filter(key=>s.stolen[key]===id),returned=[];
+  for(const key of owed){const held=key==='gold'?Math.min(s.gold,3):key==='key'?(s.key?1:0):ITEM_KEYS.includes(key)?s.items[key]:(s[key]||0);
+   if(held){returned.push(`${held} ${itemName[key]}`);if(key==='gold')s.gold-=held;else if(key==='key')s.key=false;else if(ITEM_KEYS.includes(key))s.items[key]-=held;else s[key]-=held;n.inventory[key]=(n.inventory[key]||0)+held;}
+   delete s.stolen[key];}
+  m.returned=true;if(n.attitude==='hostile')n.attitude='suspicious';
+  say(s,returned.length?`You hand back ${returned.join(', ')}. ${d.name} counts it in front of you, slowly.`:`You have nothing left to return, and ${d.name} knows it.`);
+  return true;
+ }
  if(action==='Help'){
   if(m.helped){say(s,`${d.name} remembers your help. There is no second reward for repeating it.`);return true;}
   let cost='';if(id==='mara'){if(s.items.bandages){s.items.bandages--;cost='a bandage';}else if(s.potions){s.potions--;cost='a healing potion';}}
@@ -102,15 +111,22 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],rng=Mat
   const line=`Sleight of hand ${result.total} (d20 ${result.rawRoll}${spread} + ${result.abilityModifier} dexterity${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${odds}) against DC ${dc}. ${result.success?'Success.':'Failure.'}`;
   if(!result.success){betray(n);m.theftAttempt=true;n.attitude='hostile';say(s,`${line} ${d.name} catches your hand. They are now hostile.`);witness('theft',id);return true;}
   const key=[d.pick,'potions','gold',...ITEM_KEYS,'key'].find(k=>n.inventory[k]>0);if(!key){say(s,`${d.name} has nothing to steal.`);return true;}
-  const got=transfer(s,n,key,key==='gold'?2:1);betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
+  const got=transfer(s,n,key,key==='gold'?2:1);s.stolen[key]=id;betray(n);m.stolen=true;m.distracted=false;say(s,`${line} You quietly take ${got} ${itemName[key]} from ${d.name}. They will discover the theft when you leave this room. It will not be forgotten.`);witness('theft',id);return true;
  }
  if(action==='Threaten'){
   betray(n);m.threatened=true;n.attitude=n.attitude==='friendly'?'suspicious':'hostile';say(s,`${d.name} remembers your threat. ${id==='vex'?'Vex draws a weapon rather than backing down.':'They pull their belongings close. Open robbery would take them, but end any chance of trust.'}`);if(id==='vex')startCombat(s,id,'lethal');return true;
  }
  if(action==='Rob openly'){
   betray(n);m.robberyAttempt=true;n.attitude='hostile';if(id==='vex'){say(s,'Vex: “You have badly misread the room.” Vex fights back; defeat them before looting.');startCombat(s,id,'lethal');return true;}
-  m.robbed=true;say(s,`${d.name} surrenders ${takeAll(s,n)} rather than die. They remain alive, hostile, and remember the robbery. ${id==='tobin'?'Tobin reaches for a radio.':''}`);witness('rob',id);return true;
+  m.robbed=true;say(s,`${d.name} surrenders ${takeAll(s,n,id)} rather than die. They remain alive, hostile, and remember the robbery. ${id==='tobin'?'Tobin reaches for a radio.':''}`);witness('rob',id);return true;
  }
  if(['Attack','Knock unconscious','Kill'].includes(action)){startCombat(s,id,action==='Knock unconscious'?'nonlethal':'lethal');return true;}
  return false;
 }
+// Being caught taking something. How the owner reacts depends on who they are:
+// Vex attacks, Mara and Tobin demand it back, and everyone remembers.
+export function confront(s,id,say,startCombat){const n=s.npcs[id],d=NPCS[id];n.memory.stolen=true;n.memory.theftDetected=true;n.memory.demanded=true;n.attitude='hostile';
+ if(id==='vex'){say(s,'Vex: “Put it down. You can keep the memory, not the whetstone.” Vex draws a weapon.');startCombat(s,id,'lethal');return;}
+ if(id==='mara'){say(s,'Mara: “That is mine. Put it back and we can both pretend this stayed civil.”');return;}
+ if(id==='tobin'){say(s,'Tobin: “I counted those twice. You will hand them back.”');return;}
+ say(s,`${d.name} demands their belongings back.`);}
