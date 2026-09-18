@@ -10,15 +10,18 @@ function openPanel(id){stopHold();dialogs.forEach(d=>{if($(d).open)$(d).close();
 function saved(){try{return decode(localStorage.getItem(STORAGE));}catch{return null;}}
 function save(){const raw=encode(state);if(!raw)return false;try{localStorage.setItem(STORAGE,raw);$('savestatus').textContent='Saved on this device. Saves do not sync between browsers.';return true;}catch{$('savestatus').textContent='Saving is unavailable. Keep this game open to preserve your progress.';return false;}}
 function toast(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),5000);}
-// The Dungeon AI popup: same banner, gold and a little louder, and it waits
-// its turn so a fight does not bury the news.
-function announce(from){const won=state.achievements.slice(from);
- if(!won.length)return;const entry=achievementFor(won[won.length-1]);
- $('toast').textContent=`NEW ACHIEVEMENT: ${won[won.length-1]}\n“${entry?entry.message:'Logged. The dungeon saw that.'}”`;
- $('toast').classList.add('show','achievement');clearTimeout(toastTimer);
- toastTimer=setTimeout(()=>$('toast').classList.remove('show','achievement'),7000);}
+// The Dungeon AI popup. Several unlocks can land at once, so they queue and
+// each gets its own moment in the banner.
+let awardQueue=[],awardTimer=null;
+function showAward(){if(!awardQueue.length){$('toast').classList.remove('show','achievement');return;}
+ const name=awardQueue.shift(),entry=achievementFor(name);
+ $('toast').textContent=`NEW ACHIEVEMENT ${awardQueue.length?`(${awardQueue.length} more)`:''}: ${name}\n“${entry?entry.message:'Logged. The dungeon saw that.'}”`;
+ $('toast').classList.add('show','achievement');clearTimeout(awardTimer);
+ awardTimer=setTimeout(showAward,4500);}
+function announce(from){const won=state.achievements.slice(from);if(!won.length)return;
+ awardQueue.push(...won);clearTimeout(awardTimer);showAward();}
 function modal(title,text,buttons){$('modaltitle').textContent=title;$('modaltext').textContent=text;$('modalbuttons').replaceChildren();for(const [label,fn] of buttons){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{$('modal').close();fn();};$('modalbuttons').append(b);}openPanel('modal');}
-function resetView(){target=null;npcTab='social';actionOpen=false;feedback='';motion=null;visual={x:state.x,y:state.y};dialogs.forEach(d=>$(d).close());stopHold();}
+function resetView(){awardQueue.length=0;clearTimeout(awardTimer);target=null;npcTab='social';actionOpen=false;feedback='';motion=null;visual={x:state.x,y:state.y};dialogs.forEach(d=>$(d).close());stopHold();}
 function load(){const s=saved();if(!s){modal('No living save found','Your save is missing or damaged.',[['Back',()=>{}],['New game',newGame]]);return;}state=s;resetView();render();if(state.complete)endScreen();else toast("Welcome back, crawler.");promptEvents();}
 function newGame(){state=fresh();resetView();save();render();toast('Find a key, then head east to the stairs.');}
 function restart(){modal('Start a new shift?','This replaces your saved progress on this device.',[['Keep playing',()=>{if(state.dead||state.complete)endScreen();}],['Start new game',newGame]]);}
@@ -41,7 +44,11 @@ function button(label,fn){const b=document.createElement('button');b.textContent
 function render(){
  $('rooms').replaceChildren(...rooms.map((r,i)=>{const el=document.createElement('span');el.className=i===state.room?'active':'';el.setAttribute('aria-label',r);if(i===state.room)el.setAttribute('aria-current','step');return el;}));
  $('roomtitle').textContent=rooms[state.room];$('mode').textContent=(state.combat?'YOUR TURN':'EXPLORING')+(conditionText(state,'player')?' · '+conditionText(state,'player'):'');$('hp').textContent=`${state.hp} / ${state.maxHp}`;$('healthbar').style.width=(100*state.hp/state.maxHp)+'%';$('healthbar').style.background=state.hp<10?'#e08e73':'var(--lime)';$('gold').textContent=state.gold;$('objective').textContent=(state.class!=='crawler'?CLASSES[state.class].name+' · ':'')+`Lv ${state.level} · ${state.xp}/${xpForNext(state.level)} XP`+(state.pending>0?' · LEVEL UP':(state.key?' · Key acquired · Head east':' · Find an exit key'));
- $('inventory').replaceChildren(...[`${state.potions} × Healing potion`,`${state.cheese} × Cheese`,`${state.boxes} × Loot box`,state.key?'1 × Exit key':'No exit key yet',...Object.entries(state.items).map(([key,n])=>`${n} × ${itemName[key]}`),`Attack: ${attackRange(state).join('–')}`].map(t=>{const el=document.createElement('span');el.textContent=t;return el;}));$('achievements').textContent=state.achievements.map(a=>{const entry=achievementFor(a);return '◇ '+a+(entry?': '+entry.description:'');}).join(' · ');$('packcount').textContent=state.potions+state.cheese+state.boxes+Object.values(state.items).reduce((a,b)=>a+b,0);
+ $('inventory').replaceChildren(...[`${state.potions} × Healing potion`,`${state.cheese} × Cheese`,`${state.boxes} × Loot box`,state.key?'1 × Exit key':'No exit key yet',...Object.entries(state.items).map(([key,n])=>`${n} × ${itemName[key]}`),`Attack: ${attackRange(state).join('–')}`].map(t=>{const el=document.createElement('span');el.textContent=t;return el;}));
+ // One line per achievement so a long list stays readable and scrollable.
+ $('achievements').replaceChildren(...(state.achievements.length?state.achievements.map(name=>{const entry=achievementFor(name),row=document.createElement('article'),title=document.createElement('strong'),line=document.createElement('p');
+  title.textContent='◇ '+name;line.textContent=(entry?entry.description:'Logged by the dungeon.')+(entry?` (${entry.reward})`:'');row.append(title,line);return row;}):[Object.assign(document.createElement('p'),{textContent:'Nothing yet. Try doing something regrettable.'})]));
+ $('packcount').textContent=state.potions+state.cheese+state.boxes+Object.values(state.items).reduce((a,b)=>a+b,0);
  const stopped=!!(state.combat||state.dead||state.complete);$('potion').disabled=stopped||!state.potions||state.hp===30;$('box').disabled=stopped||!state.boxes;$('bandage').disabled=stopped||!state.items.bandages||state.hp===30;$('sharpen').disabled=stopped||!state.items.whetstones;$('save').disabled=stopped;$('load').disabled=!saved();document.querySelectorAll('[data-move]').forEach(b=>b.disabled=stopped);
  $('relationships').replaceChildren(...PEOPLE.map(id=>{const n=state.npcs[id],card=document.createElement('article');const h=document.createElement('strong');h.textContent=NPCS[id].name+' · '+n.attitude+' · '+n.condition;const p=document.createElement('p');p.textContent=memoryText(n)+'. Remaining possessions: '+stockText(n)+'.';card.append(h,p);return card;}));
  $('log').replaceChildren(...state.log.map(t=>{const el=document.createElement('li');el.textContent=t;return el;}));
