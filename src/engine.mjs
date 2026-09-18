@@ -11,7 +11,7 @@ export const props=[
  [{id:'fountain',name:'Recovery station',x:4,y:3},{id:'terminal',name:'Welcome terminal',x:8,y:3},
   {id:'sign',name:'Wayfinding sign',x:2,y:2},{id:'vending',name:'Vending machine',x:6,y:2},{id:'tickets',name:'Ticket dispenser',x:7,y:5},
   {id:'bin',name:'Overflowing bin',x:10,y:6},{id:'bag',name:'Abandoned bag',x:2,y:6},{id:'service',name:'Service door',x:11,y:3},
-  {id:'help',name:'Help point',x:9,y:5},{id:'debris',name:'Scattered debris',x:5,y:6},{id:'cart',name:'Overturned cart',x:2,y:4},{id:'mara',name:'Mara, survivor',x:3,y:4}],
+  {id:'help',name:'Help point',x:9,y:5},{id:'debris',name:'Scattered debris',x:5,y:6},{id:'cart',name:'Overturned cart',x:2,y:4},{id:'mara',name:'Mara, survivor',x:3,y:4},{id:'skrit',name:'Skrit',x:6,y:3}],
  [{id:'chest',name:'Abandoned chest',x:4,y:3},{id:'crate',name:'Cracked crate',x:8,y:6},{id:'note',name:'Folded memo',x:8,y:3},{id:'tobin',name:'Tobin, scavenger',x:6,y:6},{id:'satchel',name:'Tobin’s satchel',x:5,y:5,owner:'tobin'},{id:'skulker',name:'Ratman skulker',x:10,y:2}],
  [{id:'locker',name:'Emergency locker',x:9,y:3},{id:'brute',name:'Ratman brute',x:2,y:6}],
  [{id:'rat',name:'Ratman scrapper',x:7,y:4},{id:'pipe',name:'Loose pipe',x:4,y:6},{id:'brazier',name:'Burning brazier',x:10,y:6,hazard:true}],
@@ -102,6 +102,7 @@ export function move(s,dx,dy){if(s.combat||s.dead||s.complete||!Number.isInteger
 export function nearby(s){const found=roomProps(s).filter(p=>Math.abs(p.x-s.x)+Math.abs(p.y-s.y)<=1);
  if(!s.registered&&s.room===SURFACE)found.push({id:'phone',name:'Your phone',x:s.x,y:s.y});return found;}
 function baseActions(s,id){if(s.dead||s.complete||s.combat)return [];if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return npcActions(s,id);
+ if(id==='skrit')return ['Inspect','Talk','Help with the machine','Pickpocket','Leave him alone','Fight'];
  if(NPCS[id]?.archetype&&id!=='rat')return ['Inspect','Fight',...(s.cheese?['Offer cheese']:[])];
  switch(id){
  case 'fountain':return ['Inspect','Heal'];case 'terminal':return ['Inspect'];
@@ -169,6 +170,20 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
    return true;}
   if(id==='service'&&action==='Try the handle'){say(s,'Locked. Beside the handle is a small slot the exact size of a maintenance badge.');return true;}
   if(id==='stairwell'&&action==='Enter the stairwell'){if(register(s))say(s,'You step over the threshold. The door comes down behind you like it was waiting for exactly that.');return true;}
+ // Skrit: a person with a bad leg, a bent spoon and no interest in fighting.
+ if(id==='skrit'){
+  if(action==='Inspect'){say(s,'A ratman, waist high, one leg wrapped in a strip of somebody’s curtain. He is not attacking you. He is trying to open a vending machine with a bent spoon. '+(s.npcs.skrit.memory.fed?'He is eating.':'He keeps looking at your hands.'));return true;}
+  if(action==='Help with the machine'){s.flags.vending=true;s.npcs.skrit.memory.helped=true;s.npcs.skrit.memory.distracted=false;
+   shiftMember(s,'skrit',-1,'you helped one of them');
+   say(s,'You get both hands under the panel and lift. The machine gives and a shelf of food falls into the dark. Skrit takes two packets and offers you one, which is the closest thing to a contract this building has.');
+   award(s,'Skrit’s ledger');return true;}
+  if(action==='Leave him alone'){say(s,'You step back the way you came. He watches you go, spoon still raised.');return true;}
+  if(action==='Pickpocket'){const dc=10,result=d20({actor:s,skill:'sleight of hand',dc,advantage:true,modifiers:skillBonus(s,'sleight of hand')+gearBonus(s,'checks'),rng});
+   if(!result.success){s.npcs.skrit.memory.theftAttempt=true;s.npcs.skrit.attitude='hostile';shiftMember(s,'skrit',2,'you tried to rob him');
+    say(s,`Sleight of hand ${result.total} against DC ${dc}. Failure. He feels your hand and scrambles backwards, hissing.`);return true;}
+   const took=Math.min(2,s.npcs.skrit.inventory.gold);s.npcs.skrit.inventory.gold-=took;s.gold+=took;s.stolen.gold='skrit';s.npcs.skrit.memory.stolen=true;
+   recordDeed(s,'theft');award(s,'Five-Finger Discount');shiftMember(s,'skrit',2,'you stole from him');
+   say(s,`Sleight of hand ${result.total} against DC ${dc}. Success. You take ${took} coins while he is busy being hungry.`);return true;}}
  if(action==='Inspect'){say(s,s.npcs[id]?describeNPC(s,id)+(factionOf(id)?' '+factionLine(s,id):''):({sign:'WAYFINDING. Arrows point to PEST CONTROL, DEPARTURES and a third place the sign does not name. Someone has scratched out the last one.',vending:'A vending machine, still lit. Six rows of things that were food this morning.',tickets:'A ticket dispenser, still working. It is the only machine down here that seems pleased with itself.',bin:'An overflowing bin. Municipal pride, post-apocalypse.',bag:'An abandoned handbag, sitting where somebody put it down.',service:'A service door with a small badge slot beside the handle.',help:'A blue help point. The handset is warm.',debris:'Ceiling tiles, a shoe, a birthday card. The floor is made of small endings.',fountain:'Free full healing. The plaque says “A healthy contestant is a renewable resource.”',terminal:'ANNEX: “The exit requires a key, not a body count.” Tobin scavenges in Lost Property; Mara shelters in The Holdout; Vex waits in Departures. Mara’s locker has a free spare key. Talk, help, deceive, steal, or fight. People remember.',chest:'An abandoned chest. Coins, medical supplies, and something useful for a broken satchel.',crate:'The label says “artisan survival accompaniment.” It smells like cheese committing a crime.',note:'A sponsor memo. Its slogan could support a convincing lie; its safety warning would interest Vex.',locker:'An emergency exit key. Accessible even if every other survivor dies.',pipe:'A loose pipe hides a cache. Tobin may know more.',brazier:'A barrel of burning fuel. Kick it over and something will catch fire.',satchel:'Tobin’s satchel, packed and counted. He watches it the way other people watch doors.',whetstone:'Vex’s whetstone, left within reach. Taking it is a statement.',phone:'No service. No data. The screen still says 4G, which is the most optimistic thing left standing.',stranger1:'A man in a supermarket uniform, holding a phone that will not do anything. He has not stopped talking since it happened.',stranger2:'A woman with a cut over one eye, watching the stairwell like it might move. She has decided not to go down.',wreck:'A car folded around a lamppost. The alarm is still going, which feels like a design flaw.',awning:'Half a shopfront face down on the pavement. Somebody’s washing is still on the line above it.',stairs:'The exit accepts any exit key. No NPC is required to finish.',plaque:'ANNEX: “No exit survey today. Your behavior was the survey.”'}[id]||id));return true;}
   if(id==='stranger1'||id==='stranger2'){if(action==='Talk')say(s,id==='stranger1'?'“It just came down. All of it. My car is right there.” He keeps pointing at it like it might apologise.':'“Do not go down there. They are counting people in. I am not getting in a hole in the ground, I do not care what the sign says.”');}
  if(id==='fountain'){s.hp=s.maxHp;say(s,'Fully healed. The station bills someone else. Enjoy the novelty.');}
@@ -262,7 +277,7 @@ export const SLOTS=['weapon','armor','accessory'];
 // Two factions, one contested cache of supplies.
 export const FACTIONS={
  survivors:{name:'Survivors',members:['mara','tobin','vex'],leader:'mara'},
- ratmen:{name:'Ratmen',members:['rat','skulker','brute'],leader:'rat'}
+ ratmen:{name:'Ratmen',members:['rat','skulker','brute','skrit'],leader:'rat'}
 };
 export const STANDING=['friendly','neutral','suspicious','hostile'];
 export function factionOf(id){return Object.keys(FACTIONS).find(name=>FACTIONS[name].members.includes(id))||null;}
@@ -349,9 +364,20 @@ export function dialogueOptions(s){if(!s.pendingDialogue)return [];const node=no
 export function chooseDialogue(s,index,rng=Math.random){const pending=s.pendingDialogue;if(!pending)return null;
  const node=nodeFor(s,pending.id,pending.key),option=optionsFor(node)[index];if(!option)return null;
  const id=pending.id,n=s.npcs[id];delete s.pendingDialogue;
+ // Some replies need something in hand first; the conversation stays open.
+ if(option.needs&&!(s[option.needs]>0)){s.pendingDialogue=pending;say(s,`${NPCS[id].name} looks at your empty hands. “You not have.”`);return {blocked:option.needs};}
+ if(option.consume&&s[option.consume]>0)s[option.consume]--;
  if(option.lie){const result=d20({actor:s,skill:'deception',dc:option.dc||12,modifiers:skillBonus(s,'deception'),rng});
   if(result.success){n.memory.lied=true;say(s,`Deception ${result.total} against DC ${option.dc||12}. She believes you.`);}
   else{n.memory.lieExposed=true;n.attitude='suspicious';say(s,`Deception ${result.total} against DC ${option.dc||12}. She does not believe you.`);}}
+ if(option.intimidate){const result=d20({actor:s,skill:'intimidation',dc:option.dc||10,modifiers:skillBonus(s,'intimidation'),rng});
+  n.memory.intimidated=true;
+  if(result.success){say(s,`Intimidation ${result.total} against DC ${option.dc||10}. He backs away and limps off into the dark.`);const away=roomOf(s,id)+1<=4?roomOf(s,id)+1:Math.max(0,roomOf(s,id)-1);setPlace(s,id,away,5,4);}
+  else say(s,`Intimidation ${result.total} against DC ${option.dc||10}. He flinches, but he does not run.`);}
+ if(option.revealName)n.memory.revealedName=true;
+ if(option.revealHome)n.memory.revealedHome=true;
+ if(option.friendlyMember)shiftMember(s,option.friendlyMember,-1,'you helped one of them');
+ if(option.standing){const faction=option.standing.faction;if(option.standing.delta<0)improveStanding(s,faction,-option.standing.delta,'you helped one of them');else worsenStanding(s,faction,option.standing.delta,'you crossed one of them');}
  if(option.memory)n.memory[option.memory]=true;
  const mate=companionOf(s,id);
  if(option.memory&&mate)mate.memories[option.memory]=true;
@@ -547,7 +573,7 @@ function tickConditions(s,say){for(const id of ['player',...Object.keys(NPCS)]){
 // Secondary actions sit behind a disclosure in the dock so the common loop
 // stays three taps deep. The core is whatever is left.
 export const SECONDARY_ACTIONS=['Shove','Grapple','Switch to nonlethal','Switch to lethal','Smoke bomb','Tip the brazier','Flee','Switch target','Throw a rock','Cleave','Backstab','Snare','Rally','Terrify'];
-export const ARCHETYPE_RULES={scrapper:{speed:2,rush:true,shoves:true},skulker:{speed:2,thrown:[2,4],cover:true,fleesAt:0.35},brute:{speed:1,grapple:true,shoves:true}};
+export const ARCHETYPE_RULES={coward:{speed:1,fleesAt:0.5},scrapper:{speed:2,rush:true,shoves:true},skulker:{speed:2,thrown:[2,4],cover:true,fleesAt:0.35},brute:{speed:1,grapple:true,shoves:true}};
 function actorOf(d){return {name:d.name,level:1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
 function playerDC(s){return 10+modifier(s.abilities.strength)+(s.skills.includes('athletics')?proficiencyBonus(s.level):0);}
 export function hazardNear(s,id){const place=placeOf(s,id);return props[place.room].some(prop=>prop.hazard&&Math.abs(prop.x-place.x)+Math.abs(prop.y-place.y)<=1);}

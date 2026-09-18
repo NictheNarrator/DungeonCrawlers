@@ -19,6 +19,18 @@ export const DIALOGUE={
     {label:'“Where was the room?”',line:'Mara: “Further in. Blue lights. You will know it.”'},
     {label:'“You are lying to me.”',approval:-6,suspicious:true,line:'Mara: “I am not. You are just frightened, and it is making you unpleasant.”'}
    ]}
+ },
+ skrit:{
+  first:{
+   prompt:'He freezes with one paw still on the machine. “You… tall. You not take machine. Machine mine.”',
+   options:[
+    {label:'Hold up both hands and stay low.',memory:'greeted',line:'He looks at your hands, then at the doorway, then back at you. “Skrit. That me. Skrit is… name.” He says it like he is checking it still works.'},
+    {label:'“I am not here to hurt you.”',memory:'greeted',revealName:true,line:'“Skrit,” he says, tapping his chest. “Leg bad. Machine stuck. You not help, you not stand so close.”'},
+    {label:'“Back off, or this gets worse.”',intimidate:true,dc:10,memory:'threatened',line:'Skrit shrinks back against the machine, ears flat. “No. No, you keep. You keep all.”'},
+    {label:'“What is this place?”',memory:'questioned',line:'Skrit blinks at you. “Place?” He gestures at the concourse like it explains itself. “Is place. Is home. You not from here.”'},
+    {label:'Offer him something to eat.',needs:'cheese',consume:'cheese',memory:'fed',revealName:true,revealHome:true,friendlyMember:'skrit',line:'He takes the food with both paws and eats like he has been deciding for days whether to trust the floor. “Skrit,” he says, mouth full. “Others that way. All ratmen, that way. This place is ours. You walk soft, nobody bites.”'},
+    {label:'Leave him to it.',memory:'ignored',line:'He watches you go the whole way, one paw still on the machine.'}
+   ]}
  }
 };
 export function nodeFor(s,id,key){const tree=DIALOGUE[id];if(!tree)return null;const memory=s.npcs[id]?.memory||{};
