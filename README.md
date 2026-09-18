@@ -6,7 +6,7 @@ A complete small browser dungeon: five connected rooms, three rival survivors wh
 
 Open [DungeonCrawlers](https://nicthenarrator.github.io/DungeonCrawlers/) in Safari. The game uses one full-height screen with a following camera, hold-to-move direction pad, contextual interaction/combat dock, and in-game pack, notes, and pause panels. No page scrolling is needed to play. Portrait is the primary layout; phone landscape puts the controls beside the dungeon.
 
-For a standalone window, use Safari's Share menu to add the game to your Home Screen. A manifest, app icon, and iOS standalone metadata are included. Internet is still required to load the game; offline caching is not implemented. Existing saves are compatible.
+For a standalone window, use Safari's Share menu to add the game to your Home Screen. A manifest, app icon, and iOS standalone metadata are included. After one online visit the game is cached and playable with no connection. Existing saves are compatible.
 
 ## Run
 

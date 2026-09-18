@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import {writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {bindHoldControls} from './src/controls.mjs';
 import {fresh,rooms,props,move,blocked,interact,fight,actions,encode,decode,usePotion,useBandage,useWhetstone,openBox,attackRange,combatActions,outcome} from './src/engine.mjs';
 import {PEOPLE,NPCS,STOCK_KEYS} from './src/npcs.mjs';
-let passed=0;function test(name,fn){fn();passed++;console.log('PASS '+name);}
+let passed=0;const pending=[];function test(name,fn){const result=fn();if(result&&typeof result.then==='function')pending.push(result.then(()=>{passed++;console.log('PASS '+name);}));else{passed++;console.log('PASS '+name);}}
 function walk(s,tx,ty){const q=[[s.x,s.y,[]]],seen=new Set([s.x+','+s.y]);while(q.length){const [x,y,path]=q.shift();if(x===tx&&y===ty){for(const [dx,dy] of path)assert(move(s,dx,dy));return;}for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=nx+','+ny;if(!seen.has(k)&&!blocked(s,nx,ny)){seen.add(k);q.push([nx,ny,[...path,[dx,dy]]]);}}}assert.fail(`No route in ${rooms[s.room]} to ${tx},${ty}`);}
 function travel(s,room){while(s.room<room){walk(s,11,4);assert(move(s,1,0));}while(s.room>room){walk(s,1,4);assert(move(s,-1,0));}}
 function approach(s,id){const room=props.findIndex(ps=>ps.some(p=>p.id===id));travel(s,room);const p=props[room].find(p=>p.id===id);const candidate=[[p.x-1,p.y],[p.x+1,p.y],[p.x,p.y-1],[p.x,p.y+1]].find(([x,y])=>!blocked(s,x,y));walk(s,...candidate);}
@@ -52,5 +52,84 @@ test('Touch hold repeats and release stops; click does not double-step',()=>{con
 test('Cancelled touches and app pause stop held movement',()=>{const h=holdHarness();for(const type of ['pointercancel','lostpointercapture']){h.fire('pointerdown');h.fire(type);assert.equal(h.pending.size,0);}h.fire('pointerdown');h.controls.stop();assert.equal(h.pending.size,0);h.fire('pointerdown');h.lock();h.tick();assert.equal(h.pending.size,0);});
 test('Only the active finger owns direction and disabled controls do not move',()=>{const h=holdHarness();h.fire('pointerdown');h.fire('pointerdown',{pointerId:2},h.other);h.fire('pointerup',{pointerId:1});h.tick();assert.deepEqual(h.steps.at(-1),[0,-1]);h.fire('pointerup',{pointerId:2},h.other);assert.equal(h.pending.size,0);h.button.disabled=true;const before=h.steps.length;h.fire('pointerdown');h.fire('click',{detail:0});assert.equal(h.steps.length,before);});
 
-console.log(`\n${passed} checks passed.`);
+function quotedList(source,pattern){const block=source.match(pattern);assert(block,`Could not find a list to read: ${pattern}`);return block[1].split(',').map(part=>part.trim()).filter(part=>part.startsWith("'")).map(part=>part.slice(1,-1));}
+const swSource=readFileSync('sw.js','utf8');
+const buildSource=readFileSync('build.mjs','utf8');
+const shipped=quotedList(buildSource,/for\(const file of \[([\s\S]*?)\]\)/);
+const precached=quotedList(swSource,/const ASSETS = \[([\s\S]*?)\];/);
+const normalise=path=>path.replace(/^\.\//,'');
+
+test('The offline precache covers every file the build ships, and each one exists',()=>{
+ assert(precached.includes('./'),'A directory launch must be precached for Home Screen starts');
+ assert(existsSync('sw.js'));
+ // sw.js is deliberately absent: the browser keeps its own copy of the worker.
+ for(const file of shipped.filter(file=>file!=='sw.js'))assert(precached.map(normalise).includes(file),`${file} ships but is never precached`);
+ for(const asset of precached.map(normalise).filter(Boolean))assert(existsSync(asset),`${asset} is precached but missing from the repository`);
+});
+
+test('The service worker is registered, served as JavaScript, and cache-versioned',()=>{
+ assert(readFileSync('src/app.mjs','utf8').includes("register('sw.js')"),'The app must register the service worker');
+ assert(/\.js'\s*:\s*'text\/javascript'/.test(readFileSync('server.mjs','utf8')),'The dev server must serve .js as JavaScript or browsers refuse the worker');
+ assert(/CACHE = '[^']+'/.test(swSource),'The cache name must be versioned so releases can replace it');
+ assert(swSource.includes('caches.delete'),'Old caches must be cleaned up on activation');
+ assert(swSource.includes("request.mode === 'navigate'"),'Navigations need a shell fallback when the network is gone');
+ assert(swSource.includes('request.method !== \'GET\''),'Only GET requests may be intercepted');
+});
+
+test('Offline play leaves gameplay and save rules untouched',()=>{const s=fresh();getKey(s);finish(s);assert.equal(s.hp,30);assert(decode(encode(fresh())).version,2);});
+
+// The service worker is exercised directly, with a stubbed Cache API and
+// fetch, so the offline path is tested rather than only inspected.
+function workerHarness(){
+ const base='http://localhost:4173/';
+ const listeners={},stores=new Map();
+ let online=true;
+ const url=req=>new URL(typeof req==='string'?req:req.url,base).href;
+ const response=href=>({url:href,ok:true,type:'basic',clone(){return this;}});
+ const store=name=>{if(!stores.has(name))stores.set(name,new Map());return stores.get(name);};
+ const caches={open:async name=>{const map=store(name);return{addAll:async urls=>{if(!online)throw new Error('offline');for(const item of urls)map.set(url(item),response(url(item)));},put:async(req,res)=>map.set(url(req),res),match:async req=>map.get(url(req))};},keys:async()=>[...stores.keys()],delete:async name=>stores.delete(name),match:async req=>{for(const map of stores.values()){const hit=map.get(url(req));if(hit)return hit;}return undefined;}};
+ const selfStub={location:{origin:'http://localhost:4173'},claimed:false,skipWaiting:async()=>{},clients:{claim:async()=>{selfStub.claimed=true;}},addEventListener:(type,fn)=>{listeners[type]=fn;}};
+ new Function('self','caches','fetch',readFileSync('sw.js','utf8'))(selfStub,caches,async req=>{if(!online)throw new Error('network down');return response(url(req));});
+ return {selfStub,stores,store,response,url,listeners,setOnline:value=>{online=value;},async fire(type,event={}){const waits=[],responded=[];listeners[type]({...event,waitUntil:p=>waits.push(p),respondWith:p=>responded.push(p)});await Promise.all(waits);return {responded,settled:responded.length?Promise.all(responded):null};}};
+}
+const get=url=>({method:'GET',url,mode:'no-cors'});
+const navigate=url=>({method:'GET',url,mode:'navigate'});
+
+test('The worker precaches the whole shell, then clears stale caches and takes control',async()=>{
+ const h=workerHarness();
+ h.store('dungeoncrawlers-v0').set('http://localhost:4173/old.js',h.response('http://localhost:4173/old.js'));
+ await h.fire('install');
+ const cached=h.store('dungeoncrawlers-v1');
+ for(const asset of precached){const href=h.url(asset);assert(cached.has(href),`install did not precache ${asset}`);assert.equal(cached.get(href).ok,true);}
+ await h.fire('activate');
+ assert.equal(h.stores.has('dungeoncrawlers-v0'),false,'the previous cache version must be removed');
+ assert(h.selfStub.claimed,'the worker must claim open pages so the first visit becomes offline-capable');
+});
+
+test('Network-first serving falls back to the cache, then to the shell for navigations',async()=>{
+ const h=workerHarness();
+ await h.fire('install');
+ const online=await h.fire('fetch',{request:get('http://localhost:4173/style.css')});
+ assert.equal(online.responded.length,1,'a same-origin GET must be answered by the worker');
+ const live=await online.responded[0];
+ assert.equal(live.url,'http://localhost:4173/style.css');
+ assert(h.store('dungeoncrawlers-v1').has('http://localhost:4173/style.css'),'a successful response must be cached for later');
+ h.store('dungeoncrawlers-v1').set('http://localhost:4173/style.css',h.response('http://localhost:4173/style.css?cached'));
+ h.setOnline(false);
+ const offline=await h.fire('fetch',{request:get('http://localhost:4173/style.css')});
+ assert.equal((await offline.responded[0]).url,'http://localhost:4173/style.css?cached','offline requests must be served from the cache');
+ const deep=await h.fire('fetch',{request:navigate('http://localhost:4173/some/home/screen/start')});
+ assert.equal((await deep.responded[0]).url,'http://localhost:4173/index.html','an uncached navigation must fall back to the game shell');
+});
+
+test('Non-GET and cross-origin requests are left alone',async()=>{
+ const h=workerHarness();
+ await h.fire('install');
+ const post=await h.fire('fetch',{request:{method:'POST',url:'http://localhost:4173/save',mode:'no-cors'}});
+ const font=await h.fire('fetch',{request:get('https://fonts.example.com/display.css')});
+ assert.equal(post.responded.length,0);
+ assert.equal(font.responded.length,0);
+});
+
+await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));

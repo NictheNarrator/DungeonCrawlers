@@ -25,5 +25,5 @@ Recorded by the earlier session on the commit that introduced the following came
 ## Still unverified
 
 - Physical iPhone Safari, OS-level Home Screen installation, and safe-area behavior on real hardware.
-- Offline play. No service worker is included.
+- Offline play has only been exercised against a simulated service worker, not on a phone with the network switched off.
 - Screen-reader completeness of the canvas map, which is documented as a known limitation in the README.

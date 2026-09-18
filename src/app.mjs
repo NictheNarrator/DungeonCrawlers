@@ -68,3 +68,7 @@ $('potion').onclick=()=>{if(usePotion(state)){changed();$('pack-feedback').textC
 $('help').onclick=()=>modal('Your first shift','Hold a direction to move. The camera follows you. Doorways are halfway along the east and west walls.\nStand beside a character or object, then tap Interact.\nFind an exit key from Mara or her locker, then reach the stairs. Fighting is optional.\nNPC approaches are grouped into Social, Supplies, and Conflict. Their attitudes, injuries, possessions, and memories persist. Pickpocketed NPCs notice on room exit. Field notes show relationship history.\nIn combat, use nonlethal mode to knock out or lethal mode to kill. Switching intent is free. Smoke escapes without a hit. Potions heal 10 HP; defend halves the next hit.\nProgress saves on this device outside combat. Open the menu to save, load, or restart.',[['Let’s go',()=>{}]]);
 $('modal').addEventListener('cancel',e=>{if(state.dead||state.complete)e.preventDefault();});new ResizeObserver(scheduleDraw).observe($('viewport'));
 render();const prior=saved();if(prior)modal('Back for another shift?','Your last living checkpoint is ready.',[['Continue',load],['New game',restart]]);else{save();render();toast('Find a key. Reach the stairs. Try not to die.');}
+// Offline play: the service worker precaches the game shell so a Home Screen
+// launch works without a connection. Registration is silent and harmless
+// where the API or a secure context is missing.
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
