@@ -125,7 +125,7 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   if(action==='Promise the supplies'||action==='Hand over the supplies')return questAction(s,id,action);
   if(companionOf(s,id)&&companionAction(s,id,action))return true;
   if(action==='Keep the supplies')return keepSupplies(s);
-  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id]){const handled=actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind),note:(who)=>factionOf(who)?factionLine(s,who):'',standing:(who,steps,reason)=>shiftMember(s,who,steps,reason),approve:(who,delta,reason)=>witnessedApproval(s,'act',who,delta,reason),rng});if(action==='Recruit'&&handled&&s.party.includes(id)&&companionOf(s,id)&&!companionOf(s,id).recruited){companionOf(s,id).recruited=true;say(s,`name is travelling with you now.`);}return handled;}
+  if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id]){const handled=actNPC(s,id,action,{say,award,startCombat,witness:(event,target)=>witnessed(s,event,target),deed:(name)=>recordDeed(s,name),bonus:(kind)=>gearBonus(s,kind)+(kind==='persuasion'?companionRespect(s):0),note:(who)=>factionOf(who)?factionLine(s,who):'',standing:(who,steps,reason)=>shiftMember(s,who,steps,reason),approve:(who,delta,reason)=>witnessedApproval(s,'act',who,delta,reason),rng});if(action==='Recruit'&&handled&&s.party.includes(id)&&companionOf(s,id)&&!companionOf(s,id).recruited){companionOf(s,id).recruited=true;say(s,`name is travelling with you now.`);}return handled;}
  if(action==='Inspect'){say(s,s.npcs[id]?describeNPC(s,id)+(factionOf(id)?' '+factionLine(s,id):''):({fountain:'Free full healing. The plaque says “A healthy contestant is a renewable resource.”',terminal:'ANNEX: “The exit requires a key, not a body count.” Tobin scavenges in Lost Property; Mara shelters in The Holdout; Vex waits in Departures. Mara’s locker has a free spare key. Talk, help, deceive, steal, or fight. People remember.',chest:'An abandoned chest. Coins, medical supplies, and something useful for a broken satchel.',crate:'The label says “artisan survival accompaniment.” It smells like cheese committing a crime.',note:'A sponsor memo. Its slogan could support a convincing lie; its safety warning would interest Vex.',locker:'An emergency exit key. Accessible even if every other survivor dies.',pipe:'A loose pipe hides a cache. Tobin may know more.',brazier:'A barrel of burning fuel. Kick it over and something will catch fire.',satchel:'Tobin’s satchel, packed and counted. He watches it the way other people watch doors.',whetstone:'Vex’s whetstone, left within reach. Taking it is a statement.',stairs:'The exit accepts any exit key. No NPC is required to finish.',plaque:'ANNEX: “No exit survey today. Your behavior was the survey.”'}[id]||id));return true;}
  if(id==='fountain'){s.hp=s.maxHp;say(s,'Fully healed. The station bills someone else. Enjoy the novelty.');}
  if(id==='chest'){s.flags.chest=true;s.gold+=6;s.potions++;s.items.repairKits++;s.quests.carried=true;say(s,'Found 6 coins, a potion, and a repair kit. The survivors want this cache; so do the ratmen. Neither knows you have it yet.');}
@@ -152,7 +152,9 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
 // Public action list: the base actions plus whatever the supply quest adds.
 export function actions(s,id){const list=baseActions(s,id);for(const extra of [...questActionFor(s,id),...companionActionsFor(s,id)])if(!list.includes(extra))list.push(extra);return list;}
 // What you can do for, with, or to a companion standing in front of you.
-export function companionActionsFor(s,id){const companion=companionOf(s,id);if(!companion||!companion.recruited||companion.left)return [];
+export function companionActionsFor(s,id){const companion=companionOf(s,id);if(!companion||companion.left)return [];
+ if(companion.separated)return s.npcs[id].condition==='conscious'?['Ask her to rejoin']:[];
+ if(!companion.recruited)return [];
  const list=[],n=s.npcs[id];
  if(n.condition==='unconscious'&&(s.items.bandages>0||s.potions>0))list.push('Tend to her wounds');
  if(n.condition==='conscious'){
@@ -262,6 +264,29 @@ export function approvalEffect(s,id,delta,reason){const companion=companionOf(s,
 export function witnessedApproval(s,event,targetId,delta,reason){const seen=witnesses(s,targetId).filter(id=>companionOf(s,id));
  for(const id of seen)approvalEffect(s,id,delta,reason);return seen;}
 export function partyApproval(s,delta,reason){for(const id of Object.keys(s.companions))if(s.companions[id].recruited||s.companions[id].separated)approvalEffect(s,id,delta,reason);}
+// A companion's reputation rubs off on you both ways.
+export function companionRespect(s){let total=0;
+ for(const id of Object.keys(s.companions)){const companion=s.companions[id];if(companion.left||companion.hostile)total-=2;
+  else if(companion.recruited&&bandFor(companion.approval).key==='loyal')total+=2;}
+ return Math.max(-4,Math.min(4,total));}
+// Fleeing leaves anyone who cannot walk behind.
+export function separateCompanions(s){const homes=startingPlaces();const lost=[];
+ for(const id of Object.keys(s.companions)){const companion=s.companions[id];
+  if(!companion.recruited||companion.left||s.npcs[id].condition==='conscious')continue;
+  companion.separated=true;companion.recruited=false;
+  s.party=(s.party||[]).filter(member=>member!==id);if(s.allies)delete s.allies[id];
+  const home=homes[id];if(home)setPlace(s,id,home.room,home.x,home.y);
+  say(s,`You get out and ${NPCS[id].name} does not. She is still back there, somewhere.`);
+  lost.push(id);}
+ return lost;}
+// What became of each companion, for the end screen.
+export function companionEpilogue(s){const lines=[];
+ for(const id of Object.keys(s.companions)){const companion=s.companions[id],name=NPCS[id].name;
+  if(s.npcs[id].condition==='dead')lines.push(companion.quest.outcome==='returned'?`${name} got her locket back and then died.`:companion.quest.stage==='unknown'?`${name} died before anyone found out what happened to Dell.`:`${name} died with the question still open.`);
+  else if(companion.left)lines.push(`${name} walked away and did not come back.`);
+  else if(companion.separated)lines.push(`${name} was left behind in the building.`);
+  else if(companion.recruited)lines.push(`${name} got out with you, which she will describe later as a mixed result.`);}
+ return lines;}
 export function leaveCompanion(s,id,reason){const companion=companionOf(s,id);if(!companion||companion.left)return false;
  companion.left=true;companion.recruited=false;companion.separated=false;
  s.party=(s.party||[]).filter(member=>member!==id);if(s.allies)delete s.allies[id];
@@ -271,6 +296,10 @@ export function relationshipOf(s,id){const companion=companionOf(s,id);return co
 // them: talk, patch up, share supplies, hand over gear, settle her locket.
 export function companionAction(s,id,action){const companion=companionOf(s,id);if(!companion)return false;
  const band=bandFor(companion.approval).key,cold=band==='hostile'||band==='resentful';
+ if(action==='Ask her to rejoin'){const band=bandFor(companion.approval).key;
+  if(band==='hostile'||band==='resentful'){say(s,`name: “No. Find someone else to follow.”`);return true;}
+  companion.separated=false;companion.recruited=true;if(!s.party.includes(id))s.party.push(id);
+  say(s,`name picks up her kit and falls in behind you again.`);approvalEffect(s,id,4,'you came back for her');return true;}
  if(action==='Check in with her'){const talk=conversationFor(s,id);if(!talk)return false;
   if(talk.key==='talked1')remember(companion,'talked1');
   else if(talk.key==='talked2')remember(companion,'talked2');
@@ -548,7 +577,7 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
   else if(theirs('prone')){applyCondition(s,id,'stunned',2,say);say(s,`${line} Their head cracks against the floor.`);}
   else{applyCondition(s,id,'prone',2,say);say(s,`${line} They go down.`);}}
  if(action==='Use potion'&&(!s.potions||s.hp===s.maxHp)){say(s,!s.potions?'No potions. Choose another action.':'Already at full health.');return false;}
-  if(action==='Smoke bomb'){if(!s.items.smokeBombs){say(s,'No smoke bombs. Tobin carries them.');return false;}s.items.smokeBombs--;s.x=1;s.y=4;say(s,'Smoke fills the room. You escape without a retaliatory hit. Your opponent keeps their injuries and memories.');closeCombat(s);return true;}
+  if(action==='Smoke bomb'){if(!s.items.smokeBombs){say(s,'No smoke bombs. Tobin carries them.');return false;}s.items.smokeBombs--;s.x=1;s.y=4;separateCompanions(s);say(s,'Smoke fills the room. You escape without a retaliatory hit. Your opponent keeps their injuries and memories.');closeCombat(s);return true;}
  s.combat.turn='enemy';
    if(action==='Rally'){s.combat.used[action]=true;s.hp=Math.min(s.maxHp,s.hp+8);say(s,`You rally. ${s.hp} HP.`);recordDeed(s,'help');}
    if(action==='Terrify'){s.combat.used[action]=true;applyCondition(s,id,'stunned',2,say);say(s,'Your reputation does the talking. It works.');recordDeed(s,'intimidation');}
@@ -571,7 +600,7 @@ export function fight(s,action,rng=Math.random){if(!s.combat||s.dead||s.combat.t
    s.combat.round++;
    for(const enemyId of [...s.combat.enemies]){if(!s.combat)break;if(s.npcs[enemyId].condition!=='conscious')continue;enemyTurn(s,enemyId,roll,rng,action);}
    if(!s.combat)return true;
-   if(action==='Flee'){s.x=1;s.y=4;say(s,'You escape to the entrance after taking one hit. Your opponent remembers.');closeCombat(s);}
+   if(action==='Flee'){s.x=1;s.y=4;separateCompanions(s);say(s,'You escape to the entrance after taking one hit. Your opponent remembers.');closeCombat(s);}
    else{s.combat.turn='player';tickConditions(s,say);if(s.combat)say(s,'Your turn.');}return true;
 }
 export function usePotion(s){if(s.dead||s.complete||s.combat||s.hp>=s.maxHp||!s.potions)return false;s.potions--;const old=s.hp;s.hp=Math.min(s.maxHp,s.hp+10);say(s,`Recovered ${s.hp-old} HP.`);return true;}
@@ -593,7 +622,8 @@ export function openRewardBox(s,tier,rng=Math.random){if(!BOX_TIERS.includes(tie
  say(s,`${tier} box: ${rarity?rarity+' ':''}${label}. ${entry.message}${trait}`);
  return {ok:true,tier,reward:label,rarity,traitName:item?item.traitName||null:null,traitText:item?item.traitText||null:null,message:entry.message};}
 export function gearBonus(s,kind){return itemEffects(s,kind);}
-export function outcome(s){return PEOPLE.map(id=>{const n=s.npcs[id];return `${NPCS[id].name}: ${n.condition}, ${n.attitude}. ${memoryText(n)}.`;}).join('\n');}
+export function outcome(s){const people=PEOPLE.map(id=>{const n=s.npcs[id];return `${NPCS[id].name}: ${n.condition}, ${n.attitude}. ${memoryText(n)}.`;});
+ return [...people,...companionEpilogue(s)].join('\n');}
 export function encode(s){if(s.dead||s.combat)return null;return JSON.stringify(s);}
 // The bridge between a saved character and the d20 rules: pass the result as
 // check({actor:character(s), skill:'stealth', dc:12}).

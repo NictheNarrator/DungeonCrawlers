@@ -13,6 +13,32 @@ function save(){const raw=encode(state);if(!raw)return false;try{localStorage.se
 function toast(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),5000);}
 // The Dungeon AI line for a freshly opened box.
 function aiSay(message){$('toast').textContent='DUNGEON AI: '+message;$('toast').classList.add('show','achievement');clearTimeout(awardTimer);awardTimer=setTimeout(()=>$('toast').classList.remove('show','achievement'),5000);}
+// Mara's own screen: who she is to you, what she is carrying, what she remembers.
+// Her name and HP ride along in the HUD badge while she is in the fight, so the
+// main screen stays uncluttered when she is just walking behind you.
+function companionBadge(){if(!state.combat)return '';
+ const who=Object.keys(COMPANIONS).find(id=>{const mate=companionOf(state,id);return mate&&mate.recruited&&!mate.left&&state.npcs[id].condition==='conscious';});
+ return who?' · '+NPCS[who].name.toUpperCase()+' '+state.npcs[who].hp+'/'+NPCS[who].hp+' HP':'';}
+function renderCompanion(){const who=Object.keys(COMPANIONS)[0],mate=companionOf(state,who),npc=state.npcs[who];
+ $('companion-name').textContent=NPCS[who].name;
+ const rows=[];
+ rows.push(article(NPCS[who].name+' · '+npc.condition+' · '+npc.hp+'/'+NPCS[who].hp+' HP',relationshipOf(state,who)));
+ const worn=Object.entries(mate.equipped).map(([slot,item])=>item?`${slot}: ${item} (${rarityOf(item)})`:`${slot}: empty`).join('. ');
+ rows.push(article('Equipment',worn+'.'));
+ if(mate.gear.length)rows.push(article('Spare gear',mate.gear.map(name=>`${name} (${rarityOf(name)})`).join(', ')+'.'));
+ const memories=Object.keys(mate.memories).filter(key=>mate.memories[key]);
+ rows.push(article('She remembers',memories.length?memories.join(', ')+'.':'Nothing worth holding against you yet.'));
+ rows.push(article('Her errand',mate.quest.outcome?`${COMPANIONS[who].quest.title}: ${mate.quest.outcome}.`:`${COMPANIONS[who].quest.title}: ${mate.quest.stage}.`));
+ const inCombat=!!state.combat;
+ const buttons=[];
+ if(mate.separated&&npc.condition==='conscious'&&!inCombat)buttons.push(['Ask her to rejoin',()=>{actOn(who,'Ask her to rejoin');}]);
+ if(mate.recruited&&npc.condition==='conscious'&&!inCombat&&isSafeRoom(state))buttons.push(['Check in with her',()=>{actOn(who,'Check in with her');}]);
+ if(mate.gear.length&&!inCombat&&!['hostile','resentful'].includes(bandFor(mate.approval).key))buttons.push(['Take back her spare gear',()=>{actOn(who,'Take back her spare gear');}]);
+ if(buttons.length){const card=article('Actions','');const wrap=document.createElement('div');wrap.className='actiongrid';
+  for(const [label,fn] of buttons){const b=document.createElement('button');b.textContent=label;b.onclick=fn;wrap.append(b);}card.append(wrap);rows.push(card);}
+ $('companion-body').replaceChildren(...rows);}
+function article(title,text){const card=document.createElement('article'),h=document.createElement('strong'),p=document.createElement('p');h.textContent=title;p.textContent=text;card.append(h,p);return card;}
+function actOn(who,action){$('companion-modal').close();interact(state,who,action);save();render();renderCompanion();$('companion-modal').showModal();}
 // Opening a box rolls its table, consumes it and answers with the AI line.
 function openBox(tier){const result=openRewardBox(state,tier);
  if(!result.ok){$('pack-feedback').textContent=result.reason==='unsafe'?'That box only opens in a safe room.':result.reason==='empty'?'That box is already empty.':'Not now.';return;}
@@ -53,6 +79,7 @@ function button(label,fn){const b=document.createElement('button');b.textContent
 function render(){
  $('rooms').replaceChildren(...rooms.map((r,i)=>{const el=document.createElement('span');el.className=i===state.room?'active':'';el.setAttribute('aria-label',r);if(i===state.room)el.setAttribute('aria-current','step');return el;}));
  $('roomtitle').textContent=rooms[state.room];$('mode').textContent=(state.combat?'YOUR TURN':'EXPLORING')+(conditionText(state,'player')?' · '+conditionText(state,'player'):'');$('hp').textContent=`${state.hp} / ${state.maxHp}`;$('healthbar').style.width=(100*state.hp/state.maxHp)+'%';$('healthbar').style.background=state.hp<10?'#e08e73':'var(--lime)';$('gold').textContent=state.gold;$('objective').textContent=(state.class!=='crawler'?CLASSES[state.class].name+' · ':'')+`Lv ${state.level} · ${state.xp}/${xpForNext(state.level)} XP`+(state.pending>0?' · LEVEL UP':(state.key?' · Key acquired · Head east':' · Find an exit key'));
+ $('mode').textContent+=companionBadge();
  $('inventory').replaceChildren(...[`${state.potions} × Healing potion`,`${state.cheese} × Cheese`,`${state.boxes.bronze} × Bronze box`,`${state.boxes.silver} × Silver box`,`${state.boxes.gold} × Gold box`,state.key?'1 × Exit key':'No exit key yet',...Object.entries(state.items).map(([key,n])=>`${n} × ${itemName[key]}`),`Attack: ${attackRange(state).join('–')}`,...(state.accessories||[]).map(name=>`${rarityOf(name)} ${name}`)].map(t=>{const el=document.createElement('span');el.textContent=t;return el;}));
  // One line per achievement so a long list stays readable and scrollable.
  $('achievements').replaceChildren(...(state.achievements.length?state.achievements.map(name=>{const entry=achievementFor(name),row=document.createElement('article'),title=document.createElement('strong'),line=document.createElement('p');
@@ -86,7 +113,7 @@ function render(){
  $('log').replaceChildren(...state.log.map(t=>{const el=document.createElement('li');el.textContent=t;return el;}));
  const near=nearby(state);if(!near.some(p=>p.id===target))target=null;if(!target&&near.length===1)target=near[0].id;
  $('interact').disabled=stopped||!near.length;$('nearby-label').textContent=near.length?'✦ '+near.map(p=>p.name).join(' / '):'Explore the room';$('shell').classList.toggle('combat',!!state.combat);document.querySelector('.west').hidden=state.room===0;document.querySelector('.east').hidden=state.room===4;
- if(state.combat)actionOpen=true;const showing=actionOpen&&!state.dead&&!state.complete;$('actioncard').hidden=!showing;document.querySelector('.explore-controls').hidden=showing;$('close-actions').hidden=!!state.combat;$('action-label').textContent=state.combat?'COMBAT · YOUR TURN':'WITHIN REACH';$('action-feedback').textContent=feedback;
+ if(state.combat)actionOpen=true;const showing=actionOpen&&!state.dead&&!state.complete;$('actioncard').hidden=!showing;document.querySelector('.explore-controls').hidden=showing;$('close-actions').hidden=!!state.combat;$('action-label').textContent=state.combat?(state.combat.pendingCompanion?NPCS[state.combat.pendingCompanion].name.toUpperCase()+'’S TURN':'COMBAT · YOUR TURN'):'WITHIN REACH';$('actioncard').classList.toggle('companion-turn',!!state.combat?.pendingCompanion);$('action-feedback').textContent=feedback;
  const person=target&&PEOPLE.includes(target)&&state.npcs[target].condition==='conscious'&&!state.combat;$('npc-tabs').hidden=!person;document.querySelectorAll('[data-npc-tab]').forEach(b=>{const on=b.dataset.npcTab===npcTab;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
  $('actions').replaceChildren();if(state.combat){const id=state.combat.enemy,d=NPCS[id],nonlethal=state.combat.intent==='nonlethal';$('target').textContent=d.name+' · '+state.npcs[id].hp+' HP'+(state.combat.enemies.length>1?' · '+state.combat.enemies.length+' ENEMIES':'')+' · RANGE '+state.combat.range;$('targethint').textContent=(nonlethal?'NONLETHAL':'LETHAL')+' · Your damage '+attackRange(state).map(n=>n-(nonlethal?1:0)).join('–')+' · Enemy '+d.damage.join('–')+(conditionText(state,id)?' · '+conditionText(state,id).toUpperCase():'');for(const a of combatActions(state)){const b=button(a,()=>action(a));if(a==='Use potion')b.disabled=busy||!state.potions||state.hp===30;if(a==='Smoke bomb')b.disabled=busy||!state.items.smokeBombs;$('actions').append(b);}}
  else if(target){const n=state.npcs[target];$('target').textContent=(roomProps(state).find(p=>p.id===target)||{}).name||target;let hint=n?n.attitude.toUpperCase()+' · '+n.condition+' · '+n.hp+'/'+NPCS[target].hp+' HP'+((state.party||[]).includes(target)?' · IN YOUR PARTY':(state.allies?.[target]>0?` · ALLY (${state.allies[target]})`:'')):'Choose what happens next.';if(person)hint+=npcTab==='social'?' · Help: '+NPCS[target].help:npcTab==='supplies'?' · Trade: 1 '+itemName[NPCS[target].trade]+' / '+tradePrice(state,target)+' coins':' · Attack/Kill are lethal. Knock unconscious starts nonlethal combat.';$('targethint').textContent=hint;let available=actions(state,target);if(person){const groups={social:['Inspect','Talk','Help','Befriend','Recruit','Lie','Hand it back'],supplies:['Trade','Ask about goods','Offer a fair swap','Pickpocket','Rob openly','Inspect'],conflict:['Threaten','Attack','Knock unconscious','Kill']};available=available.filter(a=>groups[npcTab].includes(a)||(npcTab==='supplies'&&a.startsWith('Sell 1 ')));}for(const a of available)$('actions').append(button(a,()=>action(a)));}
@@ -128,3 +155,4 @@ render();const prior=saved();if(prior)modal('Back for another shift?','Your last
 // launch works without a connection. Registration is silent and harmless
 // where the API or a secure context is missing.
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+$('companion').onclick=()=>{renderCompanion();openPanel('companion-modal');};

@@ -12,3 +12,4 @@
 #gear strong{display:block;font-size:11.5px;color:var(--text)}
 #gear p{margin-top:3px;font-size:11px;line-height:1.4;color:var(--muted)}
 #gear button{min-height:34px;padding:4px 10px;font-size:11px;margin-top:6px}
+.actioncard.companion-turn{border-left:3px solid var(--gold);background:#221d13;border-radius:10px;padding-left:8px}

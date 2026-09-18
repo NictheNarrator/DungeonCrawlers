@@ -119,7 +119,7 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()
   m.lied=true;if(!m.met||(!s.flags.memo&&n.attitude!=='friendly')){m.lieExposed=true;n.attitude='suspicious';say(s,`${d.name}: “Sponsor rescue team? You don’t even know their slogan.” Read the memo before trying a cover story. The lie is remembered.`);return true;}
   m.distracted=true;say(s,`You claim a sponsor rescue team is coming and quote the memo’s slogan. ${d.name} checks the radio: one pickpocket opportunity and a 1-coin trade discount. Talking again will expose the lie.`);return true;
  }
- if(action==='Recruit'){recruit(s,id,say,rng,deed);return true;}
+ if(action==='Recruit'){recruit(s,id,say,rng,deed,bonus);return true;}
  if(action==='Ask about goods'){if(refusesTrade(s,id)){say(s,`${d.name} will not discuss goods with you.`);return true;}say(s,goodsText(s,id));return true;}
  if(action.startsWith('Sell 1 ')){
   if(refusesTrade(s,id)){say(s,`${d.name} will not trade with you.`);return true;}
@@ -185,14 +185,14 @@ export function confront(s,id,say,startCombat){const n=s.npcs[id],d=NPCS[id];if(
 // Recruitment. The relationship has to justify it: a finished request opens
 // the conversation, a friendly attitude or a shared enemy makes it easier,
 // and a Persuasion check decides the answer.
-export function recruit(s,id,say,rng=Math.random,deed=()=>{}){const n=s.npcs[id],m=n.memory,d=NPCS[id],terms=RECRUIT[id];
+export function recruit(s,id,say,rng=Math.random,deed=()=>{},bonus=()=>0){const n=s.npcs[id],m=n.memory,d=NPCS[id],terms=RECRUIT[id];
  if(!terms){say(s,`${d.name} has no interest in travelling with you.`);return false;}
  if(isWith(s,id)){say(s,`${d.name} is already with you.`);return false;}
  if(m.betrayed||m.lieExposed||m.robbed||m.theftDetected||m.attacked||m.sawKill){n.attitude='suspicious';say(s,`${d.name} refuses. They have seen what you do to people who trust you.`);return false;}
  const sharedEnemy=Object.keys(NPCS).some(other=>other!==id&&s.npcs[other].attitude==='hostile'&&(s.npcs[other].memory.attacked||s.npcs[other].memory.killed));
  const asked=id==='vex'?!!m.befriended||sharedEnemy:terms.encounters?!!m.helped:!!m.befriended;
  if(!asked){say(s,id==='tobin'?`${d.name} refuses until you have done something for them first.`:`${d.name}: “I do not travel with strangers. Help me first, then ask.”`);return false;}
- const result=check({actor:s,skill:'persuasion',dc:terms.dc,advantage:sharedEnemy||n.attitude==='friendly',disadvantage:n.attitude==='suspicious',modifiers:m.befriended?2:m.helped?1:0,rng});
+ const result=check({actor:s,skill:'persuasion',dc:terms.dc,advantage:sharedEnemy||n.attitude==='friendly',disadvantage:n.attitude==='suspicious',modifiers:(m.befriended?2:m.helped?1:0)+bonus('persuasion'),rng});
  const line=`Persuasion ${result.total} (d20 ${result.rawRoll}${result.rolls.length>1?` from ${result.rolls.join(' and ')}`:''} + ${result.abilityModifier} charisma${result.proficiency?` + ${result.proficiencyBonus} proficiency`:''}${m.befriended?' +2 finished request':m.helped?' +1 helped':''}${result.advantage?' with advantage':result.disadvantage?' with disadvantage':''}) against DC ${terms.dc}. ${result.success?'Success.':'Failure.'}`;
  if(!result.success){n.attitude='suspicious';say(s,`${line} ${d.name} turns you down.`);return false;}
  m.recruited=true;n.attitude='friendly';deed('persuasion');deed('recruit');
