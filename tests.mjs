@@ -541,5 +541,47 @@ test('The Sump Maw can be fought, fed, shut in or handed to someone else',()=>{
  assert.equal(fighter.npcs.sumpmaw.condition,'dead','and it can simply be killed');
  assert.equal(checkpoint(fighter).npcs.sumpmaw.condition,'dead','which sticks');
 });
+test('The floor holds any combination of outcomes, not one scripted path',()=>{
+ // The example the design asks for: Tobin dead, the badge taken off him, Skrit
+ // alive and friendly, the ratmen still distrusting you, Vex allied, June
+ // rescued and Eli dead - all at once, in one run.
+ const s=supplied();
+ approach(s,'skrit');interact(s,'skrit','Help with the machine');
+ assert.equal(memberStanding(s,'skrit'),'friendly','Skrit is alive and friendly');
+ assert(s.npcs.skrit.memory.helped);
+ approach(s,'tobin');interact(s,'tobin','Kill');win(s);interact(s,'tobin','Loot');
+ assert.equal(s.npcs.tobin.condition,'dead','Tobin is dead');
+ assert.equal(s.items.badge,1,'and the badge came off the body');
+ assert.equal(s.npcs.tobin.inventory.badge,0,'and it is not still on him');
+ approach(s,'rat');interact(s,'rat','Fight');win(s);interact(s,'rat','Loot');
+ assert.equal(s.npcs.rat.condition,'dead','and the ratmen have a grievance');
+ assert.notEqual(memberStanding(s,'rat'),'friendly','so they distrust you');
+ s.party.push('vex');
+ assert(isWith(s,'vex'),'Vex is with you');
+ approach(s,'june');interact(s,'june','Bandage her wound');interact(s,'june','Help her out');
+ assert.equal(placeOf(s,'june').room,SAFE_ROOM,'June is rescued');
+ approach(s,'eli');interact(s,'eli','Fight');win(s);
+ assert.equal(s.npcs.eli.condition,'dead','and Eli is not');
+ // None of it cancels any of the rest out.
+ const kept=checkpoint(s);
+ assert.equal(kept.npcs.tobin.condition,'dead');assert.equal(kept.items.badge,1);
+ assert.equal(kept.npcs.skrit.condition,'conscious');assert(kept.npcs.skrit.memory.helped);assert.notEqual(memberStanding(kept,'rat'),'friendly');
+ assert(kept.party.includes('vex'),'Vex is still recruited');assert.equal(placeOf(kept,'june').room,SAFE_ROOM);assert.equal(kept.npcs.eli.condition,'dead');
+ // A dead man's badge still opens the gate: the object matters, not the owner.
+ approach(kept,'gate');assert(actions(kept,'gate').includes('Badge through the gate'),'the badge still works');
+});
+test('Helping one side while robbing the other leaves both opinions intact',()=>{
+ const s=supplied();
+ setPlace(s,'skrit',9,2,2);                       // he is off in the tunnels, out of the room
+ const ratBefore=memberStanding(s,'skrit');
+ act(s,'mara','Rob openly');
+ assert.equal(memberStanding(s,'mara'),'hostile','the camp turns on you');
+ assert.equal(memberStanding(s,'skrit'),ratBefore,'and a ratman in another room is none the wiser');
+ approach(s,'skrit');interact(s,'skrit','Help with the machine');
+ assert.equal(memberStanding(s,'skrit'),'friendly','helping him still warms him');
+ assert.equal(memberStanding(s,'mara'),'hostile','without cancelling the grudge');
+ assert.equal(checkpoint(s).standing.skrit,'friendly','standing is kept per person, not per faction flag');
+ assert.equal(checkpoint(s).standing.mara,'hostile');
+});
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));
