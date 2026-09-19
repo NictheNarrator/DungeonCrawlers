@@ -257,7 +257,11 @@ function propSprite(px,py,type){
  if(type==='sofa'){rect(px+8,py+26,48,26,'#3279a4');rect(px+8,py+26,48,5,'#a9abb8');rect(px+14,py+32,16,14,'#7c9565');rect(px+34,py+32,16,14,'#7c9565');return;}
  if(type==='kettle'){rect(px+20,py+32,24,20,'#eac999');rect(px+20,py+32,24,4,'#f5c4bd');rect(px+44,py+36,7,10,'#eac999');rect(px+27,py+27,10,5,'#8c8e9e');return;}
  if(type==='brazier'){const flame=tick%4===0?2:0;rect(px+18,py+34,28,26,'#cd7d32');rect(px+18,py+34,28,4,'#d7873c');rect(px+24,py+22-flame,16,12+flame,'#df8f44');rect(px+28,py+16-flame,8,8+flame,'#eac999');return;}
- if(type==='satchel'){rect(px+16,py+28,32,28,'#cd7d32');rect(px+16,py+28,32,5,'#d7873c');rect(px+22,py+20,20,9,'#eac999');rect(px+28,py+36,8,8,'#eac999');return;}
+  if(type==='satchel'){
+  rect(px+16,py+28,32,28,P.brown);rect(px+16,py+28,32,4,shade(P.brown,18));rect(px+16,py+52,32,4,shade(P.brown,-22));
+  rect(px+20,py+22,24,8,P.sand);rect(px+20,py+22,24,3,shade(P.sand,20));
+  rect(px+28,py+34,9,8,P.sand);rect(px+30,py+36,5,4,P.ink);
+  rect(px+20,py+44,6,3,shade(P.ink,20));rect(px+38,py+44,6,3,shade(P.ink,20));return;}
  if(type==='locker'){rect(px+16,py+8,32,52,'#1d5193');rect(px+16,py+8,32,5,'#2f63a5');rect(px+20,py+16,24,3,'#17366b');rect(px+42,py+30,5,5,'#eac999');return;}
  if(type==='plaque'){rect(px+12,py+24,40,22,'#eac999');rect(px+12,py+24,40,4,'#f5c4bd');rect(px+18,py+33,28,3,'#8c8e9e');rect(px+18,py+39,18,3,'#8c8e9e');return;}
   if(type==='sign'){
@@ -281,7 +285,11 @@ function propSprite(px,py,type){
   rect(px+25,py+38,14,12,shade(P.ink,10));rect(px+28,py+42,8,4,P.sand);return;}
  if(type==='wreck'){rect(px+4,py+30,56,20,'#cd7d32');rect(px+14,py+20,30,12,'#8c8e9e');rect(px+18,py+22,12,8,'#1d5193');rect(px+8,py+50,10,6,'#17366b');rect(px+46,py+50,10,6,'#17366b');return;}
  if(type==='awning'){rect(px+6,py+32,52,20,'#1d5193');rect(px+6,py+32,52,4,'#2f63a5');for(let i=0;i<4;i++)rect(px+10+i*12,py+38,6,12,'#eac999');return;}
- if(type==='debris'){rect(px+14,py+44,14,7,'#8c8e9e');rect(px+32,py+40,16,10,'#937862');rect(px+22,py+34,10,6,'#cd7d32');return;}
+  if(type==='debris'){
+  rect(px+14,py+44,14,7,shade(P.slate,-16));rect(px+16,py+42,10,4,shade(P.slate,4));
+  rect(px+32,py+40,16,10,shade(P.slate,-26));rect(px+34,py+38,12,4,shade(P.slate,-6));
+  rect(px+22,py+34,10,6,P.umber);rect(px+24,py+32,6,3,shade(P.umber,14));
+  rect(px+40,py+48,10,5,P.cream);rect(px+12,py+50,12,4,shade(P.sand,-14));return;}
   if(type==='terminal'){
   rect(px+14,py+11,37,44,P.teal);rect(px+14,py+11,37,5,shade(P.teal,18));
   rect(px+18,py+16,29,27,shade(P.ink,20));
@@ -445,10 +453,23 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   rect(px+9,py+24,5,28,P.umber);rect(px+50,py+24,5,28,shade(P.umber,10));
   rect(px+15,py+46,6,9,P.ink);rect(px+43,py+46,6,9,P.ink);
   rect(px+12,py+27,3,3,P.orange);rect(px+49,py+40,3,3,P.orange);return;}
- if(type==='bedroll'){rect(px+12,py+38,40,13,'#7c9565');rect(px+12,py+38,40,4,'#8b9a63');rect(px+16,py+30,32,8,'#3279a4');rect(px+46,py+33,8,8,'#eac999');return;}
- if(type==='triage'){rect(px+8,py+32,48,13,'#eac999');rect(px+8,py+32,48,4,'#f5c4bd');rect(px+13,py+45,6,9,'#937862');rect(px+45,py+45,6,9,'#937862');
-  rect(px+30,py+20,8,22,'#c0393a');rect(px+23,py+27,22,8,'#c0393a');return;}
- if(type==='banner'){rect(px+28,py+6,4,52,'#937862');rect(px+14,py+10,36,30,'#7c9565');rect(px+18,py+16,28,4,'#fdefcb');rect(px+18,py+23,18,4,'#fdefcb');rect(px+14,py+40,36,5,'#5b6340');return;}
+  if(type==='bedroll'){
+  rect(px+12,py+38,40,13,P.olive);rect(px+12,py+38,40,4,shade(P.olive,18));rect(px+12,py+48,40,3,shade(P.olive,-24));
+  rect(px+16,py+30,32,8,P.blue);rect(px+16,py+30,32,3,shade(P.blue,20));
+  rect(px+22,py+36,5,16,P.sand);rect(px+38,py+36,5,16,P.sand);
+  rect(px+46,py+33,8,8,P.cream);return;}
+  if(type==='triage'){
+  rect(px+8,py+33,48,12,P.sand);rect(px+8,py+33,48,4,shade(P.sand,18));rect(px+8,py+43,48,3,shade(P.sand,-26));
+  rect(px+12,py+28,14,7,P.cream);rect(px+12,py+29,14,2,shade(P.cream,-24));
+  rect(px+13,py+45,5,9,shade(P.slate,-14));rect(px+46,py+45,5,9,shade(P.slate,-14));
+  rect(px+31,py+22,8,18,P.brick);rect(px+26,py+28,18,7,P.brick);
+  rect(px+34,py+38,4,5,shade(P.ink,16));return;}
+ // batch 3: camp kit
+ if(type==='banner'){
+  rect(px+28,py+6,4,52,P.umber);rect(px+26,py+6,8,4,shade(P.umber,18));
+  rect(px+14,py+10,36,32,P.brick);rect(px+14,py+10,36,4,shade(P.brick,20));rect(px+14,py+38,36,5,shade(P.brick,-26));
+  rect(px+24,py+18,16,4,P.cream);rect(px+27,py+22,10,10,P.cream);rect(px+30,py+25,4,4,P.brick);
+  rect(px+12,py+9,4,4,P.sand);rect(px+48,py+9,4,4,P.sand);return;}
  if(type==='gate'){rect(px+8,py+14,48,40,'#1d5193');rect(px+12,py+18,40,32,'#8c8e9e');rect(px+16,py+22,6,24,'#937862');rect(px+42,py+22,6,24,'#937862');
   rect(px+20,py+24,24,4,'#c0393a');rect(px+20,py+38,24,4,'#c0393a');rect(px+8,py+8,48,6,'#33373a');return;}
  if(type==='desk'){rect(px+8,py+32,48,10,'#cd7d32');rect(px+8,py+32,48,3,'#d7873c');rect(px+12,py+42,6,13,'#8c8e9e');rect(px+46,py+42,6,13,'#8c8e9e');
