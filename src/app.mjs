@@ -226,13 +226,24 @@ function rect(x,y,w,h,color){paint.fillStyle=color;paint.fillRect(x,y,w,h);}
 // reusing one generic icon for unrelated objects. Light stays top-left.
 // props, palette-matched: same shapes, colours brought into the system
 function propSprite(px,py,type){
+ // batch 1: transit props, drawn on the palette
  if(type==='vending'||type==='machines'){const live=type==='vending';
-  rect(px+12,py+8,40,52,'#1d5193');rect(px+12,py+8,40,5,'#2f63a5');rect(px+15,py+16,34,26,'#133267');
-  if(live){rect(px+18,py+20,28,4,'#4fc4d8');rect(px+18,py+27,18,3,'#4fc4d8');}else rect(px+18,py+22,20,4,'#cd7d32');
-  rect(px+34,py+48,14,6,'#eac999');return;}
- if(type==='tickets'){rect(px+14,py+14,36,46,'#8c8e9e');rect(px+14,py+14,36,5,'#989aaa');
-  rect(px+19,py+22,26,14,'#4fc4d8');rect(px+23,py+44,18,4,'#eac999');rect(px+23,py+51,10,4,'#17366b');return;}
- if(type==='bin'){rect(px+17,py+26,30,34,'#937862');rect(px+14,py+21,36,7,'#8c8e9e');rect(px+20,py+34,6,20,'#cd7d32');return;}
+  rect(px+12,py+8,40,52,live?P.brick:shade(P.slate,-30));rect(px+12,py+8,40,5,shade(live?P.brick:shade(P.slate,-30),18));
+  rect(px+15,py+16,34,26,shade(P.ink,16));
+  if(live){for(let r=0;r<3;r++)for(let c=0;c<4;c++)rect(px+18+c*8,py+20+r*8,5,5,(r+c)%3?P.sand:P.cream);
+   rect(px+17,py+45,30,9,shade(P.ink,24));rect(px+19,py+47,12,5,P.cream);}
+  else{rect(px+18,py+22,20,6,shade(P.slate,-10));rect(px+18,py+31,26,4,shade(P.slate,-14));}
+  rect(px+14,py+60,6,5,P.ink);rect(px+44,py+60,6,5,P.ink);return;}
+  if(type==='tickets'){
+  rect(px+14,py+14,36,46,shade(P.slate,-22));rect(px+14,py+14,36,5,shade(P.slate,-6));
+  rect(px+19,py+22,26,15,shade(P.ink,18));rect(px+22,py+25,20,3,P.sky);rect(px+22,py+31,13,3,P.sky);
+  rect(px+19,py+42,26,10,P.cream);rect(px+22,py+45,14,3,shade(P.sand,-20));
+  rect(px+17,py+55,30,4,shade(P.ink,10));rect(px+46,py+34,3,8,P.sand);return;}
+  if(type==='bin'){
+  rect(px+17,py+26,30,34,shade(P.slate,-24));rect(px+14,py+21,36,7,shade(P.slate,-8));
+  rect(px+20,py+28,6,30,shade(P.slate,-34));
+  rect(px+24,py+22,14,5,P.umber);rect(px+36,py+18,8,6,shade(P.umber,14));
+  rect(px+22,py+40,14,3,P.sand);return;}
  if(type==='bag'){rect(px+20,py+32,24,26,'#cd7d32');rect(px+20,py+32,24,4,'#d7873c');rect(px+26,py+24,12,8,'#133267');return;}
  if(type==='cart'){rect(px+8,py+34,48,12,'#8c8e9e');rect(px+8,py+34,48,3,'#989aaa');rect(px+13,py+46,6,10,'#17366b');rect(px+45,py+46,6,10,'#17366b');rect(px+26,py+24,14,10,'#937862');return;}
  if(type==='sofa'){rect(px+8,py+26,48,26,'#3279a4');rect(px+8,py+26,48,5,'#a9abb8');rect(px+14,py+32,16,14,'#7c9565');rect(px+34,py+32,16,14,'#7c9565');return;}
@@ -242,11 +253,12 @@ function propSprite(px,py,type){
  if(type==='locker'){rect(px+16,py+8,32,52,'#1d5193');rect(px+16,py+8,32,5,'#2f63a5');rect(px+20,py+16,24,3,'#17366b');rect(px+42,py+30,5,5,'#eac999');return;}
  if(type==='plaque'){rect(px+12,py+24,40,22,'#eac999');rect(px+12,py+24,40,4,'#f5c4bd');rect(px+18,py+33,28,3,'#8c8e9e');rect(px+18,py+39,18,3,'#8c8e9e');return;}
  if(type==='sign'){rect(px+6,py+12,52,28,'#eac999');rect(px+6,py+12,52,4,'#f5c4bd');rect(px+12,py+20,20,4,'#1d5193');rect(px+12,py+29,30,4,'#1d5193');rect(px+40,py+26,12,8,'#c0393a');return;}
- if(type==='service'||type==='breakdoor'||type==='staffdoor'||type==='exitdoor'){const band=type==='breakdoor'?'#3165a7':(type==='exitdoor'?'#7c9565':(type==='staffdoor'?'#c0393a':'#eac999'));
-  rect(px+16,py+4,32,56,'#8c8e9e');rect(px+16,py+4,32,5,'#989aaa');rect(px+40,py+30,6,6,'#eac999');
-  rect(px+18,py+46,28,7,band);rect(px+18,py+46,4,7,'#17366b');
-  if(type==='exitdoor'){rect(px+20,py+18,24,9,'#eac999');rect(px+27,py+20,4,5,'#17366b');rect(px+33,py+20,3,3,'#17366b');}
-  return;}
+  if(type==='service'||type==='breakdoor'||type==='staffdoor'||type==='exitdoor'){const band=type==='breakdoor'||type==='exitdoor'?P.teal:(type==='staffdoor'?P.brick:P.sand);
+  rect(px+16,py+4,32,56,shade(P.slate,-18));rect(px+16,py+4,32,4,shade(P.slate,4));
+  rect(px+20,py+12,24,20,shade(P.slate,-26));rect(px+40,py+30,6,6,P.sand);
+  rect(px+18,py+46,28,7,band);rect(px+18,py+46,4,7,shade(P.ink,14));
+  if(type==='exitdoor'){rect(px+21,py+36,22,8,P.cream);rect(px+27,py+38,4,4,P.ink);rect(px+34,py+38,3,3,P.ink);}
+  if(type==='breakdoor'){rect(px+30,py+8,4,10,P.sky);}return;}
  if(type==='stairwell'){const pulse=tick%2?'#4fc4d8':'#8fe3f0';rect(px+6,py+10,52,48,'#133267');for(let i=0;i<5;i++)rect(px+8+i*4,py+50-i*9,48-i*7,8,'#0f2e63');
   rect(px+4,py+4,56,12,'#17366b');rect(px+8,py+8,48,4,pulse);rect(px+8,py+15,22,3,pulse);return;}
  if(type==='map'){rect(px+10,py+12,44,42,'#eac999');rect(px+10,py+12,44,4,'#f5c4bd');rect(px+15,py+22,16,3,'#1d5193');rect(px+15,py+29,24,3,'#1d5193');rect(px+15,py+36,12,3,'#1d5193');rect(px+40,py+30,9,9,'#4fc4d8');return;}
@@ -254,7 +266,11 @@ function propSprite(px,py,type){
  if(type==='wreck'){rect(px+4,py+30,56,20,'#cd7d32');rect(px+14,py+20,30,12,'#8c8e9e');rect(px+18,py+22,12,8,'#1d5193');rect(px+8,py+50,10,6,'#17366b');rect(px+46,py+50,10,6,'#17366b');return;}
  if(type==='awning'){rect(px+6,py+32,52,20,'#1d5193');rect(px+6,py+32,52,4,'#2f63a5');for(let i=0;i<4;i++)rect(px+10+i*12,py+38,6,12,'#eac999');return;}
  if(type==='debris'){rect(px+14,py+44,14,7,'#8c8e9e');rect(px+32,py+40,16,10,'#937862');rect(px+22,py+34,10,6,'#cd7d32');return;}
- if(type==='terminal'){rect(px+14,py+11,37,44,'#3279a4');rect(px+18,py+15,29,29,'#5c7545');rect(px+22,py+20,20,3,'#4fc4d8');rect(px+22,py+27,13,3,'#4fc4d8');rect(px+17,py+53,7,5,'#07265b');rect(px+43,py+53,7,5,'#07265b');return;}
+  if(type==='terminal'){
+  rect(px+14,py+11,37,44,P.teal);rect(px+14,py+11,37,5,shade(P.teal,18));
+  rect(px+18,py+16,29,27,shade(P.ink,20));
+  rect(px+21,py+20,23,4,P.sky);rect(px+21,py+27,15,3,P.sky);rect(px+21,py+33,20,3,shade(P.sky,-16));
+  rect(px+18,py+46,29,6,P.cream);rect(px+17,py+55,7,5,P.ink);rect(px+43,py+55,7,5,P.ink);return;}
  rect(px+14,py+11,37,44,'#3279a4');rect(px+18,py+15,29,29,'#7a7c8c');rect(px+39,py+32,4,7,'#eac999');rect(px+17,py+53,7,5,'#07265b');rect(px+43,py+53,7,5,'#07265b');}
 // Item icons. Same palette and top-left light as the world sprites, shrunk to a
 // 32px chip: rarity is the frame, item type is the silhouette, so the pack, the
