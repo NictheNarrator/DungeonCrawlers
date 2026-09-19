@@ -1,4 +1,5 @@
 import {conversationFor} from './conversation.mjs';
+import {portraitFor,PORTRAIT_SIZE} from './portraits.mjs';
 import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,itemOf,equipItem,unequipItem,rarityOf,SLOTS,FACTIONS,standingOf,memberStanding,questState,questCarried,relationshipOf,prologue,register,advanceClock,clockText,dialogueOptions,dialoguePrompt,chooseDialogue,journalUnlocked,knownPeople,knowsFaction,knowsSupplies,exitAt,EXITS} from './engine.mjs?v=npc1';
 import {COMPANIONS,companionOf} from './companions.mjs';
 import {PEOPLE,NPCS,tradePrice,itemName,memoryText,stockText,withPlayer,profileKnown} from './npcs.mjs';
@@ -72,8 +73,22 @@ function modal(title,text,buttons){$('modaltitle').textContent=title;$('modaltex
 let talkPage=0;
 function openTalk(id){target=id;talkPage=0;$('actioncard').hidden=true;openPanel('talk-modal');renderTalk();}
 function closeTalk(){$('talk-modal').close();render();}
+// A character can have an illustrated portrait file; if that file loads it wins,
+// and until it does (or if it never exists) the drawn portrait is used. The world
+// sprite is the last resort, so this can never render an empty frame.
+const portraitCache=new Map();
+function portraitImage(src){if(!src||typeof Image==='undefined')return null;
+ if(portraitCache.has(src)){const held=portraitCache.get(src);return held==='loading'?null:held;}
+ portraitCache.set(src,'loading');
+ const img=new Image();img.onload=()=>{portraitCache.set(src,img);if(target)renderTalk();};
+ img.onerror=()=>portraitCache.set(src,null);img.src=src;return null;}
 function drawPortrait(id,condition){const canvas=$('talk-portrait'),g=canvas.getContext('2d');if(!g)return;
- g.setTransform(1,0,0,1,0,0);g.fillStyle='#152724';g.fillRect(0,0,canvas.width,canvas.height);
+ g.setTransform(1,0,0,1,0,0);const entry=portraitFor(id),drawn=entry&&entry.draw;
+ const picture=portraitImage(entry&&entry.variants&&entry.variants[condition])||portraitImage(entry&&entry.file);
+ if(picture){g.drawImage(picture,0,0,canvas.width,canvas.height);return;}
+ if(drawn){const scale=canvas.width/PORTRAIT_SIZE.w;g.setTransform(scale,0,0,scale,0,0);drawn(g);g.setTransform(1,0,0,1,0,0);return;}
+ // somebody with no portrait at all: their world sprite, enlarged
+ g.fillStyle='#152724';g.fillRect(0,0,canvas.width,canvas.height);
  g.fillStyle='#1d3a33';g.fillRect(6,6,canvas.width-12,canvas.height-12);
  g.setTransform(3,0,0,3,-8,-24);paint=g;sprite(1,1,id,condition||'conscious');paint=ctx;g.setTransform(1,0,0,1,0,0);}
 function renderTalk(){const id=target;if(!id||!state.npcs[id])return;

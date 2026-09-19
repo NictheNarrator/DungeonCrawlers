@@ -704,5 +704,32 @@ test('The dialogue scene presents a portrait, a name and spoken replies',async()
  app.openConversation('tobin');
  assert.equal(stubEls.get('talk-name').textContent,'Tobin','and the scene follows whoever you spoke to');
 });
+test('Every conversation partner has their own portrait, and they never mix',async()=>{
+ const app=await import('./src/app.mjs?test=sprites');
+ const {portraitFor,portraitIds,PORTRAIT_SIZE}=await import('./src/portraits.mjs');
+ const cast=['mara','skrit','tobin','vex','eli','june'];
+ for(const id of cast){
+  const entry=portraitFor(id);
+  assert(entry,`${id} has a portrait entry`);
+  assert.equal(typeof entry.draw,'function',`${id} has a drawn portrait as a fallback`);
+  assert(entry.file.endsWith(`${id}.png`),`${id} points at their own file, not a shared one`);
+  assert(entry.fallbackFile,'and there is a fallback file for the whole set');
+  assert(entry.variants&&typeof entry.variants==='object','and a place for expression variants later');
+ }
+ assert.equal(new Set(cast.map(id=>portraitFor(id).file)).size,cast.length,'no two characters share a portrait file');
+ assert.equal(portraitIds().length,cast.length,'the cast is exactly the six of them');
+ assert.equal(portraitFor('sumpmaw'),null,'a creature with no portrait falls through to its sprite');
+ assert(PORTRAIT_SIZE.w>0&&PORTRAIT_SIZE.h>0,'the portrait canvas has a size');
+ // The portrait follows the character, and survives a branching conversation.
+ app.openConversation('mara');
+ const first=stubEls.get('talk-name').textContent;
+ app.openConversation('vex');
+ assert.equal(stubEls.get('talk-name').textContent,'Vex','the scene switches to whoever you are speaking to');
+ const maraEntry=portraitFor('mara'),vexEntry=portraitFor('vex');
+ assert.notEqual(maraEntry.file,vexEntry.file,'and the portrait with it');
+ app.openConversation('mara');
+ assert.equal(stubEls.get('talk-name').textContent,first,'branching does not swap the portrait');
+ assert.equal(stubEls.get('talk-portrait').hidden,false,'the portrait is on screen');
+});
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));
