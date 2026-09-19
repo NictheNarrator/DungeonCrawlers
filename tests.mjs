@@ -6,6 +6,7 @@ import {recordDeed,classOptions,classReady,chooseClass,CLASSES,RACES,activeAbili
 import {bandFor,relationshipText,companionOf,blankCompanion,COMPANIONS} from './src/companions.mjs';
 import {companionRespect,companionEpilogue,separateCompanions,journalUnlocked,knownPeople,knowsFaction,knowsSupplies,dialogueOptions,dialoguePrompt,chooseDialogue} from './src/engine.mjs';
 import {DIALOGUE} from './src/dialogue.mjs';
+import {conversationFor, SPOKEN} from './src/conversation.mjs';
 import {award,achievementFor,ACHIEVEMENTS,BOX_TIERS,BOX_LOOT,ITEMS,gearBonus,itemOf,equipItem,unequipItem,rarityOf,traitOf,abilityBonus,RARITIES,grantedItem,SLOTS,itemSlot,equippedItems,emptyEquipped,FACTIONS,STANDING,factionOf,standingOf,improveStanding,worsenStanding,questState,questCarried,questActionFor,factionLine,keepSupplies,memberStanding,approvalEffect} from './src/engine.mjs';
 import {PEOPLE,NPCS,STOCK_KEYS,isWith,withPlayer,priceOf,sellPriceOf,describeNPC,profileKnown,BADGE_PRICE} from './src/npcs.mjs';
 import {check,modifier,proficiencyBonus,SKILLS,ABILITIES} from './src/rules.mjs';
@@ -660,6 +661,48 @@ test('Milestone 9: the floor ends properly, and it ends differently each way',()
  assert.notEqual(tally,quiet,'and two very different runs read very differently');
  assert(tally.includes('Not:'),'the violent one lists its dead');
  assert(tally.includes('Tobin')&&quiet.includes('Tobin'),'both mention the people who were here');
+});
+test('Conversations are spoken lines mapped onto the real actions',()=>{
+ const s=fresh();
+ const CONVERSATIONAL=['Help','Befriend','Recruit','Threaten','Lie','Ask about the survivors','Hear his plan','Ask about the badge','Clear the barricade','Bandage her wound','Help her out','Let Vex take his pick','Keep it all'];
+ const WORDY=/^(Help|Befriend|Recruit|Threaten|Lie|Rob openly|Attack|Inspect)$/;
+ for(const id of ['mara','skrit','tobin','vex','eli','june']){
+  const scene=conversationFor(s,id);
+  assert(scene.name&&scene.line,'every conversation has a name and something to say');
+  assert(scene.line.length>20,`${id} says something rather than nothing`);
+  assert(!WORDY.test(scene.line),'and it is a line, not a menu label');
+  for(const reply of scene.replies){
+   assert(reply.text.length>12,`${id} offers a full sentence`);
+   assert(!WORDY.test(reply.text),`${id}'s replies are spoken, not commands`);
+   assert(reply.action||reply.dialogue!==undefined,'and every reply does something');
+   if(reply.action)assert(actions(s,id).includes(reply.action),`${id} can actually ${reply.action}`);
+   if(reply.skill)assert(['Persuasion','Deception','Intimidation','Insight','Athletics','Medicine'].includes(reply.skill),'skill tags are the standard ones');
+  }
+ }
+ // The world card keeps the physical options; the talking lives in the scene.
+ const app=readFileSync('src/app.mjs','utf8');
+ const social=app.match(/social:\[[^\]]*\]/)[0];
+ assert(social.includes("'Inspect'")&&social.includes("'Talk'"),'Inspect and Talk stay on the NPC you tapped');
+ for(const verb of ['Help','Befriend','Recruit','Lie'])assert(!social.includes(verb),`${verb} is said, not listed`);
+ const conflict=app.match(/conflict:\[[^\]]*\]/)[0];
+ for(const verb of ['Attack','Knock unconscious','Kill'])assert(conflict.includes(verb),`${verb} stays available without talking`);
+ assert(CONVERSATIONAL.length>0);
+});
+test('The dialogue scene presents a portrait, a name and spoken replies',async()=>{
+ const app=await import('./src/app.mjs?test=sprites');
+ const html=readFileSync('index.html','utf8');
+ for(const id of ['talk-name','talk-rel','talk-portrait','talk-line','talk-replies','talk-leave'])
+  assert(html.includes(`id="${id}"`),`the scene markup includes ${id}`);
+ app.openConversation('mara');
+ assert.equal(stubEls.get('talk-name').textContent,'Mara','the name is shown');
+ assert(['neutral','friendly','suspicious','hostile'].includes(stubEls.get('talk-rel').textContent),'with a relationship, not a number');
+ const line=stubEls.get('talk-line').textContent;
+ assert(line.includes('Did you see what happened up there'),'their line is on screen');
+ const buttons=stubEls.get('talk-replies').children;
+ assert(buttons.length>=2&&buttons.length<=4,`between two and four responses, got ${buttons.length}`);
+ assert(buttons.every(b=>String(b.children?.[0]?.textContent||'').trim().length>=0),'each response is a tappable button');
+ app.openConversation('tobin');
+ assert.equal(stubEls.get('talk-name').textContent,'Tobin','and the scene follows whoever you spoke to');
 });
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));

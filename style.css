@@ -36,3 +36,19 @@ nav span.active.safe{background:var(--safe-blue);box-shadow:0 0 8px #4b8fd055}
 /* The room strip is a trail of where you have been, not a floor plan. */
 nav span.unseen{display:none}
 @media(max-width:420px){.location>div{gap:6px}h1{font-size:15px}nav{gap:3px}nav span{width:4px;height:4px}nav span.active{width:12px}}
+/* The conversation scene: portrait, their line, your lines. Fills the phone. */
+.sheet.talk{padding:16px 14px max(12px,env(safe-area-inset-bottom,0px));max-height:94dvh;background:linear-gradient(#16231f,#0d1719);border-color:#6a8155}
+.talk-scene{display:flex;flex-direction:column;gap:10px;min-height:0}
+.talk-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.talk-head h2{font-size:20px;letter-spacing:-.4px}
+.talk-rel{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold)}
+.talk-portrait{display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#1d3a33,#0d1719 78%);border:1px solid #4d614055;border-radius:14px;padding:6px;flex:none}
+.talk-portrait canvas{width:132px;height:157px;image-rendering:pixelated}
+.talk-line{margin:0;font-size:15px;line-height:1.45;color:#e8f1d8;background:#101d1a;border-left:3px solid var(--acid-gold);border-radius:8px;padding:10px 12px}
+.talk-replies{display:grid;gap:8px}
+.talk-reply{display:flex;gap:8px;align-items:baseline;text-align:left;font:600 13.5px/1.35 system-ui;color:#eef6e2;background:#20342e;border:1px solid #5d7a55;border-radius:12px;padding:12px}
+.talk-reply:active{background:#2b463c}
+.talk-skill{flex:none;font-size:10px;letter-spacing:.6px;color:var(--electric-cyan)}
+.talk-foot{margin-top:2px}
+.talk-leave{width:100%;min-height:44px;font-size:12px;background:#1b2a26;color:#a9bb9d;border-color:#42564a}
+@media(max-height:700px){.talk-portrait canvas{width:104px;height:124px}.talk-line{font-size:14px;padding:8px 10px}.talk-reply{padding:10px}}

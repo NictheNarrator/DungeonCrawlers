@@ -1,3 +1,4 @@
+import {conversationFor} from './conversation.mjs';
 import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,itemOf,equipItem,unequipItem,rarityOf,SLOTS,FACTIONS,standingOf,memberStanding,questState,questCarried,relationshipOf,prologue,register,advanceClock,clockText,dialogueOptions,dialoguePrompt,chooseDialogue,journalUnlocked,knownPeople,knowsFaction,knowsSupplies,exitAt,EXITS} from './engine.mjs?v=npc1';
 import {COMPANIONS,companionOf} from './companions.mjs';
 import {PEOPLE,NPCS,tradePrice,itemName,memoryText,stockText,withPlayer,profileKnown} from './npcs.mjs';
@@ -13,7 +14,8 @@ function loadSafeRoom(){let raw=null;try{raw=localStorage.getItem(SAFE_KEY);}cat
  state=saved;resetView();render();toast('Back at the last Safe Room.');}
 function registerFlow(){save();render();modal('CRAWLER REGISTERED','Human. Alive. Mostly intact. Excellent start.\n\nFLOOR COLLAPSE: '+clockText(state.timer)+'\n\nNobody explains the number.',[['Down we go',()=>{}]]);}
 function collapseFlow(){save();render();modal('FLOOR COLLAPSE','The Concourse folds in on itself. Anyone still inside is inventory now.\n\nThe timer read 00:00:00.',[['Reload latest save',load],['Last Safe Room',loadSafeRoom],['New game',()=>{state=prologue();resetView();save();render();}]]);}
-const dialogs=['modal','pack-modal','menu-modal','journal-modal'];
+const dialogs=['modal','pack-modal','menu-modal','journal-modal','talk-modal'];
+const leaveTalk=()=>closeTalk();
 function anyDialog(){return dialogs.some(id=>$(id).open);}
 function stopHold(){controls?.stop();}
 function openPanel(id){stopHold();dialogs.forEach(d=>{if($(d).open)$(d).close();});$(id).showModal();}
@@ -65,6 +67,33 @@ function showAward(){if(!awardQueue.length){$('toast').classList.remove('show','
 function announce(from){const won=state.achievements.slice(from);if(!won.length)return;
  awardQueue.push(...won);clearTimeout(awardTimer);showAward();}
 function modal(title,text,buttons){$('modaltitle').textContent=title;$('modaltext').textContent=text;$('modalbuttons').replaceChildren();for(const [label,fn] of buttons){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{$('modal').close();fn();};$('modalbuttons').append(b);}openPanel('modal');}
+// The conversation scene: a portrait, what they just said, and the lines you
+// can actually say back. The engine still runs every consequence.
+let talkPage=0;
+function openTalk(id){target=id;talkPage=0;$('actioncard').hidden=true;openPanel('talk-modal');renderTalk();}
+function closeTalk(){$('talk-modal').close();render();}
+function drawPortrait(id,condition){const canvas=$('talk-portrait'),g=canvas.getContext('2d');if(!g)return;
+ g.setTransform(1,0,0,1,0,0);g.fillStyle='#152724';g.fillRect(0,0,canvas.width,canvas.height);
+ g.fillStyle='#1d3a33';g.fillRect(6,6,canvas.width-12,canvas.height-12);
+ g.setTransform(3,0,0,3,-8,-24);paint=g;sprite(1,1,id,condition||'conscious');paint=ctx;g.setTransform(1,0,0,1,0,0);}
+function renderTalk(){const id=target;if(!id||!state.npcs[id])return;
+ const scene=conversationFor(state,id);
+ $('talk-name').textContent=scene.name;$('talk-rel').textContent=scene.relationship;
+ drawPortrait(id,state.npcs[id].condition);
+ $('talk-line').textContent=scene.line;
+ const perPage=4,all=scene.replies,pages=Math.max(1,Math.ceil(all.length/perPage));if(talkPage>=pages)talkPage=0;
+ const replies=all.slice(talkPage*perPage,talkPage*perPage+perPage),list=$('talk-replies');list.replaceChildren();
+ for(const reply of replies){const b=document.createElement('button');b.className='talk-reply';
+  if(reply.skill){const tag=document.createElement('span');tag.className='talk-skill';tag.textContent='['+reply.skill+']';b.append(tag);}
+  const said=document.createElement('span');said.textContent=reply.text;b.append(said);
+  b.onclick=()=>{const who=id;$('talk-modal').close();
+   if(reply.dialogue!==undefined){const picked=dialogueOptions(state)[reply.dialogue];chooseDialogue(state,reply.dialogue);state.pendingDialogue=null;save();}
+   else action(reply.action);
+   promptEvents();if(state.combat||state.dead||state.complete){render();return;}openTalk(who);};
+  list.append(b);}
+ const more=$('talk-more');if(more)more.hidden=pages<2;
+ $('talk-leave').textContent='End the conversation';}
+export function openConversation(id){openTalk(id);}
 function resetView(){awardQueue.length=0;clearTimeout(awardTimer);target=null;npcTab='social';actionOpen=false;feedback='';motion=null;visual={x:state.x,y:state.y};dialogs.forEach(d=>$(d).close());stopHold();}
 function load(){const s=saved();if(!s){modal('No living save found','Your save is missing or damaged.',[['Back',()=>{}],['New game',newGame]]);return;}state=s;resetView();render();if(state.complete)endScreen();else toast("Welcome back, crawler.");promptEvents();}
 function newGame(){state=prologue();resetView();save();render();toast('Something is wrong with the skyline.');}
@@ -132,7 +161,7 @@ function render(){
  if(state.combat)actionOpen=true;const showing=actionOpen&&!state.dead&&!state.complete;$('actioncard').hidden=!showing;document.querySelector('.explore-controls').hidden=showing&&!!state.combat;$('close-actions').hidden=!!state.combat;$('action-label').textContent=state.combat?(state.combat.pendingCompanion?NPCS[state.combat.pendingCompanion].name.toUpperCase()+'’S TURN':'COMBAT · YOUR TURN'):'WITHIN REACH';$('actioncard').classList.toggle('companion-turn',!!state.combat?.pendingCompanion);$('action-feedback').textContent=feedback;
  const person=target&&PEOPLE.includes(target)&&state.npcs[target].condition==='conscious'&&!state.combat;$('npc-tabs').hidden=!person;document.querySelectorAll('[data-npc-tab]').forEach(b=>{const on=b.dataset.npcTab===npcTab;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
  $('actions').replaceChildren();if(state.combat){const id=state.combat.enemy,d=NPCS[id],nonlethal=state.combat.intent==='nonlethal';$('target').textContent=d.name+' · '+state.npcs[id].hp+' HP'+(state.combat.enemies.length>1?' · '+state.combat.enemies.length+' ENEMIES':'')+' · RANGE '+state.combat.range;$('targethint').textContent=(nonlethal?'NONLETHAL':'LETHAL')+' · Your damage '+attackRange(state).map(n=>n-(nonlethal?1:0)).join('–')+' · Enemy '+d.damage.join('–')+(conditionText(state,id)?' · '+conditionText(state,id).toUpperCase():'');for(const a of combatActions(state)){const b=button(a,()=>action(a));if(a==='Use potion')b.disabled=busy||!state.potions||state.hp===30;if(a==='Smoke bomb')b.disabled=busy||!state.items.smokeBombs;$('actions').append(b);}}
- else if(target){const n=state.npcs[target];$('target').textContent=(roomProps(state).find(p=>p.id===target)||{}).name||target;let hint=n?n.attitude.toUpperCase()+' · '+n.condition+' · '+n.hp+'/'+NPCS[target].hp+' HP'+((state.party||[]).includes(target)?' · IN YOUR PARTY':(state.allies?.[target]>0?` · ALLY (${state.allies[target]})`:'')):'Choose what happens next.';if(person)hint+=npcTab==='social'?' · Help: '+NPCS[target].help:npcTab==='supplies'?' · Trade: 1 '+itemName[NPCS[target].trade]+' / '+tradePrice(state,target)+' coins':' · Attack/Kill are lethal. Knock unconscious starts nonlethal combat.';$('targethint').textContent=hint;let available=actions(state,target);if(person){const groups={social:['Inspect','Talk','Help','Befriend','Recruit','Lie','Hand it back'],supplies:['Trade','Ask about goods','Offer a fair swap','Pickpocket','Rob openly','Inspect'],conflict:['Threaten','Attack','Knock unconscious','Kill']};available=available.filter(a=>groups[npcTab].includes(a)||(npcTab==='supplies'&&a.startsWith('Sell 1 ')));}for(const a of available)$('actions').append(button(a,()=>action(a)));}
+ else if(target){const n=state.npcs[target];$('target').textContent=(roomProps(state).find(p=>p.id===target)||{}).name||target;let hint=n?n.attitude.toUpperCase()+' · '+n.condition+' · '+n.hp+'/'+NPCS[target].hp+' HP'+((state.party||[]).includes(target)?' · IN YOUR PARTY':(state.allies?.[target]>0?` · ALLY (${state.allies[target]})`:'')):'Choose what happens next.';if(person)hint+=npcTab==='social'?' · Help: '+NPCS[target].help:npcTab==='supplies'?' · Trade: 1 '+itemName[NPCS[target].trade]+' / '+tradePrice(state,target)+' coins':' · Attack/Kill are lethal. Knock unconscious starts nonlethal combat.';$('targethint').textContent=hint;let available=actions(state,target);if(person){const groups={social:['Inspect','Talk','Leave him alone','Hand it back','Enter the break room'],supplies:['Trade','Ask about goods','Offer a fair swap','Pickpocket','Rob openly','Inspect'],conflict:['Attack','Knock unconscious','Kill','Fight','Force the checkpoint','Send the ratmen at it']};available=available.filter(a=>groups[npcTab].includes(a)||(npcTab==='supplies'&&a.startsWith('Sell 1 ')));}for(const a of available)$('actions').append(button(a,()=>{const who=target;action(a);if(a==='Talk'&&who&&!state.combat&&!anyDialog())openTalk(who);}));}
  else{$('target').textContent='Choose an object';$('targethint').textContent='These are within reach.';for(const p of near)$('actions').append(button(p.name,()=>{target=p.id;npcTab='social';feedback='';render();}));}
 
  {const who=state.combat?state.combat.enemy:target,chip=who?markerIcon(markerOf(state,who)):null;
@@ -158,7 +187,10 @@ function present(){const r=canvas.getBoundingClientRect();if(!r.width||!r.height
 // the warm camp, the grey offices, the rust of the ratmen, the checkpoint's
 // hazard yellow, the street, the blue safe room, and the cold way down.
 const palettes=[['#2b2f31','#3a3f3d','#6f7a4a'],['#2f2a24','#3d372d','#8a5a34'],['#2b2d30','#383c42','#3c4a63'],['#2d2622','#3b322a','#8a5a34'],['#262a33','#333a49','#3c4a63'],['#26292b','#33373a','#6d6a62'],['#1e2a33','#26384a','#4b8fd0'],['#262a30','#333a42','#e8c14a'],['#232d2c','#2c3a37','#5d7f7a'],['#23282a','#2e3436','#5d7f7a'],['#252a22','#31382b','#6f7a4a'],['#232b33','#2e3a44','#4fc4d8']];
-function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(x,y,w,h);}
+// Sprites paint through `paint` so the same art can be drawn to the map or to
+// a portrait canvas in the dialogue scene.
+let paint=ctx;
+function rect(x,y,w,h,color){paint.fillStyle=color;paint.fillRect(x,y,w,h);}
 // Characters. One light direction (top-left highlight, bottom-right shade),
 // hard short shadows, and a silhouette that reads at phone size. Guide palette:
 // AUTODIRECTION.md, art/floor1-style-guide.png.
@@ -294,7 +326,7 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
  floorMark(type,x,y);
  rect(px+13,py+47,40,8,'#1b1f21');
  if(condition==='dead'||condition==='unconscious'){rect(px+14,py+38,38,13,'#4a453f');rect(px+17,py+40,32,5,'#6d6a62');rect(px+44,py+34,11,9,'#b0a184');
-  ctx.font='13px monospace';ctx.fillStyle=condition==='dead'?'#a8332e':'#4fc4d8';ctx.fillText(condition==='dead'?'×':'Zz',px+24,py+26);return;}
+  paint.font='13px monospace';paint.fillStyle=condition==='dead'?'#a8332e':'#4fc4d8';paint.fillText(condition==='dead'?'×':'Zz',px+24,py+26);return;}
  const c=look[type];
  if(c&&!['rat','skrit','skulker','brute'].includes(type)){const coat=c.coat;
   rect(px+22,py+12,20,17,c.skin);
@@ -394,7 +426,7 @@ document.addEventListener('keydown',e=>{if(anyDialog())return;const dirs={ArrowU
 canvas.addEventListener('click',e=>{if(anyDialog()||state.combat)return;if(actionOpen){actionOpen=false;render();return;}const r=canvas.getBoundingClientRect(),x=Math.floor((camera.x+(e.clientX-r.left)/camera.scale)/64),y=Math.floor((camera.y+(e.clientY-r.top)/camera.scale)/64),p=nearby(state).find(p=>p.x===x&&p.y===y);if(p){target=p.id;npcTab='social';actionOpen=true;feedback='';render();}else if(Math.abs(x-state.x)+Math.abs(y-state.y)===1)step(x-state.x,y-state.y);});
 document.querySelectorAll('[data-npc-tab]').forEach(b=>b.onclick=()=>{npcTab=b.dataset.npcTab;render();});
 $('bandage').onclick=()=>{if(useBandage(state)){changed();$('pack-feedback').textContent=state.log.at(-1);}};$('sharpen').onclick=()=>{if(useWhetstone(state)){changed();$('pack-feedback').textContent=state.log.at(-1);}};
-$('interact').onclick=select;$('close-actions').onclick=()=>{actionOpen=false;feedback='';render();};$('menu').onclick=()=>openPanel('menu-modal');$('pack').onclick=()=>{$('pack-feedback').textContent='';openPanel('pack-modal');};$('journal').onclick=()=>openPanel('journal-modal');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
+$('interact').onclick=select;$('close-actions').onclick=()=>{actionOpen=false;feedback='';render();};$('talk-leave').onclick=()=>closeTalk();$('talk-more').onclick=()=>{talkPage++;renderTalk();};$('menu').onclick=()=>openPanel('menu-modal');$('pack').onclick=()=>{$('pack-feedback').textContent='';openPanel('pack-modal');};$('journal').onclick=()=>openPanel('journal-modal');document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
 $('potion').onclick=()=>{if(usePotion(state)){changed();$('pack-feedback').textContent=state.log.at(-1);}};$('save').onclick=()=>{if(save())$('savestatus').textContent='Saved. You can return to this browser to continue.';};$('load').onclick=()=>modal('Load your last save?','Return to your latest living checkpoint.',[['Cancel',()=>{}],['Load save',load]]);$('new').onclick=restart;
 $('help').onclick=()=>modal('Your first shift','Hold a direction to move. The camera follows you. Doorways are halfway along the east and west walls.\nStand beside a character or object, then tap Interact.\nFind an exit key from Mara or her locker, then reach the stairs. Fighting is optional.\nNPC approaches are grouped into Social, Supplies, and Conflict. Their attitudes, injuries, possessions, and memories persist. Pickpocketed NPCs notice on room exit. Field notes show relationship history.\nIn combat, use nonlethal mode to knock out or lethal mode to kill. Switching intent is free. Smoke escapes without a hit. Potions heal 10 HP; defend halves the next hit.\nProgress saves on this device outside combat. Open the menu to save, load, or restart.',[['Let’s go',()=>{}]]);
 $('modal').addEventListener('cancel',e=>{if(state.dead||state.complete)e.preventDefault();});new ResizeObserver(scheduleDraw).observe($('viewport'));
@@ -410,9 +442,7 @@ setInterval(()=>{if(!clockRunning())return;const wasRegistered=state.registered,
  if(!wasRegistered&&state.registered){registerFlow();return;}
  if(state.dead&&!wasDead){collapseFlow();return;}
  render();},1000);
+// A pending choice is a conversation already in progress: show it in the scene.
+function dialogueFlow(){if(!state.pendingDialogue||anyDialog())return;openTalk(state.pendingDialogue.id);}
 // Any pending player-choice conversation opens as a modal with one button per
 // reply. The engine owns what each reply does; this only presents them.
-function dialogueFlow(){if(!state.pendingDialogue||anyDialog())return;const options=dialogueOptions(state);if(!options.length)return;
- const who=state.pendingDialogue.id;
- modal(NPCS[who].name,dialoguePrompt(state),options.map((option,index)=>[option.label,()=>{
-  chooseDialogue(state,index);save();render();toast(state.log.at(-1));promptEvents();}]));}
