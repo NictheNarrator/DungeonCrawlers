@@ -13,7 +13,7 @@ let passed=0;const pending=[];function test(name,fn){const result=fn();if(result
 function walk(s,tx,ty){const q=[[s.x,s.y,[]]],seen=new Set([s.x+','+s.y]);while(q.length){const [x,y,path]=q.shift();if(x===tx&&y===ty){for(const [dx,dy] of path)assert(move(s,dx,dy));return;}for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=nx+','+ny;if(!seen.has(k)&&!blocked(s,nx,ny)){seen.add(k);q.push([nx,ny,[...path,[dx,dy]]]);}}}assert.fail(`No route in ${rooms[s.room]} to ${tx},${ty}`);}
 // Walk the floor the way a player would: find a route through the doorways and
 // take it, one room at a time. Works for a hub with branches, not just a line.
-function travel(s,room){let guard=0;
+function travel(s,room){let guard=0;s.flags.checkpointOpen=true; // tests walk the floor; the Inspector's gate is asserted directly
  while(s.room!==room){assert(++guard<30,`gave up trying to reach ${rooms[room]}`);
   const came=new Map([[s.room,null]]),queue=[s.room];
   while(queue.length){const here=queue.shift();if(here===room)break;
@@ -582,6 +582,59 @@ test('Helping one side while robbing the other leaves both opinions intact',()=>
  assert.equal(memberStanding(s,'mara'),'hostile','without cancelling the grudge');
  assert.equal(checkpoint(s).standing.skrit,'friendly','standing is kept per person, not per faction flag');
  assert.equal(checkpoint(s).standing.mara,'hostile');
+});
+test('The Inspector is not a monster: it checks authorisation, and you can leave it alone',()=>{
+ const s=supplied();
+ assert.equal(NPCS.inspector.name,'The Concourse Inspector');
+ assert.equal(s.npcs.inspector.attitude,'neutral','it does not hate you');
+ approach(s,'inspector');
+ assert(!s.combat,'walking up to it starts nothing');
+ interact(s,'inspector','Talk');
+ assert(s.log.at(-1).includes('Nobody passes without it'),'it explains itself');
+ assert(!s.combat,'and talking is not a fight');
+ // The checkpoint door really is shut.
+ s.flags.checkpointOpen=false;s.x=6;s.y=7;assert.equal(move(s,0,1),false,'the stairwell is not yours yet');
+ assert(s.log.some(line=>line.includes('AUTHORISED PERSONNEL ONLY')),'and the checkpoint says why');
+ // Forcing it is a choice, and it is a fight.
+ approach(s,'inspector');interact(s,'inspector','Force the checkpoint');
+ assert(s.combat&&s.combat.enemy==='inspector','forcing passage makes it hostile');
+ assert.equal(s.npcs.inspector.attitude,'hostile');
+});
+test('The stamp and the regulation each get you through legally',()=>{
+ const stamped=supplied();
+ stamped.flags.gateOpen=true;approach(stamped,'vault');interact(stamped,'vault','Crack it open');
+ assert(stamped.flags.hasStamp,'the administrative office keeps the stamp in the cache');
+ approach(stamped,'inspector');
+ assert(actions(stamped,'inspector').includes('Show the authorization stamp'),'you can produce it');
+ interact(stamped,'inspector','Show the authorization stamp');
+ assert(stamped.flags.checkpointOpen,'and the Inspector steps aside');
+ travel(stamped,11);assert.equal(stamped.room,11,'the stairwell is open');
+ // The loophole needs the regulation *and* the credentials, and a convincing read.
+ const loophole=supplied();act(loophole,'tobin',`Buy the badge (${BADGE_PRICE} coins)`);
+ act(loophole,'note','Read');
+ assert(loophole.flags.regulation,'the contradiction is written down somewhere');
+ approach(loophole,'inspector');
+ assert(actions(loophole,'inspector').includes('Cite the regulation'),'with the page and the badge you can argue it');
+ interact(loophole,'inspector','Cite the regulation',()=>0.99);
+ assert(loophole.flags.checkpointOpen,'a good reading beats a rule');
+ const unconvincing=supplied();act(unconvincing,'note','Read');approach(unconvincing,'inspector');
+ assert(!actions(unconvincing,'inspector').includes('Cite the regulation'),'the page alone is not the argument');
+});
+test('The Inspector can be killed, avoided, or dropped a platform on',()=>{
+ const crushed=supplied();approach(crushed,'platform');interact(crushed,'platform','Drop the platform');
+ assert.equal(crushed.npcs.inspector.condition,'dead','several tons settles the argument');
+ assert(crushed.flags.checkpointOpen,'and nobody is checking any more');
+ assert.equal(checkpoint(crushed).npcs.inspector.condition,'dead','it stays dead');
+ const fought=supplied();approach(fought,'inspector');interact(fought,'inspector','Fight');win(fought,()=>0.9);
+ assert.equal(fought.npcs.inspector.condition,'dead','or it can simply be fought');
+ const bypassed=supplied();
+ act(bypassed,'skrit','Help with the machine');
+ bypassed.cheese=1;approach(bypassed,'sumpmaw');interact(bypassed,'sumpmaw','Lure it away with food');   // the ratmen owe you
+ assert(bypassed.flags.tunnelBypass,'they show you the route they keep quiet about');
+ travel(bypassed,11);assert.equal(bypassed.room,11,'and the stairwell is reachable without the checkpoint');
+ const bribed=supplied();act(bribed,'vex','Hear his plan');approach(bribed,'panel');
+ interact(bribed,'panel','Reroute the security feed');
+ assert(bribed.flags.checkpointOpen,'Vex\u2019s shutdown takes the checkpoint with it');
 });
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));

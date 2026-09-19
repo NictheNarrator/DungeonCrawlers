@@ -24,6 +24,8 @@ export const NPCS = {
  ,june:{name:'June',role:'Wounded straggler',hp:6,damage:[1,2],attitude:'neutral',stock:{gold:2,potions:1},equipped:[],refuse:['potions'],help:'A bandage would do it',home:10,routine:'shelter',route:[10],abilities:{strength:9,dexterity:13,constitution:8,intelligence:12,wisdom:13,charisma:12},skills:['medicine','perception'],saves:['constitution']}
  // It wandered into the ratmen's food store and stayed, because that is where
  // the food is. Not hostile by nature: hostile by appetite.
+ // The last obstacle: it does not care whether you are good, only whether you are authorised.
+ ,inspector:{name:'The Concourse Inspector',archetype:'inspector',role:'Authorisation, with legs',hp:40,damage:[5,7],attitude:'neutral',stock:{},equipped:[],refuse:[],onHit:'bleeding',xp:200,home:4,routine:'guard',route:[4],abilities:{strength:18,dexterity:10,constitution:17,intelligence:14,wisdom:16,charisma:6},skills:['insight','perception','intimidation'],saves:['constitution','wisdom']}
  ,sumpmaw:{name:'The Sump Maw',archetype:'maw',pack:'ratmen',role:'Something that moved in',hp:22,damage:[3,5],attitude:'hostile',stock:{},equipped:[],refuse:[],onHit:'bleeding',xp:120,home:10,routine:'guard',route:[10],abilities:{strength:18,dexterity:6,constitution:17,intelligence:3,wisdom:8,charisma:2},skills:['athletics','perception'],saves:['constitution']}
 
 };

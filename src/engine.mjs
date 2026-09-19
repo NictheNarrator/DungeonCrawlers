@@ -29,7 +29,7 @@ export const props=[
   {id:'scrap',name:'Scrap pile',x:6,y:5},{id:'skullpost',name:'Trophy post',x:7,y:2}],
 // 4 Final Checkpoint — the last obstacle, with the stairwell sign already visible.
  [{id:'platform',name:'Suspended platform',x:3,y:3},{id:'barrier',name:'Checkpoint barrier',x:9,y:3},{id:'desk',name:'Inspector’s desk',x:2,y:5},
-  {id:'cabinet',name:'Abandoned cabinet',x:2,y:2},{id:'barricade',name:'Rusted barricade',x:5,y:6}],
+  {id:'cabinet',name:'Abandoned cabinet',x:2,y:2},{id:'barricade',name:'Rusted barricade',x:5,y:6},{id:'inspector',name:'The Concourse Inspector',x:6,y:4}],
 // 5 Surface — the prologue, unchanged: the stairwell is the way in.
  [{id:'wreck',name:'Wrecked car',x:3,y:3},{id:'awning',name:'Collapsed awning',x:7,y:3},{id:'stranger1',name:'Panicked man',x:5,y:6},{id:'stranger2',name:'Panicked woman',x:9,y:6},{id:'stairwell',name:'The stairwell',x:10,y:5}],
 // 6 Safe Room — blue light, working kettle, and the two regulars.
@@ -85,14 +85,14 @@ export const EXITS=[
  [{x:12,y:4,to:0,tx:1,ty:4}],
  [{x:6,y:8,to:7,tx:6,ty:1},{x:12,y:3,to:8,tx:1,ty:3}],
  [{x:0,y:2,to:9,tx:11,ty:2},{x:0,y:5,to:10,tx:11,ty:5},{x:6,y:8,to:4,tx:6,ty:1}],
- [{x:6,y:0,to:3,tx:6,ty:7},{x:6,y:8,to:11,tx:6,ty:1},{x:0,y:4,to:9,tx:11,ty:4}],
+ [{x:6,y:0,to:3,tx:6,ty:7},{x:6,y:8,to:11,tx:6,ty:1,needs:'checkpointOpen'},{x:0,y:4,to:9,tx:11,ty:4}],
  [],
  [],
  [{x:0,y:4,to:0,tx:11,ty:4},{x:6,y:0,to:2,tx:6,ty:7,needs:'gateOpen'},{x:4,y:8,to:9,tx:4,ty:1}],
  [{x:0,y:3,to:2,tx:11,ty:3},{x:9,y:8,to:9,tx:9,ty:1}],
- [{x:4,y:0,to:7,tx:4,ty:7},{x:9,y:0,to:8,tx:9,ty:7},{x:0,y:6,to:0,tx:11,ty:6},{x:12,y:2,to:3,tx:1,ty:2},{x:12,y:4,to:4,tx:1,ty:4}],
+ [{x:4,y:0,to:7,tx:4,ty:7},{x:9,y:0,to:8,tx:9,ty:7},{x:0,y:6,to:0,tx:11,ty:6},{x:12,y:2,to:3,tx:1,ty:2},{x:12,y:4,to:4,tx:1,ty:4},{x:12,y:6,to:11,tx:1,ty:4,needs:'tunnelBypass'}],
  [{x:6,y:0,to:0,tx:6,ty:7},{x:12,y:5,to:3,tx:1,ty:5}],
- [{x:6,y:0,to:4,tx:6,ty:7}]];
+ [{x:6,y:0,to:4,tx:6,ty:7},{x:0,y:4,to:9,tx:11,ty:6,needs:'tunnelBypass'}]];
 export function exitAt(room,x,y){return(EXITS[room]||[]).find(exit=>exit.x===x&&exit.y===y)||null;}
 export function blocked(s,x,y){if(x<1||x>11||y<1||y>7)return true;
  if(props[s.room].some(p=>p.x===x&&p.y===y&&!NPCS[p.id]))return true;
@@ -194,7 +194,7 @@ export function nearby(s){const found=roomProps(s).filter(p=>Math.abs(p.x-s.x)+M
  if(!s.registered&&s.room===SURFACE)found.push({id:'phone',name:'Your phone',x:s.x,y:s.y});return found;}
 function baseActions(s,id){if(id==='staffdoor'&&!s.dead&&!s.complete)return ['Inspect','Enter the break room'];if(s.dead||s.complete||s.combat)return [];if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return npcActions(s,id);
  if(id==='skrit')return ['Inspect','Talk','Help with the machine','Pickpocket','Leave him alone','Fight'];
- if(NPCS[id]?.archetype&&id!=='rat'&&id!=='sumpmaw')return ['Inspect','Fight',...(s.cheese?['Offer cheese']:[])];
+ if(NPCS[id]?.archetype&&!['rat','sumpmaw','inspector'].includes(id))return ['Inspect','Fight',...(s.cheese?['Offer cheese']:[])];
  switch(id){
  case 'fountain':return ['Inspect','Heal'];case 'terminal':return ['Inspect'];
  case 'chest':return ['Inspect',...(s.flags.chest?[]:['Open']),...(questCarried(s)&&questOpen(s)?['Keep the supplies']:[])];case 'crate':return ['Inspect',...(s.flags.crate?[]:['Break'])];
@@ -210,6 +210,8 @@ function baseActions(s,id){if(id==='staffdoor'&&!s.dead&&!s.complete)return ['In
  case 'note':return ['Inspect','Read'];case 'locker':return ['Inspect',...(s.flags.locker?[]:['Open'])];
  case 'sumpmaw':return ['Inspect','Fight',...(s.cheese?['Lure it away with food']:[]),'Trap it behind the door',...(s.npcs.brute.condition==='conscious'&&memberStanding(s,'rat')!=='hostile'?['Send the brute in']:[])];
  case 'gate':return ['Inspect',...(s.items.badge&&!s.flags.gateOpen?['Badge through the gate']:[])];case 'barrier':return ['Inspect'];
+ case 'inspector':return ['Inspect','Talk',...(s.flags.hasStamp?['Show the authorization stamp']:[]),...(s.flags.regulation&&s.items.badge?['Cite the regulation']:[]),...(s.flags.tunnelBypass?['Send the ratmen at it']:[]),'Force the checkpoint','Fight'];
+ case 'platform':return ['Inspect',...(s.flags.platformDropped?[]:['Drop the platform'])];
  case 'vault':return ['Inspect',...(s.flags.vaultOpen?[]:['Crack it open'])];
  case 'panel':return ['Inspect',...(s.flags.securityDown?[]:['Reroute the security feed'])];
  case 'eli':return ['Inspect','Talk',...(s.npcs.eli.memory.rescued?[]:['Clear the barricade']),'Threaten','Fight'];
@@ -294,7 +296,7 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
  if(id==='fountain'){s.hp=s.maxHp;say(s,'Fully healed. The station bills someone else. Enjoy the novelty.');}
  if(id==='chest'){s.flags.chest=true;s.gold+=6;s.potions++;s.items.repairKits++;s.quests.carried=true;say(s,'Found 6 coins, a potion, and a repair kit. The survivors want this cache; so do the ratmen. Neither knows you have it yet.');}
  if(id==='crate'){s.flags.crate=true;s.cheese++;say(s,'Found pungent cheese. A diplomatic instrument, probably.');}
- if(id==='note'){s.flags.memo=true;say(s,'Memo: “Sponsor slogan: WE KEEP YOU IN THE PICTURE. Beware faulty exit machinery. Tell the crawler by the stairs. Custodian accepts cheese; Mara’s locker holds a spare key.” You can share this information with Vex or quote it in a lie.');}
+ if(id==='note'){s.flags.memo=true;s.flags.regulation=true;say(s,'Memo: “Sponsor slogan: WE KEEP YOU IN THE PICTURE. Beware faulty exit machinery. Tell the crawler by the stairs. Custodian accepts cheese; Mara’s locker holds a spare key.” Behind it, a page of facility regulations contradicts itself in three places. One clause stands out: active maintenance personnel responding to a declared facility hazard may bypass normal authorization. You can share this with Vex, or quote the clause to anyone who cares about paperwork.');}
  if(id==='locker'){s.flags.locker=true;s.key=true;say(s,'You take the emergency spare key. It belongs to the building, not Mara.');}
  if(id==='gate'&&action==='Badge through the gate'){s.flags.gateOpen=true;
   say(s,'You hold the maintenance badge up to the reader. The gate considers it, then remembers it was built to obey badges, and slides open.');return true;}
@@ -304,17 +306,17 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   if(!guided){const result=d20({actor:s,skill:'investigation',dc:15,modifiers:gearBonus(s,'checks'),rng});
    if(!result.success){say(s,`Investigation ${result.total} against DC 15. Failure. The panel spits a breaker at you and the lights stay exactly as they were.`);return true;}
    say(s,`Investigation ${result.total} against DC 15. Success.`);}
-  s.flags.securityDown=true;s.flags.gateOpen=true;
+  s.flags.securityDown=true;s.flags.gateOpen=true;s.flags.checkpointOpen=true;
   say(s,guided?'Vex talks you through it: kill the feed, let the board stop arguing with itself, then take the loop out by hand. Access Control goes dark.':'You trace the security loop and pull it. Somewhere behind you the Access Control board goes dark.');
   recordDeed(s,'environment');return true;}
  if(id==='vault'&&action==='Crack it open'){
   if(!(s.flags.gateOpen||s.flags.securityDown||s.items.badge)){say(s,'The cache is locked to authorised personnel. The badge, or a security system that has stopped caring, would do it.');return true;}
-  s.flags.vaultOpen=true;s.gold+=6;grantedItem(s,'Iron signet');
+  s.flags.vaultOpen=true;s.flags.hasStamp=true;s.gold+=6;grantedItem(s,'Iron signet');
   say(s,'The cache opens on a rack of the sort of things a security office keeps: 6 coins and a heavy iron signet nobody has dared to wear. Vex watches your hands, not the rack.');return true;}
  if(id==='pipe'){let found=false;for(const who of Object.keys(s.companions)){const mate=companionOf(s,who);if(mate.quest.id!=='locket'||mate.quest.stage!=='searching')continue;mate.quest.stage='found';grantedItem(s,'Sable locket');found=true;say(s,'Wedged behind the pipe: a sable locket on a broken chain. Dell. Mara will want to know.');}if(!s.flags.secret){s.flags.secret=true;s.gold+=4;award(s,'Pipe dream');say(s,'A hidden cache contains 4 coins.');found=true;}if(s.flags.tobinCache&&!s.flags.tobinCacheTaken){s.flags.tobinCacheTaken=true;s.gold+=3;say(s,'Tobin’s tip reveals a second compartment: 3 extra coins. Information can be worth more than pockets.');found=true;}if(!found)say(s,'The cache is empty.');}
  if(id==='satchel'){s.flags.satchel=true;s.gold+=3;s.items.smokeBombs++;ownedTake(s,'satchel','3 coins and a smoke bomb',['gold','smokeBombs']);}
  if(id==='whetstone'){s.flags.whetstone=true;s.items.whetstones++;ownedTake(s,'whetstone','1 whetstone',['whetstones']);}
- if(NPCS[id]?.archetype&&id!=='rat'&&id!=='sumpmaw'){if(action==='Fight')startCombat(s,id);
+ if(NPCS[id]?.archetype&&!['rat','sumpmaw','inspector'].includes(id)){if(action==='Fight')startCombat(s,id);
   else if(action==='Offer cheese'){if(!s.cheese){say(s,'You have no cheese. Try the crate in Food Storage.');return true;}
    s.cheese--;shiftMember(s,id,-2,'you paid the cheese tribute');s.npcs[id].attitude='friendly';
    say(s,`${NPCS[id].name} accepts the tribute. The Ratmen file you under “useful”.`);}
@@ -324,7 +326,7 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   if(action==='Offer cheese'){if(memberStanding(s,'rat')==='friendly')say(s,'The custodian has already accepted your tribute.');else if(!s.cheese)say(s,'You have no cheese. Try the crate in Food Storage.');else{s.cheese--;s.npcs.rat.attitude='friendly';s.npcs.rat.memory.helped=true;recordDeed(s,'persuasion');partyApproval(s,8,'you talked your way past a problem');shiftMember(s,'rat',-2,'you paid the cheese tribute');award(s,'Cheese diplomacy');say(s,'The ratman accepts. The only honest transaction in the building.');}}
   if(action==="Sneak past"){s.flags.sneaked=true;recordDeed(s,"stealth");partyApproval(s,8,'you avoided a fight');award(s,"Quiet quitting");say(s,'You slip along the wall. The custodian pretends not to see.');awardXp(s,30,'resolving the custodian without a fight');}
   if(action==='Return the badge'){if(!s.items.badge){say(s,'You have nothing of theirs to give back.');return true;}
-   s.items.badge--;s.flags.badgeReturned=true;s.npcs.rat.memory.returnedBadge=true;s.npcs.rat.memory.helped=true;
+   s.items.badge--;s.flags.badgeReturned=true;s.flags.tunnelBypass=true;s.npcs.rat.memory.returnedBadge=true;s.npcs.rat.memory.helped=true;
    shiftMember(s,'rat',-2,'you gave the ratmen back their badge');
    say(s,'You hold the badge out. The custodian takes it back without thanking you, which from a ratman is close enough, and says the tunnels are yours to use.');return true;}
   if(action==='Fight')startCombat(s,'rat');
@@ -364,6 +366,29 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
    say(s,'You point at the store and tell the brute it is a big rat. It thinks about this, decides you are right, and goes in. The noise lasts a while. It comes out missing most of an ear and holding what is left of the Sump Maw, and the ratmen look at you as though you have done something clever and unforgivable at the same time.');
    mawReward(s,'you sent the brute in to deal with it');awardXp(s,80,'sending the brute at the Sump Maw');return true;}
   if(action==='Fight'){startCombat(s,id);return true;}}
+ // The Inspector. It is not a monster with a grudge; it is a rule with legs,
+ // and every way past it is a way of becoming authorised.
+ if(id==='inspector'){
+  if(action==='Talk'&&!s.combat){say(s,'The Inspector does not turn its head. “Authorization is checked here. Nobody passes without it. This is not a judgement about you.”');return true;}
+  if(action==='Show the authorization stamp'){
+   if(!s.flags.hasStamp){say(s,'You have nothing to show it.');return true;}
+   s.flags.checkpointOpen=true;say(s,'You hold up the Exit Authorization Stamp. The Inspector examines it for a long, unhurried moment, finds it in order, and steps aside without comment.');return true;}
+  if(action==='Cite the regulation'){const result=d20({actor:s,skill:'persuasion',dc:14,modifiers:gearBonus(s,'checks'),rng});
+   if(!result.success){say(s,`Persuasion ${result.total} against DC 14. Failure. The Inspector considers the clause, then considers you, and stays exactly where it is.`);return true;}
+   s.flags.checkpointOpen=true;say(s,`Persuasion ${result.total} against DC 14. Success. You read the clause out loud - active maintenance personnel responding to a declared facility hazard may bypass normal authorization - and hold up the maintenance badge. The Inspector checks its own regulations, finds the contradiction, and cannot legally stop you. It steps aside with what might be annoyance.`);return true;}
+  if(action==='Send the ratmen at it'){s.npcs.inspector.hp-=12;s.npcs.inspector.attitude='hostile';
+   if(s.npcs.inspector.hp<=0){s.npcs.inspector.hp=0;s.npcs.inspector.condition='dead';s.flags.checkpointOpen=true;}
+   say(s,'You let the ratmen explain their grievance in person. The Inspector takes a great deal of damage before it starts taking the situation seriously.');recordDeed(s,'help');awardXp(s,80,'the ratmen and the Inspector');return true;}
+  if(action==='Force the checkpoint'){s.npcs.inspector.attitude='hostile';say(s,'You make to walk past. The Inspector\u2019s posture changes in a way that suggests the forms have ended.');startCombat(s,'inspector');return true;}
+  if(action==='Fight'){startCombat(s,'inspector');return true;}}
+ if(id==='platform'&&action==='Drop the platform'){s.flags.platformDropped=true;recordDeed(s,'environment');
+  const here=placeOf(s,'inspector').room===s.room&&s.npcs.inspector.condition==='conscious';
+  if(!here){say(s,'You pull the maintenance control. Several tons of machinery come down on an empty stretch of floor and bring everything in the room to a stop.');return true;}
+  s.npcs.inspector.hp-=45;
+  if(s.npcs.inspector.hp<=0){s.npcs.inspector.hp=0;s.npcs.inspector.condition='dead';s.flags.checkpointOpen=true;
+   say(s,'You pull the maintenance control. The platform comes down exactly where the Inspector is standing, and something very old and very procedural stops moving. ANNEX: “Authorization is no longer required. Nobody is checking.”');awardXp(s,120,'dropping the platform on the Inspector');return true;}
+  s.npcs.inspector.attitude='hostile';
+  say(s,'The platform comes down. The Inspector takes the hit, folds in a way that has nothing to do with paperwork, and comes for you.');awardXp(s,60,'wounding the Inspector');return true;}
  if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in Records, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
  return true;
 }
@@ -471,7 +496,7 @@ function grantFactionGift(s,faction){s.factionGifts=s.factionGifts||{};if(s.fact
  awardXp(s,30,`the ${FACTIONS[faction].name} trust you`);return true;}
 // Clearing the ratmen's store is worth more to them than any badge.
 function mawReward(s,reason){
- s.npcs.rat.memory.helped=true;shiftMember(s,'rat',-2,reason);
+ s.npcs.rat.memory.helped=true;s.flags.tunnelBypass=true;shiftMember(s,'rat',-2,reason);
  if(s.flags.mawReward)return;
  s.flags.mawReward=true;
  say(s,'The custodian comes out to look at the empty store, then says the tunnels are yours - and this time it means the tunnels.');}
@@ -763,7 +788,7 @@ function tickConditions(s,say){for(const id of ['player',...Object.keys(NPCS)]){
 // Secondary actions sit behind a disclosure in the dock so the common loop
 // stays three taps deep. The core is whatever is left.
 export const SECONDARY_ACTIONS=['Shove','Grapple','Switch to nonlethal','Switch to lethal','Smoke bomb','Tip the brazier','Flee','Switch target','Throw a rock','Cleave','Backstab','Snare','Rally','Terrify'];
-export const ARCHETYPE_RULES={maw:{speed:1,grapple:true},coward:{speed:1,fleesAt:0.5},scrapper:{speed:2,rush:true,shoves:true},skulker:{speed:2,thrown:[2,4],cover:true,fleesAt:0.35},brute:{speed:1,grapple:true,shoves:true}};
+export const ARCHETYPE_RULES={inspector:{speed:1,grapple:true},maw:{speed:1,grapple:true},coward:{speed:1,fleesAt:0.5},scrapper:{speed:2,rush:true,shoves:true},skulker:{speed:2,thrown:[2,4],cover:true,fleesAt:0.35},brute:{speed:1,grapple:true,shoves:true}};
 function actorOf(d){return {name:d.name,level:1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
 function playerDC(s){return 10+modifier(s.abilities.strength)+(s.skills.includes('athletics')?proficiencyBonus(s.level):0);}
 export function hazardNear(s,id){const place=placeOf(s,id);return props[place.room].some(prop=>prop.hazard&&Math.abs(prop.x-place.x)+Math.abs(prop.y-place.y)<=1);}

@@ -309,6 +309,12 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   if(type==='vex'){rect(px+49,py+12,3,34,c.blade);rect(px+45,py+42,11,4,'#b0a184');}
   if(type.startsWith('stranger')){rect(px+24,py+18,14,3,'#a8332e');}
   return;}
+ if(type==='inspector'){// a big biomechanical officer: uniform plates on an insect frame
+  rect(px+6,py+40,52,14,'#33373a');rect(px+6,py+40,52,4,'#4a453f');
+  rect(px+14,py+20,36,24,'#3c4a63');rect(px+14,py+20,36,5,'#4f5f7d');rect(px+22,py+28,20,6,'#b0a184');
+  rect(px+10,py+24,6,18,'#4a453f');rect(px+48,py+24,6,18,'#4a453f');
+  rect(px+22,py+10,20,12,'#2b2f31');rect(px+26,py+14,12,5,'#e8c14a');
+  rect(px+18,py+6,5,8,'#5f6355');rect(px+41,py+6,5,8,'#5f6355');rect(px+34,py+44,6,10,'#a8332e');return;}
  if(type==='sumpmaw'){// a mound of a creature with a mouth where its face should be
   rect(px+4,py+34,56,22,'#2f4a35');rect(px+4,py+34,56,5,'#4a6b3f');
   rect(px+12,py+22,40,16,'#3d5a42');rect(px+12,py+22,40,4,'#5f8256');
