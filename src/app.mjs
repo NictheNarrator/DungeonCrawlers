@@ -244,15 +244,27 @@ function propSprite(px,py,type){
   rect(px+20,py+28,6,30,shade(P.slate,-34));
   rect(px+24,py+22,14,5,P.umber);rect(px+36,py+18,8,6,shade(P.umber,14));
   rect(px+22,py+40,14,3,P.sand);return;}
- if(type==='bag'){rect(px+20,py+32,24,26,'#cd7d32');rect(px+20,py+32,24,4,'#d7873c');rect(px+26,py+24,12,8,'#133267');return;}
- if(type==='cart'){rect(px+8,py+34,48,12,'#8c8e9e');rect(px+8,py+34,48,3,'#989aaa');rect(px+13,py+46,6,10,'#17366b');rect(px+45,py+46,6,10,'#17366b');rect(px+26,py+24,14,10,'#937862');return;}
+  if(type==='bag'){
+  rect(px+20,py+34,24,24,P.sand);rect(px+20,py+34,24,4,shade(P.sand,16));
+  rect(px+24,py+38,6,14,shade(P.sand,-20));rect(px+34,py+38,6,14,shade(P.sand,-20));
+  rect(px+26,py+26,12,8,P.umber);rect(px+25,py+25,14,3,shade(P.umber,16));
+  rect(px+30,py+44,5,5,P.brick);return;}
+  if(type==='cart'){
+  rect(px+8,py+34,48,11,shade(P.slate,-18));rect(px+8,py+34,48,3,shade(P.slate,4));
+  rect(px+12,py+26,40,8,P.sand);rect(px+18,py+28,26,4,shade(P.sand,-24));
+  rect(px+13,py+45,7,9,P.ink);rect(px+44,py+45,7,9,P.ink);
+  rect(px+30,py+30,10,4,P.brick);return;}
  if(type==='sofa'){rect(px+8,py+26,48,26,'#3279a4');rect(px+8,py+26,48,5,'#a9abb8');rect(px+14,py+32,16,14,'#7c9565');rect(px+34,py+32,16,14,'#7c9565');return;}
  if(type==='kettle'){rect(px+20,py+32,24,20,'#eac999');rect(px+20,py+32,24,4,'#f5c4bd');rect(px+44,py+36,7,10,'#eac999');rect(px+27,py+27,10,5,'#8c8e9e');return;}
  if(type==='brazier'){const flame=tick%4===0?2:0;rect(px+18,py+34,28,26,'#cd7d32');rect(px+18,py+34,28,4,'#d7873c');rect(px+24,py+22-flame,16,12+flame,'#df8f44');rect(px+28,py+16-flame,8,8+flame,'#eac999');return;}
  if(type==='satchel'){rect(px+16,py+28,32,28,'#cd7d32');rect(px+16,py+28,32,5,'#d7873c');rect(px+22,py+20,20,9,'#eac999');rect(px+28,py+36,8,8,'#eac999');return;}
  if(type==='locker'){rect(px+16,py+8,32,52,'#1d5193');rect(px+16,py+8,32,5,'#2f63a5');rect(px+20,py+16,24,3,'#17366b');rect(px+42,py+30,5,5,'#eac999');return;}
  if(type==='plaque'){rect(px+12,py+24,40,22,'#eac999');rect(px+12,py+24,40,4,'#f5c4bd');rect(px+18,py+33,28,3,'#8c8e9e');rect(px+18,py+39,18,3,'#8c8e9e');return;}
- if(type==='sign'){rect(px+6,py+12,52,28,'#eac999');rect(px+6,py+12,52,4,'#f5c4bd');rect(px+12,py+20,20,4,'#1d5193');rect(px+12,py+29,30,4,'#1d5193');rect(px+40,py+26,12,8,'#c0393a');return;}
+  if(type==='sign'){
+  rect(px+14,py+40,4,22,P.umber);rect(px+46,py+40,4,22,P.umber);
+  rect(px+6,py+10,52,32,P.blue);rect(px+6,py+10,52,4,shade(P.blue,22));rect(px+6,py+38,52,4,shade(P.blue,-24));
+  rect(px+11,py+16,22,4,P.cream);rect(px+11,py+24,30,4,P.cream);rect(px+11,py+32,16,4,P.cream);
+  rect(px+40,py+22,12,10,P.sand);rect(px+44,py+25,5,4,P.ink);return;}
   if(type==='service'||type==='breakdoor'||type==='staffdoor'||type==='exitdoor'){const band=type==='breakdoor'||type==='exitdoor'?P.teal:(type==='staffdoor'?P.brick:P.sand);
   rect(px+16,py+4,32,56,shade(P.slate,-18));rect(px+16,py+4,32,4,shade(P.slate,4));
   rect(px+20,py+12,24,20,shade(P.slate,-26));rect(px+40,py+30,6,6,P.sand);
@@ -262,7 +274,11 @@ function propSprite(px,py,type){
  if(type==='stairwell'){const pulse=tick%2?'#4fc4d8':'#8fe3f0';rect(px+6,py+10,52,48,'#133267');for(let i=0;i<5;i++)rect(px+8+i*4,py+50-i*9,48-i*7,8,'#0f2e63');
   rect(px+4,py+4,56,12,'#17366b');rect(px+8,py+8,48,4,pulse);rect(px+8,py+15,22,3,pulse);return;}
  if(type==='map'){rect(px+10,py+12,44,42,'#eac999');rect(px+10,py+12,44,4,'#f5c4bd');rect(px+15,py+22,16,3,'#1d5193');rect(px+15,py+29,24,3,'#1d5193');rect(px+15,py+36,12,3,'#1d5193');rect(px+40,py+30,9,9,'#4fc4d8');return;}
- if(type==='help'){rect(px+22,py+14,20,48,'#3165a7');rect(px+22,py+14,20,5,'#76abbf');rect(px+26,py+22,12,14,'#fdefcb');rect(px+26,py+42,12,4,'#fdefcb');return;}
+  if(type==='help'){
+  rect(px+22,py+12,20,50,P.blue);rect(px+22,py+12,20,5,shade(P.blue,20));
+  rect(px+25,py+18,14,12,P.cream);rect(px+27,py+21,10,3,P.ink);rect(px+27,py+26,6,3,P.ink);
+  rect(px+40,py+24,8,10,shade(P.ink,14));rect(px+44,py+26,5,14,shade(P.ink,22));
+  rect(px+25,py+38,14,12,shade(P.ink,10));rect(px+28,py+42,8,4,P.sand);return;}
  if(type==='wreck'){rect(px+4,py+30,56,20,'#cd7d32');rect(px+14,py+20,30,12,'#8c8e9e');rect(px+18,py+22,12,8,'#1d5193');rect(px+8,py+50,10,6,'#17366b');rect(px+46,py+50,10,6,'#17366b');return;}
  if(type==='awning'){rect(px+6,py+32,52,20,'#1d5193');rect(px+6,py+32,52,4,'#2f63a5');for(let i=0;i<4;i++)rect(px+10+i*12,py+38,6,12,'#eac999');return;}
  if(type==='debris'){rect(px+14,py+44,14,7,'#8c8e9e');rect(px+32,py+40,16,10,'#937862');rect(px+22,py+34,10,6,'#cd7d32');return;}
@@ -412,14 +428,23 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   if(type==='skulker'){rect(px+14,py+30,5,18,c.coat);rect(px+47,py+22,3,20,c.sling);rect(px+23,py+9,17,5,c.coat);}
   return;}
  if(type==='chest'||type==='crate'){rect(px+12,py+24,42,29,'#665036');rect(px+12,py+18,42,13,'#a6804e');rect(px+15,py+23,36,3,'#bc9963');rect(px+16,py+33,34,3,'#493b2c');rect(px+30,py+28,7,12,'#dfc782');if(type==='crate'){rect(px+17,py+20,5,33,'#bb9461');rect(px+45,py+20,5,33,'#bb9461');}return;}
- if(type==='fountain'){rect(px+9,py+27,47,25,'#697d76');rect(px+14,py+22,37,24,'#92a599');rect(px+19,py+27,27,13,'#6bc1b0');rect(px+23,py+30,10,3,'#a4e2c7');rect(px+27,py+10,10,16,'#8ba79d');return;}
+ // batch 2: fixtures and street furniture
+ if(type==='fountain'){
+  rect(px+8,py+30,48,24,shade(P.slate,-14));rect(px+8,py+30,48,4,shade(P.slate,6));
+  rect(px+14,py+26,36,20,P.sky);rect(px+19,py+30,26,12,shade(P.sky,22));rect(px+24,py+32,8,3,P.cream);
+  rect(px+28,py+12,8,16,P.slate);rect(px+24,py+10,16,5,shade(P.slate,10));
+  rect(px+6,py+50,52,6,P.cream);rect(px+10,py+52,20,3,shade(P.sand,-18));return;}
  if(type==='stairs'){for(let i=0;i<5;i++){rect(px+5+i*5,py+51-i*9,53-i*7,8,i%2?'#abb6a1':'#849483');}return;}
  if(type==='pipe'){rect(px+9,py+22,45,12,'#70867d');rect(px+40,py+22,12,28,'#70867d');rect(px+15,py+19,5,18,'#a0aba0');rect(px+38,py+40,16,5,'#a0aba0');return;}
  if(type==='note'){rect(px+19,py+21,28,33,'#cabd8d');for(let i=0;i<4;i++)rect(px+24,py+28+i*5,16,2,'#786c4c');return;}
 // Faction and structure props. Same rules as everything else: one silhouette per
 // object, top-left light, hard short shadow, accents used on purpose.
- if(type==='barricade'){rect(px+6,py+42,52,8,'#937862');rect(px+10,py+30,44,5,'#cd7d32');rect(px+16,py+36,32,5,'#cd7d32');
-  rect(px+9,py+24,5,26,'#8c8e9e');rect(px+50,py+24,5,26,'#8c8e9e');rect(px+16,py+44,6,8,'#17366b');rect(px+42,py+44,6,8,'#17366b');return;}
+  if(type==='barricade'){
+  rect(px+6,py+44,52,7,shade(P.brown,-10));rect(px+6,py+44,52,3,shade(P.brown,10));
+  rect(px+10,py+30,44,6,P.brown);rect(px+16,py+37,32,6,shade(P.brown,8));
+  rect(px+9,py+24,5,28,P.umber);rect(px+50,py+24,5,28,shade(P.umber,10));
+  rect(px+15,py+46,6,9,P.ink);rect(px+43,py+46,6,9,P.ink);
+  rect(px+12,py+27,3,3,P.orange);rect(px+49,py+40,3,3,P.orange);return;}
  if(type==='bedroll'){rect(px+12,py+38,40,13,'#7c9565');rect(px+12,py+38,40,4,'#8b9a63');rect(px+16,py+30,32,8,'#3279a4');rect(px+46,py+33,8,8,'#eac999');return;}
  if(type==='triage'){rect(px+8,py+32,48,13,'#eac999');rect(px+8,py+32,48,4,'#f5c4bd');rect(px+13,py+45,6,9,'#937862');rect(px+45,py+45,6,9,'#937862');
   rect(px+30,py+20,8,22,'#c0393a');rect(px+23,py+27,22,8,'#c0393a');return;}
