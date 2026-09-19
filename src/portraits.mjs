@@ -6,6 +6,8 @@
 // If that file exists it is used; if it does not, the drawn portrait is used
 // instead. Nothing ever renders blank.
 
+import {PALETTE as P} from './palette.mjs';
+
 export const PORTRAIT_SIZE = { w: 96, h: 114 };
 
 // Everybody here is an adult, and nobody shares a face. Skull width, jaw, chin,
@@ -13,62 +15,62 @@ export const PORTRAIT_SIZE = { w: 96, h: 114 };
 const CAST = {
  mara:{
   // late twenties to early thirties: frightened, and refusing to show it.
-  skin:'#c9a487',shade:'#9d7a5f',
-  hair:{color:'#4a3428',style:'messy'},
+  skin:'#e2b0a8',shade:'#b98d87',
+  hair:{color:'#6b4a32',style:'long'},
   face:{width:18,jaw:15,chin:8},
-  eyes:{color:'#3f5a4a',spacing:19,size:8,brow:'angled'},
+  eyes:{color:'#3279a4',spacing:19,size:8,brow:'angled'},
   nose:{length:10,width:4},mouth:{width:13,curve:0},
-  cloth:{base:'#6f7a4a',trim:'#b6c187',collar:'#3c4a63'},gear:'strap',
+  cloth:{base:'#7c9565',trim:'#99ad7c',collar:'#8d725c'},gear:'strap',
   expression:'guarded'
  },
  skrit:{
   // a person first and a monster second: wiry, wary, hungry.
-  skin:'#7d8a74',shade:'#5c6854',
-  hair:{color:'#4e5a4b',style:'tuft'},
+  skin:'#8c8e9e',shade:'#747686',
+  hair:{color:'#604e4d',style:'tuft'},
   face:{width:16,jaw:13,chin:9,muzzle:12},
   eyes:{color:'#c4403a',spacing:17,size:7,brow:'flat'},
   nose:{length:6,width:5},mouth:{width:12,curve:-1},
-  cloth:{base:'#5d7f7a',trim:'#b0a184',collar:'#4a453f'},gear:'fur',
+  cloth:{base:'#3279a4',trim:'#eac999',collar:'#604e4d'},gear:'fur',
   expression:'wary'
  },
  tobin:{
   // thin, patchy, mentally inventorying everything you are carrying.
-  skin:'#bd9878',shade:'#8f7058',
-  hair:{color:'#5b4632',style:'thinning'},
-  face:{width:17,jaw:14,chin:7},
+  skin:'#e2b0a8',shade:'#b98d87',
+  hair:{color:'#a8563a',style:'thick'},
+  face:{width:20,jaw:18,chin:10},
   eyes:{color:'#5a4a34',spacing:18,size:8,brow:'worried'},
   nose:{length:12,width:4},mouth:{width:12,curve:-1},
-  cloth:{base:'#6f7a4a',trim:'#8a5a34',collar:'#4a453f'},gear:'pouches',
+  cloth:{base:'#8d725c',trim:'#eac999',collar:'#604e4d'},gear:'beard',
   expression:'nervous'
  },
  vex:{
   // attractive, composed, and entirely unreadable.
-  skin:'#c2a084',shade:'#95775e',
-  hair:{color:'#2f3238',style:'swept'},
+  skin:'#e2b0a8',shade:'#b98d87',
+  hair:{color:'#17365e',style:'loose'},
   face:{width:19,jaw:16,chin:8},
-  eyes:{color:'#4fc4d8',spacing:20,size:8,brow:'level'},
+  eyes:{color:'#3279a4',spacing:20,size:9,brow:'level'},
   nose:{length:11,width:4},mouth:{width:13,curve:1},
-  cloth:{base:'#3c4a63',trim:'#6d6a62',collar:'#26292b'},gear:'highcollar',
+  cloth:{base:'#1d5193',trim:'#b27579',collar:'#07265b'},gear:'scarf',
   expression:'calm'
  },
  eli:{
   // an ordinary man pushed a long way past his comfort zone.
-  skin:'#c8a684',shade:'#997b5c',
-  hair:{color:'#4a4038',style:'receding'},
+  skin:'#e2b0a8',shade:'#b98d87',
+  hair:{color:'#8d725c',style:'thick'},
   face:{width:18,jaw:14,chin:9},
   eyes:{color:'#5c6470',spacing:18,size:8,brow:'raised'},
   nose:{length:11,width:5},mouth:{width:12,curve:-2},
-  cloth:{base:'#6d6a62',trim:'#3c4a63',collar:'#4a453f'},gear:'glasses',
+  cloth:{base:'#8c8e9e',trim:'#1d5193',collar:'#604e4d'},gear:'glasses',
   expression:'frightened'
  },
  june:{
   // striking in a different key to Mara: softer structure, warmer, hurt.
-  skin:'#d0a98b',shade:'#a17b62',
-  hair:{color:'#7a4a2a',style:'loose'},
+  skin:'#e2b0a8',shade:'#b98d87',
+  hair:{color:'#fdefcb',style:'bun'},
   face:{width:17,jaw:15,chin:6},
   eyes:{color:'#6a5a3f',spacing:20,size:9,brow:'soft'},
   nose:{length:9,width:4},mouth:{width:14,curve:0},
-  cloth:{base:'#5d7f7a',trim:'#b0a184',collar:'#8a5a34'},gear:'bandage',
+  cloth:{base:'#7c9565',trim:'#99ad7c',collar:'#eac999'},gear:'bandage',
   expression:'hurt'
  }
 };
@@ -103,10 +105,11 @@ function drawPortrait(g,s){
  const eyeY=top+Math.round(fh*0.46),faceBottom=top+fh;
 
  // backdrop: cold wall, one seam, dark at the edges, nothing to read
- px(0,0,W,PORTRAIT_SIZE.h,'#131c1d');
- px(0,0,W,40,'#1e2e2e');px(0,40,W,26,'#182726');px(0,66,W,PORTRAIT_SIZE.h-66,'#152220');
- px(0,38,W,2,'#0f1a1a');px(0,0,W,2,'#243433');
- px(0,0,3,PORTRAIT_SIZE.h,'#0c1313');px(W-3,0,3,PORTRAIT_SIZE.h,'#0c1313');
+ const sky=P.sky,skyLit=shade(sky,58),skyMid=shade(sky,36);
+ px(0,0,W,PORTRAIT_SIZE.h,skyMid);
+ px(0,0,W,42,skyLit);px(0,42,W,20,shade(sky,46));
+ px(0,40,W,2,shade(sky,20));
+ px(0,0,2,PORTRAIT_SIZE.h,shade(sky,-6));px(W-2,0,2,PORTRAIT_SIZE.h,shade(sky,-12));
 
  // hair mass, behind everything
  if(s.hair.style==='loose')soft(cx-fw-6,top-6,(fw+6)*2,fh+30,6,shade(hair,-22));
@@ -123,6 +126,7 @@ function drawPortrait(g,s){
  else px(cx-13,shoulderY-3,26,6,s.cloth.collar);
  if(s.gear==='strap'){px(cx-16,shoulderY+2,5,26,shade('#4a453f',6));px(cx-15,shoulderY+8,3,3,'#b0a184');}
  if(s.gear==='pouches'){px(cx-20,shoulderY+4,9,10,'#8a5a34');px(cx+11,shoulderY+8,8,8,shade('#8a5a34',-14));px(cx-8,shoulderY+3,4,18,shade('#4a453f',4));}
+ if(s.gear==='beard'){px(cx-s.face.jaw-1,faceBottom-13,(s.face.jaw+1)*2,15,s.hair.color);px(cx-5,faceBottom,10,5,s.hair.color);px(cx-s.face.jaw,eyeY+s.nose.length,s.face.jaw*2,5,shade(s.hair.color,16));px(cx-3,faceBottom-14,6,3,shade(s.hair.color,20));}
  if(s.gear==='fur'){for(let i=0;i<7;i++)px(cx-fw-8+i*6,shoulderY-4,5,5,shade(s.skin,4));}
  if(s.gear==='bandage'){px(cx-18,shoulderY+1,8,14,'#e6e2d6');px(cx-18,shoulderY+6,8,2,shade('#e6e2d6',-40));}
  if(s.gear==='glasses'){px(cx-20,shoulderY+6,7,7,'#3c4a63');}
@@ -185,6 +189,9 @@ function drawPortrait(g,s){
  if(s.hair.style==='swept'){px(cx-fw,top-4,fw*2,6,hair);px(cx-fw,top+2,15,5,shade(hair,-16));px(cx+fw-12,top-1,12,4,shade(hair,14));}
  if(s.hair.style==='thinning'){px(cx-fw+3,top-3,fw*2-6,5,shade(hair,-12));px(cx-fw+5,top+2,6,5,hair);px(cx+fw-11,top+2,6,5,hair);}
  if(s.hair.style==='receding'){px(cx-fw+4,top-3,fw*2-8,4,shade(hair,-14));px(cx-fw+1,top+1,7,6,hair);px(cx+fw-8,top+1,7,6,hair);}
+ if(s.hair.style==='long'){px(cx-fw-2,top-4,fw*2+4,7,hair);px(cx-fw-4,top+2,11,fh+16,shade(hair,-12));px(cx+fw-7,top+2,11,fh+16,hair);px(cx-fw,top+3,10,6,shade(hair,10));}
+ if(s.hair.style==='thick'){px(cx-fw,top-5,fw*2,7,hair);px(cx-fw-1,top,14,6,shade(hair,-10));px(cx+fw-13,top-1,14,6,shade(hair,12));}
+ if(s.hair.style==='bun'){px(cx-fw+1,top-3,fw*2-2,6,hair);px(cx+fw-16,top-12,13,12,shade(hair,-10));px(cx-fw,top+2,10,6,shade(hair,14));}
  if(s.hair.style==='tuft'){px(cx-fw+2,top-4,11,7,hair);px(cx+fw-15,top-3,13,6,shade(hair,10));px(cx-3,top-5,7,4,hair);}
 
  // glasses, if any, are the last thing on the face
