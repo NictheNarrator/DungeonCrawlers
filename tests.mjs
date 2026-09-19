@@ -636,5 +636,30 @@ test('The Inspector can be killed, avoided, or dropped a platform on',()=>{
  interact(bribed,'panel','Reroute the security feed');
  assert(bribed.flags.checkpointOpen,'Vex\u2019s shutdown takes the checkpoint with it');
 });
+test('Milestone 9: the floor ends properly, and it ends differently each way',()=>{
+ const gentle=supplied();
+ act(gentle,'skrit','Help with the machine');
+ act(gentle,'mara','Ask about the survivors');
+ getKey(gentle);finish(gentle);
+ assert(gentle.complete,'reaching the stairwell with a key finishes the floor');
+ assert(gentle.log.some(line=>line.includes('FLOOR ONE COMPLETE')),'and says so by name');
+ assert(gentle.log.some(line=>line.includes('Monsters can talk')),'with the Dungeon AI line the story asks for');
+ assert(gentle.log.some(line=>line.includes('not part of this build yet')),'and a Floor 2 stub rather than a cliff');
+ const stopped=gentle.timer;advanceClock(gentle,600);
+ assert.equal(gentle.timer,stopped,'the floor clock stops when you leave the floor');
+ assert.equal(move(gentle,1,0),false,'and the level stops taking input');
+ const kept=checkpoint(gentle);
+ assert(kept.complete,'a finished run saves as finished');
+ assert(kept.log.some(line=>line.includes('FLOOR ONE COMPLETE')),'with its ending intact');
+ // The summary describes this run, not a fixed script.
+ const quiet=outcome(gentle);
+ for(const part of ['Still breathing','The survivors think of you','What you did','Time left on the clock','Lessons learned'])assert(quiet.includes(part),`the summary should cover ${part}`);
+ assert(quiet.includes('Skrit'),'naming who is still alive');
+ const brutal=violent();   // that playthrough already walks out with the key
+ const tally=outcome(brutal);
+ assert.notEqual(tally,quiet,'and two very different runs read very differently');
+ assert(tally.includes('Not:'),'the violent one lists its dead');
+ assert(tally.includes('Tobin')&&quiet.includes('Tobin'),'both mention the people who were here');
+});
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));

@@ -389,7 +389,12 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
    say(s,'You pull the maintenance control. The platform comes down exactly where the Inspector is standing, and something very old and very procedural stops moving. ANNEX: “Authorization is no longer required. Nobody is checking.”');awardXp(s,120,'dropping the platform on the Inspector');return true;}
   s.npcs.inspector.attitude='hostile';
   say(s,'The platform comes down. The Inspector takes the hit, folds in a way that has nothing to do with paperwork, and comes for you.');awardXp(s,60,'wounding the Inspector');return true;}
- if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in Records, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
+ if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in Records, or obtain Mara’s.');
+  else if(!s.complete){s.complete=true;s.completedAt=s.timer;
+   say(s,'FLOOR ONE COMPLETE.');
+   say(s,'You learned several valuable lessons. Monsters can talk. Humans can be worse. And somehow, against all available evidence, you’re still alive. Please proceed downward.');
+   say(s,'The next floor is not part of this build yet. Your crawler is saved where they stand.');
+   recordDeed(s,'explore');}}
  return true;
 }
 // Public action list: the base actions plus whatever the supply quest adds.
@@ -931,8 +936,38 @@ export function openRewardBox(s,tier,rng=Math.random){if(!BOX_TIERS.includes(tie
  say(s,`${tier} box: ${rarity?rarity+' ':''}${label}. ${entry.message}${trait}`);
  return {ok:true,tier,reward:label,rarity,traitName:item?item.traitName||null:null,traitText:item?item.traitText||null:null,message:entry.message};}
 export function gearBonus(s,kind){return itemEffects(s,kind);}
-export function outcome(s){const people=PEOPLE.map(id=>{const n=s.npcs[id];return `${NPCS[id].name}: ${n.condition}, ${n.attitude}. ${memoryText(n)}.`;});
- return [...people,...companionEpilogue(s)].join('\n');}
+// The floor's epitaph. Nobody has won anything: this just says what happened,
+// in the order a crawler would want to hear it.
+export function outcome(s){const lines=[];
+ lines.push(`Time left on the clock when you went down: ${clockText(s.timer)}.`);
+ lines.push(`You reached level ${s.level} with ${s.xp} XP, with ${s.boxes.bronze+s.boxes.silver+s.boxes.gold} unopened reward boxes in your pack.`);
+ const alive=[],dead=[];
+ for(const id of Object.keys(NPCS)){const n=s.npcs[id];if(n.condition==='dead')dead.push(NPCS[id].name);else alive.push(NPCS[id].name);}
+ lines.push(`Still breathing: ${alive.join(', ')||'nobody'}.`);
+ if(dead.length)lines.push(`Not: ${dead.join(', ')}.`);
+ lines.push(`The survivors think of you as ${standingOf(s,'survivors')}; the ratmen as ${standingOf(s,'ratmen')}.`);
+ const did=[];
+ if(s.items.badge)did.push('you still carry the ratmen’s maintenance badge');
+ if(s.flags.badgeReturned)did.push('you gave the badge back');
+ if(s.flags.gateOpen)did.push('the security gate stands open');
+ if(s.flags.securityDown)did.push('the security system is cut');
+ if(s.flags.savedEli)did.push('Eli came in from the cold');
+ if(s.npcs.eli.condition==='dead')did.push('Eli died in Records');
+ if(s.flags.savedJune)did.push('June is in the safe room');
+ if(s.npcs.june.condition==='dead')did.push('June died of her wound');
+ if(s.flags.mawLured)did.push('the Sump Maw was lured off with food');
+ if(s.flags.mawTrapped)did.push('the Sump Maw is shut in behind a door');
+ if(s.flags.mawSolved||s.npcs.sumpmaw.condition==='dead')did.push('the Sump Maw is dead');
+ if(s.quests.vexDeal==='settled')did.push('you honoured your deal with Vex');
+ if(s.quests.vexDeal==='betrayed')did.push('you kept Vex out of his own plan');
+ if(s.npcs.inspector.condition==='dead')did.push('the Inspector is scrap');
+ else if(s.flags.checkpointOpen)did.push('the Inspector let you pass');
+ else if(s.flags.tunnelBypass)did.push('you went round the Inspector by the maintenance route');
+ if(s.quests.supplies!=='open')did.push(`the supply cache was ${s.quests.supplies==='kept'?'kept':`left with the ${s.quests.supplies}`}`);
+ lines.push(`What you did: ${did.join('; ')}.`);
+ lines.push(...companionEpilogue(s));
+ lines.push(`Lessons learned: ${s.achievements.length?s.achievements.join(', '):'none you were told about'}.`);
+ return lines.join('\n');}
 export function encode(s){if(s.dead||s.combat)return null;return JSON.stringify(s);}
 // The bridge between a saved character and the d20 rules: pass the result as
 // check({actor:character(s), skill:'stealth', dc:12}).
