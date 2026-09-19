@@ -325,24 +325,20 @@ export function markerIcon(category){const tint=MARKERS[category];if(!tint)retur
  else{paint(4,4,8,8,tint);paint(6,6,4,4,'#152724');}
  return chip;}
 const look={
- player:{skin:'#eac999',coat:'#6f7a4a',trim:'#b6c187',head:'#1d5193'},
- mara:{skin:'#eac999',coat:'#8a5a34',trim:'#eac999',pack:'#1d5193'},
- tobin:{skin:'#eac999',coat:'#6f7a4a',trim:'#8a5a34',hat:'#8a5a34'},
- eli:{skin:'#eac999',coat:'#8c8e9e',trim:'#1d5193'},
- june:{skin:'#eac999',coat:'#5d7f7a',trim:'#8a5a34'},
- vex:{skin:'#eac999',coat:'#1d5193',trim:'#eac999',blade:'#cfd6d2'},
-skrit:{fur:'#5d7f7a',skin:'#5d7f7a',coat:'#5d7f7a',trim:'#eac999',bandage:'#e6e2d6'},
-rat:{fur:'#8c8e9e',skin:'#8c8e9e',coat:'#5d7f7a',trim:'#eac999'},
- skulker:{fur:'#7d8a74',coat:'#1d5193',trim:'#eac999',sling:'#8a5a34'},
- brute:{fur:'#6b6b58',coat:'#8a5a34',trim:'#eac999',plate:'#7f644e'},
- stranger1:{skin:'#eac999',coat:'#8c8e9e',trim:'#9a978c'},
- stranger2:{skin:'#eac999',coat:'#8a5a34',trim:'#9a978c'}
+ player:{skin:'#efbeb7',coat:'#1d5193',trim:'#7aafc3',head:'#795e48'},
+ mara:{skin:'#efbeb7',coat:'#7c9565',trim:'#99ad7c',head:'#755a44',pack:'#1d5193'},
+ tobin:{skin:'#efbeb7',coat:'#8d725c',trim:'#eac999',head:'#c17126',beard:'#d18136'},
+ eli:{skin:'#efbeb7',coat:'#848696',trim:'#7aafc3',head:'#816650',glass:'#fdefcb'},
+ june:{skin:'#efbeb7',coat:'#7c9565',trim:'#eac999',head:'#fdefcb',hair:'#fdefcb'},
+ vex:{skin:'#efbeb7',coat:'#133267',trim:'#b27579',head:'#033779',blade:'#fdefcb'},
+ skrit:{fur:'#868898',skin:'#eac999',coat:'#3279a4',trim:'#eac999',bandage:'#fdefcb'},
+ rat:{fur:'#876c56',skin:'#eac999',coat:'#3279a4',trim:'#eac999'},
+ skulker:{fur:'#99ad7c',coat:'#1d5193',trim:'#eac999',sling:'#8d725c'},
+ brute:{fur:'#604e4d',coat:'#c0393a',trim:'#eac999',plate:'#8c8e9e'},
+ stranger1:{skin:'#efbeb7',coat:'#8c8e9e',trim:'#fdefcb'},
+ stranger2:{skin:'#efbeb7',coat:'#df8f44',trim:'#fdefcb'}
 };
-// Special locations get a marked floor: a colour-coded band at the base of the
-// tile, so a recovery station, the exit stairs, a safe-room threshold and the
-// stairwell entrance read as places rather than just props. Drawn first, so it
-// always sits under the sprite.
-const FLOOR_MARKS={fountain:['#8ba79d','#a8d3c4'],stairs:['#eac999','#8a5a34'],breakdoor:['#4b8fd0','#8fc4ef'],stairwell:['#4fc4d8','#2a6f7d']};
+const FLOOR_MARKS={fountain:['#3279a4','#7aafc3'],stairs:['#eac999','#df8f44'],breakdoor:['#1d5193','#7aafc3'],stairwell:['#7aafc3','#3279a4']};
 function floorMark(id,x,y){const band=FLOOR_MARKS[id];if(!band)return;const px=x*64,py=y*64;
  rect(px+5,py+55,54,6,band[0]);
  if(id==='stairs'){for(let i=0;i<4;i++)rect(px+9+i*13,py+55,6,6,band[1]);}
@@ -367,6 +363,10 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   if(type==='mara'){rect(px+44,py+33,10,12,c.pack);rect(px+19,py+33,3,16,'#e6e2d6');}
   if(type==='tobin'){rect(px+13,py+32,12,18,c.trim);rect(px+19,py+9,26,6,c.hat);rect(px+18,py+14,28,3,c.hat);}
   if(type==='vex'){rect(px+49,py+12,3,34,c.blade);rect(px+45,py+42,11,4,'#eac999');}
+  if(type==='tobin'){rect(px+22,py+26,20,8,c.beard);rect(px+20,py+23,24,4,c.beard);}
+  if(type==='vex'){rect(px+18,py+30,26,4,c.trim);rect(px+44,py+14,4,20,c.head);rect(px+16,py+12,4,18,c.head);}
+  if(type==='june'){rect(px+26,py+6,14,7,c.hair);rect(px+30,py+3,6,4,c.hair);}
+  if(type==='eli'){rect(px+24,py+18,14,2,c.glass);rect(px+26,py+20,3,3,'#07265b');rect(px+34,py+20,3,3,'#07265b');}
   if(type.startsWith('stranger')){rect(px+24,py+18,14,3,'#c0393a');}
   return;}
  if(type==='inspector'){// a big biomechanical officer: uniform plates on an insect frame
