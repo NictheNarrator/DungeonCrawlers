@@ -7,7 +7,7 @@ import {bandFor,relationshipText,companionOf,blankCompanion,COMPANIONS} from './
 import {companionRespect,companionEpilogue,separateCompanions,journalUnlocked,knownPeople,knowsFaction,knowsSupplies,dialogueOptions,dialoguePrompt,chooseDialogue} from './src/engine.mjs';
 import {DIALOGUE} from './src/dialogue.mjs';
 import {award,achievementFor,ACHIEVEMENTS,BOX_TIERS,BOX_LOOT,ITEMS,gearBonus,itemOf,equipItem,unequipItem,rarityOf,traitOf,abilityBonus,RARITIES,grantedItem,SLOTS,itemSlot,equippedItems,emptyEquipped,FACTIONS,STANDING,factionOf,standingOf,improveStanding,worsenStanding,questState,questCarried,questActionFor,factionLine,keepSupplies,memberStanding,approvalEffect} from './src/engine.mjs';
-import {PEOPLE,NPCS,STOCK_KEYS,isWith,withPlayer,priceOf,sellPriceOf,describeNPC,profileKnown} from './src/npcs.mjs';
+import {PEOPLE,NPCS,STOCK_KEYS,isWith,withPlayer,priceOf,sellPriceOf,describeNPC,profileKnown,BADGE_PRICE} from './src/npcs.mjs';
 import {check,modifier,proficiencyBonus,SKILLS,ABILITIES} from './src/rules.mjs';
 let passed=0;const pending=[];function test(name,fn){const result=fn();if(result&&typeof result.then==='function')pending.push(result.then(()=>{passed++;console.log('PASS '+name);}));else{passed++;console.log('PASS '+name);}}
 function walk(s,tx,ty){const q=[[s.x,s.y,[]]],seen=new Set([s.x+','+s.y]);while(q.length){const [x,y,path]=q.shift();if(x===tx&&y===ty){for(const [dx,dy] of path)assert(move(s,dx,dy));return;}for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=nx+','+ny;if(!seen.has(k)&&!blocked(s,nx,ny)){seen.add(k);q.push([nx,ny,[...path,[dx,dy]]]);}}}assert.fail(`No route in ${rooms[s.room]} to ${tx},${ty}`);}
@@ -17,7 +17,7 @@ function travel(s,room){let guard=0;
  while(s.room!==room){assert(++guard<30,`gave up trying to reach ${rooms[room]}`);
   const came=new Map([[s.room,null]]),queue=[s.room];
   while(queue.length){const here=queue.shift();if(here===room)break;
-   for(const exit of EXITS[here]||[])if(!came.has(exit.to)){came.set(exit.to,{from:here,exit});queue.push(exit.to);}}
+   for(const exit of EXITS[here]||[])if(!came.has(exit.to)&&(!exit.needs||s.flags[exit.needs])){came.set(exit.to,{from:here,exit});queue.push(exit.to);}}
   assert(came.get(room),`no way through to ${rooms[room]}`);
   // Walk the first hop of that route, then take the doorway out of this room.
   let hop=came.get(room);while(hop.from!==s.room)hop=came.get(hop.from);
@@ -377,6 +377,54 @@ test('Doorways are declared, walkable, and connect the whole floor',()=>{
  while(queue.length){const room=queue.shift();for(const exit of EXITS[room]||[])if(!seen.has(exit.to)){seen.add(exit.to);queue.push(exit.to);}}
  assert(seen.has(stairs),'the stairwell is reachable on foot from the entrance');
  assert(seen.size>=5,'the floor is a branching level, not a single corridor');
+});
+test('The maintenance badge exists in exactly one place at a time',()=>{
+ const start=fresh();
+ assert.equal(start.npcs.tobin.inventory.badge,1,'Tobin lifted it off the ratmen, and it is his problem now');
+ assert.equal(start.items.badge,0,'nobody gets it for free');
+ const talked=supplied();act(talked,'tobin','Ask about the badge',()=>0.99);
+ assert.equal(talked.items.badge,1,'persuasion works');assert.equal(talked.npcs.tobin.inventory.badge,0,'and it leaves his inventory');
+ assert(talked.flags.badgeKnown);
+ const refused=supplied();act(refused,'tobin','Ask about the badge',()=>0);
+ assert.equal(refused.items.badge,0,'a failed ask gets a closed hand, not a badge');
+ assert(refused.npcs.tobin.memory.badgeRefused);
+ const helped=supplied();act(helped,'tobin','Talk');act(helped,'tobin','Help');
+ assert(actions(helped,'tobin').includes('Ask about the badge'),'the ask is still there'); 
+ const bought=supplied();const purse=bought.gold;act(bought,'tobin',`Buy the badge (${BADGE_PRICE} coins)`);
+ assert.equal(bought.items.badge,1);assert.equal(bought.gold,purse-BADGE_PRICE,'he is paid');assert.equal(bought.npcs.tobin.inventory.badge,0);
+ const lifted=supplied();act(lifted,'tobin','Talk');act(lifted,'tobin','Lie');act(lifted,'tobin','Lift the badge',()=>0.99);
+ assert.equal(lifted.items.badge,1,'a quiet lift works');assert.equal(lifted.stolen.badge,'tobin','and it remembers where it came from');
+ assert.equal(lifted.npcs.tobin.inventory.badge,0);
+ const caught=supplied();act(caught,'tobin','Lift the badge',()=>0);
+ assert.equal(caught.items.badge,0,'a failed lift takes nothing');assert.equal(caught.npcs.tobin.attitude,'hostile');assert(caught.npcs.tobin.memory.theftAttempt);
+ const robbed=supplied();act(robbed,'tobin','Rob openly');assert.equal(robbed.items.badge,1,'robbery takes it with everything else');
+ const knocked=supplied();act(knocked,'tobin','Knock unconscious');win(knocked);act(knocked,'tobin','Loot');assert.equal(knocked.items.badge,1,'looting an unconscious Tobin finds it');
+ const killed=supplied();act(killed,'tobin','Kill');win(killed);act(killed,'tobin','Loot');assert.equal(killed.items.badge,1,'so does looting a dead one');
+ assert.equal(checkpoint(killed).npcs.tobin.inventory.badge,0,'and it does not reappear on the body after a save');
+});
+test('The security gate is shut until you have the run of the building',()=>{
+ const s=supplied();
+ approach(s,'gate');
+ assert(actions(s,'gate').includes('Inspect'),'you can look at the problem');
+ assert(!actions(s,'gate').includes('Badge through the gate'),'with no badge there is nothing to show it');
+ s.x=6;s.y=1;assert.equal(move(s,0,-1),false,'the gate refuses you');
+ assert(s.log.some(line=>line.includes('AUTHORISED PERSONNEL ONLY')),'and says so once');
+ const locked=supplied();travel(locked,2);
+ assert.equal(locked.room,2,'the maintenance route reaches Records the long way round');
+ const opened=supplied();act(opened,'tobin',`Buy the badge (${BADGE_PRICE} coins)`);
+ approach(opened,'gate');assert(actions(opened,'gate').includes('Badge through the gate'));
+ interact(opened,'gate','Badge through the gate');
+ assert(opened.flags.gateOpen,'the reader obeys the badge');
+ travel(opened,2);assert.equal(opened.room,2,'and the short way is open');
+ assert(checkpoint(opened).flags.gateOpen,'an opened gate stays open in the save');
+});
+test('Handing the badge back to the ratmen buys goodwill',()=>{
+ const s=supplied();act(s,'tobin',`Buy the badge (${BADGE_PRICE} coins)`);
+ assert.equal(memberStanding(s,'rat'),'neutral');
+ act(s,'rat','Return the badge');
+ assert.equal(s.items.badge,0,'the badge goes back where it came from');
+ assert.equal(memberStanding(s,'rat'),'friendly','and the tunnels are yours to use');
+ assert(s.npcs.rat.memory.returnedBadge);
 });
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));

@@ -350,6 +350,8 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   rect(px+24,py+24,12,6,'#a8332e');rect(px+8,py+24,6,4,'#e8c14a');rect(px+50,py+24,6,4,'#e8c14a');return;}
  if(type==='platform'){rect(px+4,py+18,56,10,'#3c4a63');rect(px+4,py+18,56,3,'#4f5f7d');rect(px+10,py+28,3,26,'#6d6a62');rect(px+51,py+28,3,26,'#6d6a62');
   rect(px+27,py+4,9,14,'#e8c14a');rect(px+12,py+30,40,4,'#4a453f');return;}
+ if(type==='barrier'){rect(px+10,py+28,6,32,'#4a453f');rect(px+48,py+28,6,32,'#4a453f');rect(px+8,py+22,48,10,'#b0a184');
+  for(let i=0;i<4;i++)rect(px+12+i*12,py+22,6,10,'#a8332e');rect(px+28,py+6,8,16,'#33373a');rect(px+30,py+8,4,4,'#4fc4d8');return;}
  if(type==='whetstone'){rect(px+13,py+41,38,12,'#6d6a62');rect(px+13,py+41,38,3,'#8b877c');rect(px+19,py+35,26,8,'#b0a184');rect(px+19,py+35,26,3,'#c8bb9c');rect(px+44,py+45,9,4,'#4a453f');return;}
  propSprite(px,py,type);}
 // Environment tiles: clean, dirty, cracked, bloodstained, grate, hazard stripe

@@ -8,18 +8,21 @@ export function isWith(s,id){return (s.party||[]).includes(id)||(s.allies?.[id]|
 export const PEOPLE = ['mara','tobin','vex'];
 export const ATTITUDES = ['friendly','neutral','suspicious','hostile'];
 export const CONDITIONS = ['conscious','unconscious','dead'];
-export const ITEM_KEYS = ['bandages','repairKits','smokeBombs','whetstones'];
+export const ITEM_KEYS = ['bandages','repairKits','smokeBombs','whetstones','badge'];
 export const STOCK_KEYS = ['gold','potions','key',...ITEM_KEYS];
 export const NPCS = {
  mara:{name:'Mara',role:'Cautious survivor',hp:20,damage:[4,6],attitude:'neutral',trade:'potions',price:3,pick:'key',help:'1 bandage or potion',stock:{gold:3,potions:2,key:1},equipped:['bandages'],refuse:['key'],onHit:'bleeding',home:0,routine:'shelter',route:[0],abilities:{strength:14,dexterity:12,constitution:14,intelligence:12,wisdom:15,charisma:13},skills:['medicine','insight'],saves:['wisdom','constitution']},
- tobin:{name:'Tobin',role:'Suspicious scavenger',hp:16,damage:[2,4],attitude:'suspicious',trade:'smokeBombs',price:4,pick:'smokeBombs',help:'1 repair kit or 2 coins',stock:{gold:6,potions:2,smokeBombs:2},equipped:['repairKits'],refuse:[],onHit:'bleeding',home:1,routine:'scavenge',route:[1,0],abilities:{strength:11,dexterity:15,constitution:12,intelligence:14,wisdom:13,charisma:12},skills:['sleight of hand','stealth','investigation'],saves:['dexterity','intelligence']},
+ tobin:{name:'Tobin',role:'Suspicious scavenger',hp:16,damage:[2,4],attitude:'suspicious',trade:'smokeBombs',price:4,pick:'smokeBombs',help:'1 repair kit or 2 coins',stock:{gold:6,potions:2,smokeBombs:2,badge:1},equipped:['repairKits'],refuse:[],onHit:'bleeding',home:1,routine:'scavenge',route:[1,0],abilities:{strength:11,dexterity:15,constitution:12,intelligence:14,wisdom:13,charisma:12},skills:['sleight of hand','stealth','investigation'],saves:['dexterity','intelligence']},
  vex:{name:'Vex',role:'Dangerous rival',hp:28,damage:[5,7],attitude:'neutral',trade:'whetstones',price:4,pick:'whetstones',help:'Read the memo, or give 1 potion',stock:{gold:5,potions:1,whetstones:1},equipped:[],refuse:['potions'],onHit:'bleeding',home:1,routine:'patrol',route:[1,0],abilities:{strength:17,dexterity:16,constitution:15,intelligence:11,wisdom:12,charisma:14},skills:['athletics','intimidation','perception'],saves:['strength','constitution']},
  skrit:{name:'Skrit',role:'Injured ratman',hp:9,damage:[1,2],attitude:'neutral',stock:{gold:2,cheese:1},equipped:[],refuse:[],home:0,routine:'guard',route:[0],archetype:'coward',pack:'ratmen',onHit:'bleeding',abilities:{strength:7,dexterity:13,constitution:9,intelligence:9,wisdom:11,charisma:8},skills:['stealth','perception'],saves:['dexterity']},
  rat:{name:'Ratman scrapper',archetype:'scrapper',pack:'ratmen',role:'Unpaid sanitation',hp:12,damage:[2,3],attitude:'neutral',stock:{gold:2},equipped:[],refuse:['gold'],onHit:'poisoned',xp:30,home:3,routine:'guard',route:[3],abilities:{strength:8,dexterity:14,constitution:10,intelligence:8,wisdom:12,charisma:6},skills:['stealth','perception'],saves:['dexterity']}
  ,skulker:{name:'Ratman skulker',archetype:'skulker',pack:'ratmen',role:'Thrown-object specialist',hp:10,damage:[1,2],thrown:[2,4],attitude:'neutral',stock:{gold:3,smokeBombs:1},equipped:[],refuse:['smokeBombs'],onHit:'bleeding',xp:35,home:9,routine:'guard',route:[9],abilities:{strength:8,dexterity:16,constitution:10,intelligence:11,wisdom:13,charisma:7},skills:['stealth','perception'],saves:['dexterity']}
  ,brute:{name:'Ratman brute',archetype:'brute',pack:'ratmen',role:'Slow and heavy',hp:24,damage:[5,7],attitude:'neutral',stock:{gold:4,potions:1},equipped:[],refuse:['potions'],onHit:'bleeding',xp:80,home:10,routine:'guard',route:[10],abilities:{strength:17,dexterity:9,constitution:16,intelligence:6,wisdom:9,charisma:5},skills:['athletics','intimidation'],saves:['strength','constitution']}
 };
-export const itemName={gold:'coins',potions:'healing potion',key:'exit key',bandages:'bandage',repairKits:'repair kit',smokeBombs:'smoke bomb',whetstones:'whetstone'};
+export const itemName={gold:'coins',potions:'healing potion',key:'exit key',bandages:'bandage',repairKits:'repair kit',smokeBombs:'smoke bomb',whetstones:'whetstone',badge:'maintenance badge'};
+// Tobin lifted the badge off the ratmen. It is one object in one place: whoever
+// is carrying it has it, and the moment it moves it leaves the other inventory.
+export const BADGE_PRICE=12,BADGE_ASK_DC=13,BADGE_LIFT_DC=4;
 export function makeNPC(id){const d=NPCS[id];return {hp:d.hp,attitude:d.attitude,condition:'conscious',memory:{},inventory:Object.fromEntries(STOCK_KEYS.map(k=>[k,d.stock[k]||0]))};}
 export function memoryText(n){const names={helped:'helped',befriended:'befriended',recruited:'joined you',abandoned:'left the party',returned:'got their goods back',threatened:'threatened',lied:'lied to',lieExposed:'lie exposed',stolen:'pickpocketed',theftDetected:'theft discovered',robbed:'robbed',robberyAttempt:'robbery attempted',attacked:'attacked',knockedOut:'knocked unconscious',killed:'killed',looted:'looted',betrayed:'betrayed',woken:'woken up',sawAttack:'saw an attack',sawKill:'saw a killing',sawRob:'saw a robbery',sawTheft:'saw a theft',fled:'fled danger',sawBody:'found a body',heardViolence:'heard violence',sawHelp:'saw you help someone',sawRescue:'saw you rescue someone'};return Object.entries(names).filter(([key])=>n.memory[key]).map(([,label])=>label).join(', ')||'No shared history yet';}
 export function stockText(n){return STOCK_KEYS.filter(k=>n.inventory[k]>0).map(k=>`${n.inventory[k]} ${itemName[k]}`).join(', ')||'nothing left';}
@@ -47,7 +50,13 @@ export function describeNPC(s,id){const n=s.npcs[id],d=NPCS[id];
  return `${d.name} · ${n.attitude} · ${n.condition} · ${n.hp}/${d.hp} HP. Damage ${d.damage.join('–')}. Carries: ${stockText(n)}. Remembers: ${memoryText(n)}.`;}
 export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];const owed=Object.keys(s.stolen||{}).some(key=>s.stolen[key]===id);
  const trade=n.attitude==='hostile'?[]:['Ask about goods','Trade','Offer a fair swap',...wantedGoods(s,id).filter(key=>held(s,key)).slice(0,3).map(key=>`Sell 1 ${itemName[key]}`)];
- return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),'Threaten','Lie',...trade,'Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
+ return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),...badgeOffers(s,id),'Threaten','Lie',...trade,'Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
+// The badge on offer: he can be talked out of it, bought out of it, or relieved
+// of it. Everything else - robbery, a knockout, a killing - runs through the
+// ordinary loot and robbery paths, which already empty whatever he is carrying.
+function badgeOffers(s,id){const n=s.npcs[id];
+ if(id!=='tobin'||!n.inventory.badge||n.attitude==='hostile')return [];
+ return ['Ask about the badge',...(s.gold>=BADGE_PRICE?[`Buy the badge (${BADGE_PRICE} coins)`]:[]),'Lift the badge'];}
 function held(s,key){return (key==='gold'?s.gold:ITEM_KEYS.includes(key)?s.items[key]:s[key]||0)>0;}
 function refusesTrade(s,id){const n=s.npcs[id];return n.attitude==='hostile'||!!n.memory.lieExposed;}
 function transfer(s,n,key,count){const amount=Math.min(n.inventory[key],count);if(!amount)return 0;n.inventory[key]-=amount;if(key==='key')s.key=true;else if(ITEM_KEYS.includes(key))s.items[key]+=amount;else s[key]+=amount;return amount;}
@@ -92,6 +101,24 @@ function talk(s,id,say){const n=s.npcs[id],m=n.memory;m.met=true;
 export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()=>{},bonus=()=>0,note=()=>'',standing=()=>{},approve=()=>{},rng=Math.random}){const n=s.npcs[id],m=n.memory,d=NPCS[id];
  if(action==='Inspect'){const note=note(id);say(s,describeNPC(s,id)+(note?' '+note:''));return true;}
  if(action==='Loot'){const got=takeAll(s,n,id);m.looted=true;if(got!=='nothing'&&n.condition==='unconscious'){betray(n);m.robbed=true;n.attitude='hostile';}say(s,got==='nothing'?`${d.name} has nothing left. Possessions do not respawn.`:`You take ${got} from ${d.name}. ${n.condition==='unconscious'?'They remain alive and unconscious.':'They remain dead.'}`);return true;}
+ // The maintenance badge: Tobin will not give up something that opens doors
+ // without a reason, and he remembers being asked either way.
+ if(action==='Ask about the badge'){
+  const result=check({actor:s,skill:'persuasion',dc:BADGE_ASK_DC,advantage:!!m.helped,disadvantage:!!m.lieExposed,modifiers:bonus('checks'),rng});
+  if(!result.success){m.badgeRefused=true;say(s,`Persuasion ${result.total} against DC ${BADGE_ASK_DC}. Failure. ${d.name} closes his hand around it. “Mine.”`);return true;}
+  transfer(s,n,'badge',1);s.flags.badgeKnown=true;m.sharedBadge=true;approve(id,8,'you talked Tobin out of the badge');
+  say(s,`Persuasion ${result.total} against DC ${BADGE_ASK_DC}. Success. ${d.name} hands over the maintenance badge and watches your face the whole time.`);return true;}
+ if(action.startsWith('Buy the badge')){
+  if(s.gold<BADGE_PRICE){say(s,`${d.name} wants ${BADGE_PRICE} coins for it. You have ${s.gold}.`);return true;}
+  s.gold-=BADGE_PRICE;n.inventory.gold+=BADGE_PRICE;transfer(s,n,'badge',1);s.flags.badgeKnown=true;m.traded=true;m.soldBadge=true;
+  say(s,`You pay ${d.name} ${BADGE_PRICE} coins for the maintenance badge. He counts them twice and does not look at you.`);return true;}
+ if(action==='Lift the badge'){
+  const alert=!m.distracted&&n.attitude!=='friendly',dc=pickpocketDC(id)+BADGE_LIFT_DC;
+  const result=check({actor:s,skill:'sleight of hand',dc,advantage:!alert,disadvantage:alert,modifiers:bonus('checks'),rng});
+  if(!result.success){betray(n);m.theftAttempt=true;n.attitude='hostile';say(s,`Sleight of hand ${result.total} against DC ${dc}. Failure. ${d.name} feels the tug on the lanyard and turns round. He is now hostile.`);witness('theft',id);return true;}
+  transfer(s,n,'badge',1);s.stolen.badge=id;s.flags.badgeKnown=true;deed('theft');standing(id,2,'you stole from one of them');approve(id,-15,'you stole from someone');
+  award(s,'Five-Finger Discount');m.stolen=true;m.distracted=false;
+  say(s,`Sleight of hand ${result.total} against DC ${dc}. Success. The badge comes away with the lanyard still on it and ${d.name} notices nothing.`);return true;}
  if(action==='Wake up'){n.condition='conscious';n.hp=Math.max(1,Math.ceil(d.hp/4));m.woken=true;n.attitude='hostile';say(s,`${d.name} wakes at ${n.hp} HP. They remember the attack${m.looted?' and the missing possessions':''}. Waking them does not restore their inventory or trust.`);return true;}
   if(action==='Kill'&&n.condition==='unconscious'){approve(id,-25,'you killed someone who could not fight back');betray(n);n.condition='dead';n.hp=0;m.killed=true;n.attitude='hostile';say(s,`${d.name} is dead. Their remaining possessions can be looted. ANNEX: “One fewer unresolved relationship.”`);witness('kill',id);return true;}
  if(action==='Talk'){talk(s,id,say);return true;}

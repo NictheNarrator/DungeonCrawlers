@@ -28,7 +28,7 @@ export const props=[
  [{id:'rat',name:'Ratman scrapper',x:5,y:4},{id:'brazier',name:'Burning brazier',x:10,y:5,hazard:true},{id:'nest',name:'Ratman nest',x:9,y:2},
   {id:'scrap',name:'Scrap pile',x:6,y:5},{id:'skullpost',name:'Trophy post',x:7,y:2}],
 // 4 Final Checkpoint — the last obstacle, with the stairwell sign already visible.
- [{id:'platform',name:'Suspended platform',x:3,y:3},{id:'gate',name:'Checkpoint gate',x:9,y:3},{id:'desk',name:'Inspector’s desk',x:2,y:5},
+ [{id:'platform',name:'Suspended platform',x:3,y:3},{id:'barrier',name:'Checkpoint barrier',x:9,y:3},{id:'desk',name:'Inspector’s desk',x:2,y:5},
   {id:'cabinet',name:'Abandoned cabinet',x:2,y:2},{id:'barricade',name:'Rusted barricade',x:5,y:6}],
 // 5 Surface — the prologue, unchanged: the stairwell is the way in.
  [{id:'wreck',name:'Wrecked car',x:3,y:3},{id:'awning',name:'Collapsed awning',x:7,y:3},{id:'stranger1',name:'Panicked man',x:5,y:6},{id:'stranger2',name:'Panicked woman',x:9,y:6},{id:'stairwell',name:'The stairwell',x:10,y:5}],
@@ -64,7 +64,7 @@ export function advanceClock(s,seconds){if(s.dead||s.complete)return s.timer;
  s.timer=Math.max(0,s.timer-seconds);
  if(s.timer===0&&!s.collapsed){s.collapsed=true;s.dead=true;say(s,"FLOOR COLLAPSE. The Concourse folds in on itself. Anyone still inside is inventory now.");}
  return s.timer;}
-export function fresh(){return {version:2,registered:true,collapsed:false,timer:FLOOR_SECONDS,surfaceTime:0,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},gear:[],equipped:emptyEquipped(),standing:Object.fromEntries(Object.keys(NPCS).map(id=>[id,'neutral'])),companions:{mara:blankCompanion('mara')},factionGifts:{survivors:false,ratmen:false},factions:{survivors:'neutral',ratmen:'neutral'},quests:{supplies:'open',carried:false,promised:null},npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
+export function fresh(){return {version:2,registered:true,collapsed:false,timer:FLOOR_SECONDS,surfaceTime:0,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0,badge:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},gear:[],equipped:emptyEquipped(),standing:Object.fromEntries(Object.keys(NPCS).map(id=>[id,'neutral'])),companions:{mara:blankCompanion('mara')},factionGifts:{survivors:false,ratmen:false},factions:{survivors:'neutral',ratmen:'neutral'},quests:{supplies:'open',carried:false,promised:null},npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
 export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);
  const entry=ACHIEVEMENTS[id]||{description:'',condition:'',reward:'box',message:'Logged. The dungeon saw that.'};
@@ -88,7 +88,7 @@ export const EXITS=[
  [{x:6,y:0,to:3,tx:6,ty:7},{x:6,y:8,to:11,tx:6,ty:1},{x:0,y:4,to:9,tx:11,ty:4}],
  [],
  [],
- [{x:0,y:4,to:0,tx:11,ty:4},{x:6,y:0,to:2,tx:6,ty:7},{x:4,y:8,to:9,tx:4,ty:1}],
+ [{x:0,y:4,to:0,tx:11,ty:4},{x:6,y:0,to:2,tx:6,ty:7,needs:'gateOpen'},{x:4,y:8,to:9,tx:4,ty:1}],
  [{x:0,y:3,to:2,tx:11,ty:3},{x:9,y:8,to:9,tx:9,ty:1}],
  [{x:4,y:0,to:7,tx:4,ty:7},{x:9,y:0,to:8,tx:9,ty:7},{x:0,y:6,to:0,tx:11,ty:6},{x:12,y:2,to:3,tx:1,ty:2},{x:12,y:4,to:4,tx:1,ty:4}],
  [{x:6,y:0,to:0,tx:6,ty:7},{x:12,y:5,to:3,tx:1,ty:5}],
@@ -180,6 +180,10 @@ export function worldTurn(s){for(const id of Object.keys(NPCS)){const n=s.npcs[i
  if(d.routine==='scavenge')moveTo(s,id,d.route[(d.route.indexOf(room)+1)%d.route.length],say);}}
 export function move(s,dx,dy){if(s.combat||s.dead||s.complete||!Number.isInteger(dx)||!Number.isInteger(dy)||Math.abs(dx)+Math.abs(dy)!==1)return false;const x=s.x+dx,y=s.y+dy;
  const exit=exitAt(s.room,x,y);
+ // A locked doorway stays shut until its flag is set - the security gate only
+ // opens for a badge, and there is always the long way round through the tunnels.
+ if(exit&&exit.needs&&!s.flags[exit.needs]){if(!s.flags.gateSeen){s.flags.gateSeen=true;
+  say(s,'The security gate at Access Control is shut. AUTHORISED PERSONNEL ONLY, and you are wearing the wrong everything.');}return false;}
  if(exit){discoverThefts(s,PEOPLE.filter(id=>roomOf(s,id)===s.room),say,award);s.room=exit.to;s.x=exit.tx;s.y=exit.ty;say(s,`Entered ${rooms[s.room]}.`);
   const seen='seen'+s.room;if(!s.flags[seen]){s.flags[seen]=true;awardXp(s,20,`finding ${rooms[s.room]}`);}
   worldTurn(s);return true;}
@@ -204,7 +208,8 @@ function baseActions(s,id){if(id==='staffdoor'&&!s.dead&&!s.complete)return ['In
  case 'staffdoor':case 'breakdoor':return ['Inspect','Enter the break room'];case 'exitdoor':return ['Inspect','Head back out'];
  case 'map':return ['Inspect'];case 'sofa':case 'kettle':return ['Inspect','Rest for a while'];case 'machines':return ['Inspect'];
  case 'note':return ['Inspect','Read'];case 'locker':return ['Inspect',...(s.flags.locker?[]:['Open'])];
- case 'rat':return ['Inspect','Talk','Offer cheese','Sneak past','Fight'];
+ case 'gate':return ['Inspect',...(s.items.badge&&!s.flags.gateOpen?['Badge through the gate']:[])];case 'barrier':return ['Inspect'];
+ case 'rat':return ['Inspect','Talk','Offer cheese','Sneak past',...(s.items.badge?['Return the badge']:[]),'Fight'];
  case 'pipe':return ['Inspect','Search'];
  case 'satchel':return ['Inspect',...(s.flags.satchel?[]:['Open'])];
  case 'whetstone':return ['Inspect',...(s.flags.whetstone?[]:['Take'])];
@@ -286,6 +291,8 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
  if(id==='crate'){s.flags.crate=true;s.cheese++;say(s,'Found pungent cheese. A diplomatic instrument, probably.');}
  if(id==='note'){s.flags.memo=true;say(s,'Memo: “Sponsor slogan: WE KEEP YOU IN THE PICTURE. Beware faulty exit machinery. Tell the crawler by the stairs. Custodian accepts cheese; Mara’s locker holds a spare key.” You can share this information with Vex or quote it in a lie.');}
  if(id==='locker'){s.flags.locker=true;s.key=true;say(s,'You take the emergency spare key. It belongs to the building, not Mara.');}
+ if(id==='gate'&&action==='Badge through the gate'){s.flags.gateOpen=true;
+  say(s,'You hold the maintenance badge up to the reader. The gate considers it, then remembers it was built to obey badges, and slides open.');return true;}
  if(id==='pipe'){let found=false;for(const who of Object.keys(s.companions)){const mate=companionOf(s,who);if(mate.quest.id!=='locket'||mate.quest.stage!=='searching')continue;mate.quest.stage='found';grantedItem(s,'Sable locket');found=true;say(s,'Wedged behind the pipe: a sable locket on a broken chain. Dell. Mara will want to know.');}if(!s.flags.secret){s.flags.secret=true;s.gold+=4;award(s,'Pipe dream');say(s,'A hidden cache contains 4 coins.');found=true;}if(s.flags.tobinCache&&!s.flags.tobinCacheTaken){s.flags.tobinCacheTaken=true;s.gold+=3;say(s,'Tobin’s tip reveals a second compartment: 3 extra coins. Information can be worth more than pockets.');found=true;}if(!found)say(s,'The cache is empty.');}
  if(id==='satchel'){s.flags.satchel=true;s.gold+=3;s.items.smokeBombs++;ownedTake(s,'satchel','3 coins and a smoke bomb',['gold','smokeBombs']);}
  if(id==='whetstone'){s.flags.whetstone=true;s.items.whetstones++;ownedTake(s,'whetstone','1 whetstone',['whetstones']);}
@@ -298,6 +305,10 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   if(action==='Talk')say(s,'Ratman: “Cheese tax. Or go around. I am paid neither way.”');
   if(action==='Offer cheese'){if(memberStanding(s,'rat')==='friendly')say(s,'The custodian has already accepted your tribute.');else if(!s.cheese)say(s,'You have no cheese. Try the crate in Food Storage.');else{s.cheese--;s.npcs.rat.attitude='friendly';s.npcs.rat.memory.helped=true;recordDeed(s,'persuasion');partyApproval(s,8,'you talked your way past a problem');shiftMember(s,'rat',-2,'you paid the cheese tribute');award(s,'Cheese diplomacy');say(s,'The ratman accepts. The only honest transaction in the building.');}}
   if(action==="Sneak past"){s.flags.sneaked=true;recordDeed(s,"stealth");partyApproval(s,8,'you avoided a fight');award(s,"Quiet quitting");say(s,'You slip along the wall. The custodian pretends not to see.');awardXp(s,30,'resolving the custodian without a fight');}
+  if(action==='Return the badge'){if(!s.items.badge){say(s,'You have nothing of theirs to give back.');return true;}
+   s.items.badge--;s.flags.badgeReturned=true;s.npcs.rat.memory.returnedBadge=true;s.npcs.rat.memory.helped=true;
+   shiftMember(s,'rat',-2,'you gave the ratmen back their badge');
+   say(s,'You hold the badge out. The custodian takes it back without thanking you, which from a ratman is close enough, and says the tunnels are yours to use.');return true;}
   if(action==='Fight')startCombat(s,'rat');
  }
  if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in Records, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
@@ -380,6 +391,7 @@ export const ITEMS={
  'Iron signet':{rarity:'rare',type:'accessory',description:'Heavy, official, and entirely self-issued.',effects:{damage:1},trait:null,traitName:null,traitText:null},
  'Improviser’s Grip':{rarity:'epic',type:'accessory',description:'A strap for people who fight with furniture.',effects:{},trait:'improviser',traitName:'Makeshift Artillery',traitText:'Thrown objects deal +2 damage.'}
  ,'Sable locket':{rarity:'rare',type:'accessory',description:'Dell’s locket, scratched from a lot of waiting.',effects:{checks:1},trait:'keepsake',traitName:'Keepsake',traitText:'+1 on every check, while you are the one carrying it.'}
+ ,'Maintenance badge':{rarity:'uncommon',type:'tool',description:'Ratman-made, Tobin-stolen, still on its lanyard.',effects:{},trait:null}
 };
 export const SLOTS=['weapon','armor','accessory'];
 // Two factions, one contested cache of supplies.
@@ -842,6 +854,11 @@ export function encode(s){if(s.dead||s.combat)return null;return JSON.stringify(
 // check({actor:character(s), skill:'stealth', dc:12}).
 export function character(s,id='player'){if(id==='player'){const abilities={};for(const key of ABILITIES)abilities[key]=s.abilities[key]+abilityBonus(s,key);return {name:'Crawler 01',level:s.level,abilities,skills:s.skills,saves:s.saves};}const d=NPCS[id];return {name:d.name,level:d.level||1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
 function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...STARTING_ABILITIES};for(const ability of ABILITIES)if(!Number.isInteger(s.abilities[ability]))s.abilities[ability]=STARTING_ABILITIES[ability];if(!Array.isArray(s.skills))s.skills=[...STARTING_SKILLS];if(!Array.isArray(s.saves))s.saves=[...STARTING_SAVES];if(!dictionary(s.stolen))s.stolen={};s.places=normalisePlaces(s.places);s.conditions=normaliseConditions(s.conditions);if(!Array.isArray(s.party))s.party=[];if(!dictionary(s.allies))s.allies={};if(!Number.isInteger(s.level))s.level=1;if(!Number.isInteger(s.maxHp)||s.maxHp<30)s.maxHp=30;if(!Number.isInteger(s.xp)||s.xp<0)s.xp=0;s.deeds=dictionary(s.deeds)?s.deeds:{};if(typeof s.boxes==='number')s.boxes={bronze:Math.max(0,s.boxes),silver:0,gold:0};if(!dictionary(s.boxes))s.boxes={bronze:0,silver:0,gold:0};for(const tier of BOX_TIERS)if(!Number.isInteger(s.boxes[tier])||s.boxes[tier]<0)s.boxes[tier]=0;s.gear=Array.isArray(s.gear)?s.gear.filter(name=>!!ITEMS[name]):[];
+ // Saves written before the badge existed have no slot for it. Fill the gap
+ // rather than refusing to load someone's run.
+ if(dictionary(s.items))for(const key of ITEM_KEYS)if(!count(s.items[key]))s.items[key]=0;
+ if(dictionary(s.npcs))for(const who of Object.keys(s.npcs)){const carried=s.npcs[who];
+  if(dictionary(carried)&&dictionary(carried.inventory))for(const key of STOCK_KEYS)if(!count(carried.inventory[key]))carried.inventory[key]=0;}
  const legacy=Array.isArray(s.accessories)?s.accessories.filter(name=>!!ITEMS[name]):[];
  s.equipped=dictionary(s.equipped)?s.equipped:emptyEquipped();
  for(const slot of SLOTS){const name=s.equipped[slot];if(!ITEMS[name]){s.equipped[slot]=null;continue;}if(itemSlot(name)!==slot){s.equipped[slot]=null;if(!s.gear.includes(name))s.gear.push(name);}}
