@@ -230,27 +230,27 @@ function propSprite(px,py,type){
   if(live){rect(px+18,py+20,28,4,'#4fc4d8');rect(px+18,py+27,18,3,'#4fc4d8');}else rect(px+18,py+22,20,4,'#8a5a34');
   rect(px+34,py+48,14,6,'#eac999');return;}
  if(type==='tickets'){rect(px+14,py+14,36,46,'#8c8e9e');rect(px+14,py+14,36,5,'#8b877c');
-  rect(px+19,py+22,26,14,'#4fc4d8');rect(px+23,py+44,18,4,'#eac999');rect(px+23,py+51,10,4,'#26292b');return;}
+  rect(px+19,py+22,26,14,'#4fc4d8');rect(px+23,py+44,18,4,'#eac999');rect(px+23,py+51,10,4,'#17366b');return;}
  if(type==='bin'){rect(px+17,py+26,30,34,'#7f644e');rect(px+14,py+21,36,7,'#8c8e9e');rect(px+20,py+34,6,20,'#8a5a34');return;}
  if(type==='bag'){rect(px+20,py+32,24,26,'#8a5a34');rect(px+20,py+32,24,4,'#a06a3c');rect(px+26,py+24,12,8,'#0f2e63');return;}
- if(type==='cart'){rect(px+8,py+34,48,12,'#8c8e9e');rect(px+8,py+34,48,3,'#8b877c');rect(px+13,py+46,6,10,'#26292b');rect(px+45,py+46,6,10,'#26292b');rect(px+26,py+24,14,10,'#7f644e');return;}
+ if(type==='cart'){rect(px+8,py+34,48,12,'#8c8e9e');rect(px+8,py+34,48,3,'#8b877c');rect(px+13,py+46,6,10,'#17366b');rect(px+45,py+46,6,10,'#17366b');rect(px+26,py+24,14,10,'#7f644e');return;}
  if(type==='sofa'){rect(px+8,py+26,48,26,'#5d7f7a');rect(px+8,py+26,48,5,'#7d9a94');rect(px+14,py+32,16,14,'#6f7a4a');rect(px+34,py+32,16,14,'#6f7a4a');return;}
- if(type==='kettle'){rect(px+20,py+32,24,20,'#eac999');rect(px+20,py+32,24,4,'#c8bb9c');rect(px+44,py+36,7,10,'#eac999');rect(px+27,py+27,10,5,'#8c8e9e');return;}
+ if(type==='kettle'){rect(px+20,py+32,24,20,'#eac999');rect(px+20,py+32,24,4,'#fbcac3');rect(px+44,py+36,7,10,'#eac999');rect(px+27,py+27,10,5,'#8c8e9e');return;}
  if(type==='brazier'){const flame=tick%4===0?2:0;rect(px+18,py+34,28,26,'#8a5a34');rect(px+18,py+34,28,4,'#a06a3c');rect(px+24,py+22-flame,16,12+flame,'#d97a34');rect(px+28,py+16-flame,8,8+flame,'#eac999');return;}
  if(type==='satchel'){rect(px+16,py+28,32,28,'#8a5a34');rect(px+16,py+28,32,5,'#a06a3c');rect(px+22,py+20,20,9,'#eac999');rect(px+28,py+36,8,8,'#eac999');return;}
- if(type==='locker'){rect(px+16,py+8,32,52,'#1d5193');rect(px+16,py+8,32,5,'#4f5f7d');rect(px+20,py+16,24,3,'#26292b');rect(px+42,py+30,5,5,'#eac999');return;}
- if(type==='plaque'){rect(px+12,py+24,40,22,'#eac999');rect(px+12,py+24,40,4,'#c8bb9c');rect(px+18,py+33,28,3,'#8c8e9e');rect(px+18,py+39,18,3,'#8c8e9e');return;}
- if(type==='sign'){rect(px+6,py+12,52,28,'#eac999');rect(px+6,py+12,52,4,'#c8bb9c');rect(px+12,py+20,20,4,'#1d5193');rect(px+12,py+29,30,4,'#1d5193');rect(px+40,py+26,12,8,'#c0393a');return;}
+ if(type==='locker'){rect(px+16,py+8,32,52,'#1d5193');rect(px+16,py+8,32,5,'#4f5f7d');rect(px+20,py+16,24,3,'#17366b');rect(px+42,py+30,5,5,'#eac999');return;}
+ if(type==='plaque'){rect(px+12,py+24,40,22,'#eac999');rect(px+12,py+24,40,4,'#fbcac3');rect(px+18,py+33,28,3,'#8c8e9e');rect(px+18,py+39,18,3,'#8c8e9e');return;}
+ if(type==='sign'){rect(px+6,py+12,52,28,'#eac999');rect(px+6,py+12,52,4,'#fbcac3');rect(px+12,py+20,20,4,'#1d5193');rect(px+12,py+29,30,4,'#1d5193');rect(px+40,py+26,12,8,'#c0393a');return;}
  if(type==='service'||type==='breakdoor'||type==='staffdoor'||type==='exitdoor'){const band=type==='breakdoor'?'#4b8fd0':(type==='exitdoor'?'#6f7a4a':(type==='staffdoor'?'#c0393a':'#eac999'));
   rect(px+16,py+4,32,56,'#8c8e9e');rect(px+16,py+4,32,5,'#8b877c');rect(px+40,py+30,6,6,'#eac999');
-  rect(px+18,py+46,28,7,band);rect(px+18,py+46,4,7,'#26292b');
-  if(type==='exitdoor'){rect(px+20,py+18,24,9,'#eac999');rect(px+27,py+20,4,5,'#26292b');rect(px+33,py+20,3,3,'#26292b');}
+  rect(px+18,py+46,28,7,band);rect(px+18,py+46,4,7,'#17366b');
+  if(type==='exitdoor'){rect(px+20,py+18,24,9,'#eac999');rect(px+27,py+20,4,5,'#17366b');rect(px+33,py+20,3,3,'#17366b');}
   return;}
  if(type==='stairwell'){const pulse=tick%2?'#4fc4d8':'#8fe3f0';rect(px+6,py+10,52,48,'#0f2e63');for(let i=0;i<5;i++)rect(px+8+i*4,py+50-i*9,48-i*7,8,'#2a2f33');
-  rect(px+4,py+4,56,12,'#26292b');rect(px+8,py+8,48,4,pulse);rect(px+8,py+15,22,3,pulse);return;}
- if(type==='map'){rect(px+10,py+12,44,42,'#eac999');rect(px+10,py+12,44,4,'#c8bb9c');rect(px+15,py+22,16,3,'#1d5193');rect(px+15,py+29,24,3,'#1d5193');rect(px+15,py+36,12,3,'#1d5193');rect(px+40,py+30,9,9,'#4fc4d8');return;}
+  rect(px+4,py+4,56,12,'#17366b');rect(px+8,py+8,48,4,pulse);rect(px+8,py+15,22,3,pulse);return;}
+ if(type==='map'){rect(px+10,py+12,44,42,'#eac999');rect(px+10,py+12,44,4,'#fbcac3');rect(px+15,py+22,16,3,'#1d5193');rect(px+15,py+29,24,3,'#1d5193');rect(px+15,py+36,12,3,'#1d5193');rect(px+40,py+30,9,9,'#4fc4d8');return;}
  if(type==='help'){rect(px+22,py+14,20,48,'#4b8fd0');rect(px+22,py+14,20,5,'#6ba3dd');rect(px+26,py+22,12,14,'#e6e2d6');rect(px+26,py+42,12,4,'#e6e2d6');return;}
- if(type==='wreck'){rect(px+4,py+30,56,20,'#8a5a34');rect(px+14,py+20,30,12,'#8c8e9e');rect(px+18,py+22,12,8,'#1d5193');rect(px+8,py+50,10,6,'#26292b');rect(px+46,py+50,10,6,'#26292b');return;}
+ if(type==='wreck'){rect(px+4,py+30,56,20,'#8a5a34');rect(px+14,py+20,30,12,'#8c8e9e');rect(px+18,py+22,12,8,'#1d5193');rect(px+8,py+50,10,6,'#17366b');rect(px+46,py+50,10,6,'#17366b');return;}
  if(type==='awning'){rect(px+6,py+32,52,20,'#1d5193');rect(px+6,py+32,52,4,'#4f5f7d');for(let i=0;i<4;i++)rect(px+10+i*12,py+38,6,12,'#eac999');return;}
  if(type==='debris'){rect(px+14,py+44,14,7,'#8c8e9e');rect(px+32,py+40,16,10,'#7f644e');rect(px+22,py+34,10,6,'#8a5a34');return;}
  if(type==='terminal'){rect(px+14,py+11,37,44,'#687b76');rect(px+18,py+15,29,29,'#283e35');rect(px+22,py+20,20,3,'#4fc4d8');rect(px+22,py+27,13,3,'#4fc4d8');rect(px+17,py+53,7,5,'#172725');rect(px+43,py+53,7,5,'#172725');return;}
@@ -275,14 +275,14 @@ export function itemIcon(label){const kind=iconKind(label);if(!kind)return null;
  if(kind==='potion'||kind==='bronze'||kind==='silver'||kind==='gold'||kind==='bomb'){
   if(kind==='potion'){paint(12,14,8,12,'#c0393a');paint(13,15,3,9,'#d4544c');paint(13,10,6,4,'#e6e2d6');paint(14,11,2,2,'#8a5a34');}
   else if(kind==='bomb'){paint(10,15,12,12,'#7f644e');paint(11,16,4,5,'#8c8e9e');paint(15,10,3,5,'#8a5a34');paint(17,8,3,3,'#eac999');}
-  else{paint(8,12,16,14,BOX_FRAME[kind]);paint(8,12,16,3,'#e6e2d6');paint(14,8,4,5,'#26292b');paint(11,16,10,6,'#26292b');paint(13,18,6,2,BOX_FRAME[kind]);}
+  else{paint(8,12,16,14,BOX_FRAME[kind]);paint(8,12,16,3,'#e6e2d6');paint(14,8,4,5,'#17366b');paint(11,16,10,6,'#17366b');paint(13,18,6,2,BOX_FRAME[kind]);}
  }else if(kind==='cheese'){paint(8,14,16,11,'#eac999');paint(8,14,16,3,'#f3d97c');paint(11,18,3,3,'#8a5a34');paint(17,21,3,2,'#8a5a34');}
  else if(kind==='bandage'||kind==='repair kit'){paint(8,14,16,11,'#e6e2d6');paint(8,14,16,3,'#f4f1e8');paint(10,11,3,6,'#c0393a');paint(19,11,3,6,'#c0393a');if(kind==='repair kit')paint(14,17,4,5,'#8c8e9e');}
  else if(kind==='whetstone'){paint(7,19,18,6,'#8c8e9e');paint(7,19,18,2,'#8b877c');paint(10,14,12,5,'#eac999');}
  else if(kind==='key'){paint(12,11,8,8,'#eac999');paint(14,13,4,4,'#152724');paint(15,19,3,8,'#eac999');paint(18,21,4,2,'#eac999');}
  else if(kind==='weapon'){paint(9,21,14,4,'#8a5a34');paint(14,8,4,14,'#cfd6d2');paint(12,10,9,3,'#cfd6d2');}
  else if(kind==='armor'){paint(10,10,12,14,'#5d7f7a');paint(10,10,12,3,'#7d9a94');paint(7,13,4,7,'#5d7f7a');paint(21,13,4,7,'#5d7f7a');}
- else{paint(14,10,4,4,'#eac999');paint(10,15,12,8,'#eac999');paint(12,16,3,6,'#c8bb9c');}
+ else{paint(14,10,4,4,'#eac999');paint(10,15,12,8,'#eac999');paint(12,16,3,6,'#fbcac3');}
  return chip;}
 // Interaction icon in the world: colour-coded corner brackets around whatever is
 // within reach, so an object reads by category without hiding its own sprite.
@@ -358,11 +358,11 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
  const c=look[type];
  if(c&&!['rat','skrit','skulker','brute'].includes(type)){const coat=c.coat;
   rect(px+22,py+12,20,17,c.skin);
-  rect(px+22,py+12,20,4,'#c8bb9c');rect(px+37,py+25,5,4,'#8d8168');
-  rect(px+31,py+19,3,4,'#26292b');rect(px+39,py+19,3,4,'#26292b');
-  rect(px+21,py+29,22,19,coat);rect(px+21,py+29,22,4,c.trim);rect(px+37,py+44,6,4,'#26292b');
+  rect(px+22,py+12,20,4,'#fbcac3');rect(px+37,py+25,5,4,'#c3928b');
+  rect(px+31,py+19,3,4,'#17366b');rect(px+39,py+19,3,4,'#17366b');
+  rect(px+21,py+29,22,19,coat);rect(px+21,py+29,22,4,c.trim);rect(px+37,py+44,6,4,'#17366b');
   rect(px+17,py+31,5,15,coat);rect(px+42,py+31,5,15,coat);
-  rect(px+21,py+48,8,8,'#26292b');rect(px+35,py+48,8,8,'#26292b');
+  rect(px+21,py+48,8,8,'#17366b');rect(px+35,py+48,8,8,'#17366b');
   if(type==='player'){rect(px+20,py+7,24,7,c.head);rect(px+17,py+12,30,4,c.head);rect(px+20,py+31,3,17,c.trim);}
   if(type==='mara'){rect(px+44,py+33,10,12,c.pack);rect(px+19,py+33,3,16,'#e6e2d6');}
   if(type==='tobin'){rect(px+13,py+32,12,18,c.trim);rect(px+19,py+9,26,6,c.hat);rect(px+18,py+14,28,3,c.hat);}
@@ -386,9 +386,9 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   rect(px+15,py+8,9,10,fur);rect(px+39,py+8,9,10,fur);
   rect(px+30,py+20,3,3,'#c0393a');rect(px+39,py+20,3,3,'#c0393a');
   rect(px+26,py+26,11,4,'#e6e2d6');
-  rect(px+20,py+30,23,18,coat);rect(px+20,py+30,23,4,'#7d9a94');rect(px+37,py+44,6,4,'#26292b');
+  rect(px+20,py+30,23,18,coat);rect(px+20,py+30,23,4,'#7d9a94');rect(px+37,py+44,6,4,'#17366b');
   rect(px+16,py+32,5,14,coat);rect(px+42,py+32,5,14,coat);
-  rect(px+21,py+48,8,8,'#26292b');rect(px+35,py+48,8,8,'#26292b');
+  rect(px+21,py+48,8,8,'#17366b');rect(px+35,py+48,8,8,'#17366b');
   rect(px+45,py+34,4,20,fur);
   if(type==='skrit'){rect(px+35,py+44,9,6,c.bandage,'#c0393a');}
   if(type==='brute'){rect(px+19,py+29,28,7,c.plate);rect(px+19,py+29,28,3,'#5f6355');}
@@ -402,9 +402,9 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
 // Faction and structure props. Same rules as everything else: one silhouette per
 // object, top-left light, hard short shadow, accents used on purpose.
  if(type==='barricade'){rect(px+6,py+42,52,8,'#7f644e');rect(px+10,py+30,44,5,'#8a5a34');rect(px+16,py+36,32,5,'#8a5a34');
-  rect(px+9,py+24,5,26,'#8c8e9e');rect(px+50,py+24,5,26,'#8c8e9e');rect(px+16,py+44,6,8,'#26292b');rect(px+42,py+44,6,8,'#26292b');return;}
+  rect(px+9,py+24,5,26,'#8c8e9e');rect(px+50,py+24,5,26,'#8c8e9e');rect(px+16,py+44,6,8,'#17366b');rect(px+42,py+44,6,8,'#17366b');return;}
  if(type==='bedroll'){rect(px+12,py+38,40,13,'#6f7a4a');rect(px+12,py+38,40,4,'#8b9a63');rect(px+16,py+30,32,8,'#5d7f7a');rect(px+46,py+33,8,8,'#eac999');return;}
- if(type==='triage'){rect(px+8,py+32,48,13,'#eac999');rect(px+8,py+32,48,4,'#c8bb9c');rect(px+13,py+45,6,9,'#7f644e');rect(px+45,py+45,6,9,'#7f644e');
+ if(type==='triage'){rect(px+8,py+32,48,13,'#eac999');rect(px+8,py+32,48,4,'#fbcac3');rect(px+13,py+45,6,9,'#7f644e');rect(px+45,py+45,6,9,'#7f644e');
   rect(px+30,py+20,8,22,'#c0393a');rect(px+23,py+27,22,8,'#c0393a');return;}
  if(type==='banner'){rect(px+28,py+6,4,52,'#7f644e');rect(px+14,py+10,36,30,'#6f7a4a');rect(px+18,py+16,28,4,'#e6e2d6');rect(px+18,py+23,18,4,'#e6e2d6');rect(px+14,py+40,36,5,'#5b6340');return;}
  if(type==='gate'){rect(px+8,py+14,48,40,'#1d5193');rect(px+12,py+18,40,32,'#8c8e9e');rect(px+16,py+22,6,24,'#7f644e');rect(px+42,py+22,6,24,'#7f644e');
@@ -418,7 +418,7 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
  if(type==='cables'){rect(px+6,py+24,52,8,'#1d5193');rect(px+6,py+36,52,6,'#c0393a');rect(px+6,py+46,52,5,'#8c8e9e');rect(px+10,py+20,6,10,'#7f644e');rect(px+48,py+20,6,10,'#7f644e');return;}
  if(type==='nest'){rect(px+12,py+36,40,15,'#6b6b58');rect(px+12,py+36,40,4,'#7d8a74');rect(px+20,py+28,24,10,'#5d7f7a');rect(px+26,py+22,12,7,'#8a5a34');return;}
  if(type==='scrap'){rect(px+8,py+42,48,12,'#8c8e9e');rect(px+16,py+32,13,11,'#8a5a34');rect(px+32,py+30,15,13,'#7f644e');rect(px+22,py+23,11,9,'#5d7f7a');rect(px+36,py+22,6,8,'#eac999');return;}
- if(type==='skullpost'){rect(px+30,py+12,5,48,'#7f644e');rect(px+22,py+8,21,15,'#e6e2d6');rect(px+26,py+13,5,4,'#26292b');rect(px+35,py+13,5,4,'#26292b');rect(px+29,py+20,8,3,'#26292b');rect(px+18,py+44,28,5,'#8c8e9e');return;}
+ if(type==='skullpost'){rect(px+30,py+12,5,48,'#7f644e');rect(px+22,py+8,21,15,'#e6e2d6');rect(px+26,py+13,5,4,'#17366b');rect(px+35,py+13,5,4,'#17366b');rect(px+29,py+20,8,3,'#17366b');rect(px+18,py+44,28,5,'#8c8e9e');return;}
  if(type==='pit'){rect(px+3,py+28,58,30,'#16221b');rect(px+8,py+33,48,21,'#2f4a35');rect(px+14,py+38,16,7,'#4a6b3f');rect(px+38,py+40,14,7,'#4a6b3f');
   rect(px+24,py+24,12,6,'#c0393a');rect(px+8,py+24,6,4,'#eac999');rect(px+50,py+24,6,4,'#eac999');return;}
  if(type==='platform'){rect(px+4,py+18,56,10,'#1d5193');rect(px+4,py+18,56,3,'#4f5f7d');rect(px+10,py+28,3,26,'#8c8e9e');rect(px+51,py+28,3,26,'#8c8e9e');
@@ -426,8 +426,8 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
  if(type==='barrier'){rect(px+10,py+28,6,32,'#7f644e');rect(px+48,py+28,6,32,'#7f644e');rect(px+8,py+22,48,10,'#eac999');
   for(let i=0;i<4;i++)rect(px+12+i*12,py+22,6,10,'#c0393a');rect(px+28,py+6,8,16,'#33373a');rect(px+30,py+8,4,4,'#4fc4d8');return;}
  if(type==='vault'){rect(px+13,py+14,38,42,'#7f644e');rect(px+13,py+14,38,4,'#5f6355');rect(px+18,py+20,28,30,'#33373a');
-  rect(px+29,py+30,7,7,'#eac999');rect(px+31,py+32,3,3,'#7f644e');rect(px+38,py+34,6,3,'#8b877c');rect(px+21,py+52,22,4,'#26292b');return;}
- if(type==='whetstone'){rect(px+13,py+41,38,12,'#8c8e9e');rect(px+13,py+41,38,3,'#8b877c');rect(px+19,py+35,26,8,'#eac999');rect(px+19,py+35,26,3,'#c8bb9c');rect(px+44,py+45,9,4,'#7f644e');return;}
+  rect(px+29,py+30,7,7,'#eac999');rect(px+31,py+32,3,3,'#7f644e');rect(px+38,py+34,6,3,'#8b877c');rect(px+21,py+52,22,4,'#17366b');return;}
+ if(type==='whetstone'){rect(px+13,py+41,38,12,'#8c8e9e');rect(px+13,py+41,38,3,'#8b877c');rect(px+19,py+35,26,8,'#eac999');rect(px+19,py+35,26,3,'#fbcac3');rect(px+44,py+45,9,4,'#7f644e');return;}
  propSprite(px,py,type);}
 // Environment tiles: clean, dirty, cracked, bloodstained, grate, hazard stripe
 // and sludge, layered deterministically so a room reads the same every visit.
@@ -436,19 +436,61 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
 // The concourse floor: big tiles, a blue tile band every third column, a cream
 // platform lip along the far wall and hazard stripes at the platform edge. Drawn
 // from the palette so it can never drift from the rest of the game.
-function concourseFloor(x,y,a,b){const px=x*64,py=y*64;
- // a bright tiled floor: pale squares, thin grout, and occasional blue tiles
- const accent=(x%5===2)&&(y%3===1);
- const base=accent?shade(P.blue,-8):b;
- rect(px+1,py+1,62,62,base);
- rect(px+1,py+1,62,3,shade(base,18));
- rect(px+1,py+60,62,3,shade(base,-20));
- rect(px+62,py+1,2,62,shade(base,-26));
- rect(px+1,py+62,62,2,shade(base,-26));
- // a cream platform lip along the far wall and hazard stripes at the edge
- if(y===0)rect(px+1,py+13,62,4,P.sand);
- if(y===8){rect(px+1,py+45,62,6,P.sand);for(let i=0;i<5;i++)rect(px+4+i*13,py+46,7,4,P.ink);}
- if((x*5+y*3)%9===0)rect(px+10,py+38,10,3,shade(P.sand,-22));
+// Floor and wall treatments by room. Each room is a place with its own surface:
+// transit tile, floorboards, office lino, trampled earth, concrete slab, road,
+// metal plate. Big colour masses, one seam, no noise.
+const FLOOR_STYLE=[0,1,2,3,4,5,6,7,8,9,10,11].map(room=>['transit','boards','lino','earth','slab','road','lino','slab','metal','metal','earth','slab'][room]);
+function roomFloor(room,x,y,a,b){const px=x*64,py=y*64,style=FLOOR_STYLE[room];
+ if(style==='transit'){
+  const accent=(x%5===2)&&(y%3===1),base=accent?shade(P.blue,-8):b;
+  rect(px+1,py+1,62,62,base);rect(px+1,py+1,62,3,shade(base,18));rect(px+1,py+60,62,3,shade(base,-20));
+  rect(px+62,py+1,2,62,shade(base,-26));rect(px+1,py+62,62,2,shade(base,-26));
+  if(y===0)rect(px+1,py+13,62,4,P.sand);
+  if(y===8){rect(px+1,py+45,62,6,P.sand);for(let i=0;i<5;i++)rect(px+4+i*13,py+46,7,4,P.ink);}
+  if((x*5+y*3)%9===0)rect(px+10,py+38,10,3,shade(P.sand,-22));return;}
+ if(style==='boards'){
+  const base=(y%2?shade(a,6):a);
+  rect(px+1,py+1,62,62,base);rect(px+1,py+1,62,2,shade(base,16));rect(px+1,py+30,62,2,shade(base,-26));
+  rect(px+(x%2?20:44),py+2,2,60,shade(base,-22));
+  if((x*3+y*7)%8===0)rect(px+8,py+36,16,3,shade(P.brown,-30));return;}
+ if(style==='lino'){
+  const base=(x+y)%2?shade(b,8):b;
+  rect(px+1,py+1,62,62,base);rect(px+1,py+1,62,2,shade(base,12));
+  if((x*7+y*5)%6===0)rect(px+20,py+24,22,3,shade(base,-18));return;}
+ if(style==='earth'){
+  const base=(x+y)%2?shade(a,-6):a;
+  rect(px+1,py+1,62,62,base);rect(px+1,py+2,62,3,shade(base,12));
+  if((x*11+y*5)%7===0)rect(px+12,py+42,14,4,shade(base,-24));
+  if((x*5+y*13)%11===0){rect(px+30,py+20,6,3,shade(base,-30));rect(px+38,py+26,4,3,shade(base,-30));}return;}
+ if(style==='road'){
+  const base=(x+y)%2?shade(a,-10):shade(a,-4);
+  rect(px+1,py+1,62,62,base);rect(px+1,py+2,62,2,shade(base,10));
+  if(x===6&&y===4)rect(px+6,py+26,50,8,P.sand);
+  if((x*13+y*7)%9===0)rect(px+16,py+38,18,3,shade(base,-20));return;}
+ if(style==='metal'){
+  const base=(x+y)%2?shade(a,-4):a;
+  rect(px+1,py+1,62,62,base);rect(px+1,py+1,62,3,shade(base,18));rect(px+1,py+60,62,3,shade(base,-26));
+  for(let i=0;i<4;i++)rect(px+6+i*16,py+30,10,2,shade(base,-30));
+  if((x+y)%3===0)rect(px+8,py+8,4,4,shade(base,24));return;}
+ // concrete slab, the fallback
+ const base=(x+y)%2?shade(a,-8):a;
+ rect(px+1,py+1,62,62,base);rect(px+1,py+1,62,3,shade(base,14));rect(px+1,py+60,62,3,shade(base,-22));
+ rect(px+30,py+2,2,60,shade(base,-18));
+ if((x*5+y*9)%7===0)rect(px+12,py+40,12,3,shade(base,-22));
+ if(room===4||room===7){for(let i=0;i<4;i++)rect(px+4+i*16,py+56,9,4,shade(P.orange,-6));}
+}
+function wallFace(room,x,y,wall){const px=x*64,py=y*64;
+ const lit=shade(wall,16),dark=shade(wall,-26);
+ rect(px+2,py+4,60,11,wall);rect(px+2,py+4,60,3,lit);
+ if(room===0){rect(px+2,py+6,60,3,P.cream);rect(px+4,py+13,56,2,shade(P.blue,-30));}
+ else if(room===3){for(let i=0;i<4;i++){rect(px+2+i*15,py+4,13,7,shade(P.brick,-10));rect(px+9+i*15,py+11,13,4,P.brick);}}
+ else if(room===1||room===10){rect(px+2,py+4,60,3,P.cream);rect(px+2,py+12,60,3,dark);}
+ else if(room===4||room===7){for(let i=0;i<5;i++)rect(px+3+i*12,py+5,7,9,shade(P.sand,-10));}
+ else if(room===8||room===9){for(let i=0;i<6;i++)rect(px+4+i*10,py+5,6,3,shade(wall,26));rect(px+2,py+13,60,2,dark);}
+ else if(room===6){rect(px+2,py+6,60,2,P.sky);rect(px+2,py+13,60,2,dark);}
+ else {rect(px+2,py+12,60,3,dark);}
+ rect(px+3,py+20,58,3,shade(P.ink,4));
+ rect(px+31,py+4,3,16,shade(wall,-6));
 }
 function tileDetail(x,y,solid){const h=((x*73856093)^(y*19349663)^((state.room+1)*83492791))>>>0,px=x*64,py=y*64;
  if(solid){if(h%3===0)rect(px+38,py+30,18,16,'#606272');if(h%5===0)rect(px+22,py+34,20,2,'#eac999');if(h%7===0)rect(px+18,py+8,26,9,'#1d5193');return;}
@@ -459,7 +501,7 @@ function tileDetail(x,y,solid){const h=((x*73856093)^(y*19349663)^((state.room+1
  if(state.room===3&&h%4===0)rect(px+8,py+44,44,8,'#105782');
  if(state.room===4&&h%8===0)rect(px+8,py+14,48,3,'#eac999');
  if(state.room===5&&h%5===0)rect(px+14,py+30,20,9,'#8c8e9e');}
-function draw(){const [a,b,wall]=palettes[state.room]||palettes[0];ctx.clearRect(0,0,832,576);rect(0,0,832,576,'#0b2a5f');for(let y=0;y<9;y++)for(let x=0;x<13;x++){const edge=x===0||x===12||y===0||y===8;const door=exitAt(state.room,x,y);if(state.room===0&&!edge)concourseFloor(x,y,a,b);else rect(x*64+1,y*64+1,62,62,edge&&!door?'#5e6070':(x+y)%2?a:b);tileDetail(x,y,edge&&!door);if(edge&&!door){rect(x*64+2,y*64+4,60,11,state.room===0?P.blue:wall);if(state.room===0)rect(x*64+2,y*64+6,60,3,P.cream);rect(x*64+3,y*64+20,58,3,'#07265b');rect(x*64+31,y*64+4,3,16,'#747686');}else{if(state.room!==0)rect(x*64+6,y*64+58,52,2,'#11306544');if((x*7+y*11)%6===0)rect(x*64+13,y*64+21,8,3,'#fdefcb22');if(door){ctx.fillStyle='#fdefcb';ctx.font='24px monospace';ctx.fillText(x===0?'←':x===12?'→':y===0?'↑':'↓',x*64+21,y*64+39);}}}
+function draw(){const [a,b,wall]=palettes[state.room]||palettes[0];ctx.clearRect(0,0,832,576);rect(0,0,832,576,'#0b2a5f');for(let y=0;y<9;y++)for(let x=0;x<13;x++){const edge=x===0||x===12||y===0||y===8;const door=exitAt(state.room,x,y);if(!edge)roomFloor(state.room,x,y,a,b);else rect(x*64+1,y*64+1,62,62,edge&&!door?'#5e6070':(x+y)%2?a:b);tileDetail(x,y,edge&&!door);if(edge&&!door){wallFace(state.room,x,y,wall);rect(x*64+3,y*64+20,58,3,'#07265b');rect(x*64+31,y*64+4,3,16,'#747686');}else{if((x*7+y*11)%6===0)rect(x*64+13,y*64+21,8,3,'#fdefcb22');if(door){ctx.fillStyle='#fdefcb';ctx.font='24px monospace';ctx.fillText(x===0?'←':x===12?'→':y===0?'↑':'↓',x*64+21,y*64+39);}}}
  for(const p of roomProps(state)){const near=nearby(state).some(n=>n.id===p.id);if(near)brackets(p.x*64+5,p.y*64+4,p.id===target?'#e6e2d6':MARKERS[markerOf(state,p.id)]);sprite(p.x,p.y,p.id,state.npcs[p.id]?.condition||'conscious');if((p.id==='chest'&&state.flags.chest)||(p.id==='crate'&&state.flags.crate)){rect(p.x*64+8,p.y*64+28,49,4,'#1b2420');}if(state.npcs[p.id]?.attitude==='friendly'&&state.npcs[p.id]?.condition==='conscious'){ctx.fillStyle='#d9ec9b';ctx.font='13px monospace';ctx.fillText('♥',p.x*64+28,p.y*64+5);}}
  for(const p of roomProps(state).filter(p=>PEOPLE.includes(p.id))){ctx.font='11px monospace';ctx.textAlign='center';ctx.fillStyle=({friendly:'#d6ef9b',neutral:'#e5dcc3',suspicious:'#e4ba75',hostile:'#e8988d'})[state.npcs[p.id].attitude];ctx.fillText(withPlayer(state).includes(p.id)?NPCS[p.id].name+' ✦':NPCS[p.id].name,p.x*64+32,p.y*64+3);ctx.textAlign='left';}
  ctx.strokeStyle='#cce59e55';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(visual.x*64+33,visual.y*64+53,24,8,0,0,Math.PI*2);ctx.stroke();sprite(visual.x,visual.y,'player',state.dead?'dead':'conscious');
