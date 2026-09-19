@@ -50,13 +50,20 @@ export function describeNPC(s,id){const n=s.npcs[id],d=NPCS[id];
  return `${d.name} · ${n.attitude} · ${n.condition} · ${n.hp}/${d.hp} HP. Damage ${d.damage.join('–')}. Carries: ${stockText(n)}. Remembers: ${memoryText(n)}.`;}
 export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];const owed=Object.keys(s.stolen||{}).some(key=>s.stolen[key]===id);
  const trade=n.attitude==='hostile'?[]:['Ask about goods','Trade','Offer a fair swap',...wantedGoods(s,id).filter(key=>held(s,key)).slice(0,3).map(key=>`Sell 1 ${itemName[key]}`)];
- return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),...badgeOffers(s,id),'Threaten','Lie',...trade,'Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
+ return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),...badgeOffers(s,id),...vexOffers(s,id),'Threaten','Lie',...trade,'Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
 // The badge on offer: he can be talked out of it, bought out of it, or relieved
 // of it. Everything else - robbery, a knockout, a killing - runs through the
 // ordinary loot and robbery paths, which already empty whatever he is carrying.
 function badgeOffers(s,id){const n=s.npcs[id];
  if(id!=='tobin'||!n.inventory.badge||n.attitude==='hostile')return [];
  return ['Ask about the badge',...(s.gold>=BADGE_PRICE?[`Buy the badge (${BADGE_PRICE} coins)`]:[]),'Lift the badge'];}
+// Vex wants first pick of the security cache, and he is the only one here who
+// understands the electrical room. Once the cache is open, honour it or don't.
+function vexOffers(s,id){if(id!=='vex')return [];const n=s.npcs[id],deal=s.quests.vexDeal;
+ const offers=[];
+ if(deal==='open')offers.push('Hear his plan');
+ if(s.flags.vaultOpen&&deal==='agreed')offers.push('Let Vex take his pick','Keep it all');
+ return offers;}
 function held(s,key){return (key==='gold'?s.gold:ITEM_KEYS.includes(key)?s.items[key]:s[key]||0)>0;}
 function refusesTrade(s,id){const n=s.npcs[id];return n.attitude==='hostile'||!!n.memory.lieExposed;}
 function transfer(s,n,key,count){const amount=Math.min(n.inventory[key],count);if(!amount)return 0;n.inventory[key]-=amount;if(key==='key')s.key=true;else if(ITEM_KEYS.includes(key))s.items[key]+=amount;else s[key]+=amount;return amount;}
@@ -102,6 +109,23 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()
  if(action==='Inspect'){const note=note(id);say(s,describeNPC(s,id)+(note?' '+note:''));return true;}
  if(action==='Loot'){const got=takeAll(s,n,id);m.looted=true;if(got!=='nothing'&&n.condition==='unconscious'){betray(n);m.robbed=true;n.attitude='hostile';}say(s,got==='nothing'?`${d.name} has nothing left. Possessions do not respawn.`:`You take ${got} from ${d.name}. ${n.condition==='unconscious'?'They remain alive and unconscious.':'They remain dead.'}`);return true;}
  // The maintenance badge: Tobin will not give up something that opens doors
+ if(action==='Hear his plan'){s.quests.vexDeal='agreed';n.memory.vexDeal=true;
+  s.allies[id]=Math.max(1,s.allies[id]||0);
+  say(s,'Vex draws the loop on the back of a ticket: the security feed runs through the Electrical Control Room, and a feed is only an opinion. Cut it there and the gate stops asking questions. He wants first pick of whatever is in the security cache, and he says so before you agree.');return true;}
+ if(action==='Let Vex take his pick'){
+  s.quests.vexDeal='settled';n.memory.honouredDeal=true;
+  const signet=(s.gear||[]).indexOf('Iron signet')>=0,slot=Object.keys(s.equipped||{}).find(key=>s.equipped[key]==='Iron signet');
+  if(slot){s.equipped[slot]=null;say(s,'Vex takes the iron signet off you and pockets it without ceremony.');}
+  else if(signet){s.gear=s.gear.filter(item=>item!=='Iron signet');say(s,'Vex picks the iron signet out of your hands and pockets it without ceremony.');}
+  else{const paid=Math.min(5,s.gold);s.gold-=paid;n.inventory.gold+=paid;say(s,`The signet is already gone, so Vex takes ${paid} coins instead and does not pretend to be pleased.`);}
+  standing(id,-1,'you honoured your deal with Vex');approve(id,10,'you honoured the deal');
+  say(s,'He nods once, which from Vex is a standing ovation.');return true;}
+ if(action==='Keep it all'){
+  s.quests.vexDeal='betrayed';n.memory.betrayed=true;
+  const left=leaveParty(s,id,say,'you kept what you promised him');deed('betrayal');
+  standing(id,2,'you kept what you promised him');approve(id,-25,'you betrayed Vex over the cache');
+  say(s,left?'Vex looks at the cache, then at you, and stops being on your side in the space of one breath.':'Vex looks at the cache, then at you. “I drew you the loop,” he says, and files it away.');
+  return true;}
  // without a reason, and he remembers being asked either way.
  if(action==='Ask about the badge'){
   const result=check({actor:s,skill:'persuasion',dc:BADGE_ASK_DC,advantage:!!m.helped,disadvantage:!!m.lieExposed,modifiers:bonus('checks'),rng});

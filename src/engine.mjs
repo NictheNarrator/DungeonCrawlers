@@ -23,7 +23,7 @@ export const props=[
   {id:'tobin',name:'Tobin, scavenger',x:4,y:4},{id:'vex',name:'Vex, rival crawler',x:8,y:5}],
 // 2 Records / Security — logs, keys and regrets; Eli barricades himself in.
  [{id:'locker',name:'Emergency locker',x:8,y:5},{id:'desk',name:'Records desk',x:3,y:2},{id:'cabinet',name:'Filing cabinet',x:9,y:2},
-  {id:'note',name:'Folded memo',x:5,y:3},{id:'barricade',name:'Barricaded office',x:4,y:6}],
+  {id:'note',name:'Folded memo',x:5,y:3},{id:'barricade',name:'Barricaded office',x:4,y:6},{id:'vault',name:'Security cache',x:7,y:2}],
 // 3 Ratmen Territory — their home, not a spawn point: nests, trophies, a fire.
  [{id:'rat',name:'Ratman scrapper',x:5,y:4},{id:'brazier',name:'Burning brazier',x:10,y:5,hazard:true},{id:'nest',name:'Ratman nest',x:9,y:2},
   {id:'scrap',name:'Scrap pile',x:6,y:5},{id:'skullpost',name:'Trophy post',x:7,y:2}],
@@ -64,7 +64,7 @@ export function advanceClock(s,seconds){if(s.dead||s.complete)return s.timer;
  s.timer=Math.max(0,s.timer-seconds);
  if(s.timer===0&&!s.collapsed){s.collapsed=true;s.dead=true;say(s,"FLOOR COLLAPSE. The Concourse folds in on itself. Anyone still inside is inventory now.");}
  return s.timer;}
-export function fresh(){return {version:2,registered:true,collapsed:false,timer:FLOOR_SECONDS,surfaceTime:0,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0,badge:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},gear:[],equipped:emptyEquipped(),standing:Object.fromEntries(Object.keys(NPCS).map(id=>[id,'neutral'])),companions:{mara:blankCompanion('mara')},factionGifts:{survivors:false,ratmen:false},factions:{survivors:'neutral',ratmen:'neutral'},quests:{supplies:'open',carried:false,promised:null},npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
+export function fresh(){return {version:2,registered:true,collapsed:false,timer:FLOOR_SECONDS,surfaceTime:0,room:0,x:3,y:5,places:startingPlaces(),conditions:{},hp:30,maxHp:30,xp:0,pending:0,race:"human",class:"crawler",classOffered:false,deeds:Object.fromEntries(DEEDS.map(deed=>[deed,0])),potions:2,gold:0,cheese:0,key:false,weapon:0,stolen:{},party:[],allies:{},level:1,abilities:{...STARTING_ABILITIES},skills:[...STARTING_SKILLS],saves:[...STARTING_SAVES],items:{bandages:1,repairKits:0,smokeBombs:0,whetstones:0,badge:0},flags:{},achievements:[],boxes:{bronze:0,silver:0,gold:0},gear:[],equipped:emptyEquipped(),standing:Object.fromEntries(Object.keys(NPCS).map(id=>[id,'neutral'])),companions:{mara:blankCompanion('mara')},factionGifts:{survivors:false,ratmen:false},factions:{survivors:'neutral',ratmen:'neutral'},quests:{supplies:'open',carried:false,promised:null,vexDeal:'open'},npcs:Object.fromEntries(Object.keys(NPCS).map(id=>[id,makeNPC(id)])),combat:null,dead:false,complete:false,logSerial:1,log:['ANNEX: “Welcome to Probation. Three other survivors, one exit. Please resolve your differences where the cameras can see.” A bandage and two potions are in your pack.']};}
 export function say(s,text){s.log.push(text);s.log=s.log.slice(-60);s.logSerial++;}
 export function award(s,id){if(s.achievements.includes(id))return;s.achievements.push(id);
  const entry=ACHIEVEMENTS[id]||{description:'',condition:'',reward:'box',message:'Logged. The dungeon saw that.'};
@@ -209,6 +209,8 @@ function baseActions(s,id){if(id==='staffdoor'&&!s.dead&&!s.complete)return ['In
  case 'map':return ['Inspect'];case 'sofa':case 'kettle':return ['Inspect','Rest for a while'];case 'machines':return ['Inspect'];
  case 'note':return ['Inspect','Read'];case 'locker':return ['Inspect',...(s.flags.locker?[]:['Open'])];
  case 'gate':return ['Inspect',...(s.items.badge&&!s.flags.gateOpen?['Badge through the gate']:[])];case 'barrier':return ['Inspect'];
+ case 'vault':return ['Inspect',...(s.flags.vaultOpen?[]:['Crack it open'])];
+ case 'panel':return ['Inspect',...(s.flags.securityDown?[]:['Reroute the security feed'])];
  case 'rat':return ['Inspect','Talk','Offer cheese','Sneak past',...(s.items.badge?['Return the badge']:[]),'Fight'];
  case 'pipe':return ['Inspect','Search'];
  case 'satchel':return ['Inspect',...(s.flags.satchel?[]:['Open'])];
@@ -293,6 +295,19 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
  if(id==='locker'){s.flags.locker=true;s.key=true;say(s,'You take the emergency spare key. It belongs to the building, not Mara.');}
  if(id==='gate'&&action==='Badge through the gate'){s.flags.gateOpen=true;
   say(s,'You hold the maintenance badge up to the reader. The gate considers it, then remembers it was built to obey badges, and slides open.');return true;}
+ if(id==='panel'&&action==='Reroute the security feed'){
+  // Vex's plan, or your own hands on a live panel.
+  const guided=s.quests.vexDeal==='agreed'&&(isWith(s,'vex')||roomOf(s,'vex')===s.room);
+  if(!guided){const result=d20({actor:s,skill:'investigation',dc:15,modifiers:gearBonus(s,'checks'),rng});
+   if(!result.success){say(s,`Investigation ${result.total} against DC 15. Failure. The panel spits a breaker at you and the lights stay exactly as they were.`);return true;}
+   say(s,`Investigation ${result.total} against DC 15. Success.`);}
+  s.flags.securityDown=true;s.flags.gateOpen=true;
+  say(s,guided?'Vex talks you through it: kill the feed, let the board stop arguing with itself, then take the loop out by hand. Access Control goes dark.':'You trace the security loop and pull it. Somewhere behind you the Access Control board goes dark.');
+  recordDeed(s,'environment');return true;}
+ if(id==='vault'&&action==='Crack it open'){
+  if(!(s.flags.gateOpen||s.flags.securityDown||s.items.badge)){say(s,'The cache is locked to authorised personnel. The badge, or a security system that has stopped caring, would do it.');return true;}
+  s.flags.vaultOpen=true;s.gold+=6;grantedItem(s,'Iron signet');
+  say(s,'The cache opens on a rack of the sort of things a security office keeps: 6 coins and a heavy iron signet nobody has dared to wear. Vex watches your hands, not the rack.');return true;}
  if(id==='pipe'){let found=false;for(const who of Object.keys(s.companions)){const mate=companionOf(s,who);if(mate.quest.id!=='locket'||mate.quest.stage!=='searching')continue;mate.quest.stage='found';grantedItem(s,'Sable locket');found=true;say(s,'Wedged behind the pipe: a sable locket on a broken chain. Dell. Mara will want to know.');}if(!s.flags.secret){s.flags.secret=true;s.gold+=4;award(s,'Pipe dream');say(s,'A hidden cache contains 4 coins.');found=true;}if(s.flags.tobinCache&&!s.flags.tobinCacheTaken){s.flags.tobinCacheTaken=true;s.gold+=3;say(s,'Tobin’s tip reveals a second compartment: 3 extra coins. Information can be worth more than pockets.');found=true;}if(!found)say(s,'The cache is empty.');}
  if(id==='satchel'){s.flags.satchel=true;s.gold+=3;s.items.smokeBombs++;ownedTake(s,'satchel','3 coins and a smoke bomb',['gold','smokeBombs']);}
  if(id==='whetstone'){s.flags.whetstone=true;s.items.whetstones++;ownedTake(s,'whetstone','1 whetstone',['whetstones']);}
@@ -875,8 +890,10 @@ function withCharacter(s){s.abilities=dictionary(s.abilities)?s.abilities:{...ST
  s.factionGifts=dictionary(s.factionGifts)?s.factionGifts:{survivors:false,ratmen:false};for(const faction of Object.keys(FACTIONS))s.factionGifts[faction]=!!s.factionGifts[faction];
  s.factions=dictionary(s.factions)?s.factions:{survivors:'neutral',ratmen:'neutral'};
  for(const faction of Object.keys(FACTIONS)){refreshFaction(s,faction);if(!STANDING.includes(s.factions[faction]))s.factions[faction]='neutral';}
- s.quests=dictionary(s.quests)?s.quests:{supplies:'open',carried:false,promised:null};
+ s.quests=dictionary(s.quests)?s.quests:{supplies:'open',carried:false,promised:null,vexDeal:'open'};
  if(!['open','survivors','ratmen','kept'].includes(s.quests.supplies))s.quests.supplies='open';
+ // What was agreed with Vex about the security cache, if anything.
+ if(!['open','agreed','settled','betrayed'].includes(s.quests.vexDeal))s.quests.vexDeal='open';
  s.quests.carried=!!s.quests.carried;
  if(![null,'survivors','ratmen'].includes(s.quests.promised))s.quests.promised=null;for(const deed of DEEDS)if(!Number.isInteger(s.deeds[deed])||s.deeds[deed]<0)s.deeds[deed]=0;if(!RACES[s.race])s.race="human";if(s.class!=="crawler"&&!CLASSES[s.class])s.class="crawler";if(typeof s.classOffered!=="boolean")s.classOffered=false;if(!Number.isInteger(s.pending)||s.pending<0)s.pending=0;return s;}
 function dictionary(v){return v&&typeof v==='object'&&!Array.isArray(v);}

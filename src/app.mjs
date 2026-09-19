@@ -92,7 +92,7 @@ function render(){
  $('journal').hidden=!journalUnlocked(state);
  $('companion').hidden=!state.npcs.mara.memory.met;
  document.body.classList.toggle('pre-dungeon',!state.registered);
- $('inventory').replaceChildren(...[`${state.potions} × Healing potion`,`${state.cheese} × Cheese`,`${state.boxes.bronze} × Bronze box`,`${state.boxes.silver} × Silver box`,`${state.boxes.gold} × Gold box`,state.key?'1 × Exit key':'No exit key yet',...Object.entries(state.items).map(([key,n])=>`${n} × ${itemName[key]}`),`Attack: ${attackRange(state).join('–')}`,...(state.accessories||[]).map(name=>`${rarityOf(name)} ${name}`)].map(t=>{const el=document.createElement('span'),chip=itemIcon(t),label=document.createElement('b');if(chip)el.append(chip);label.textContent=t;el.append(label);return el;}));
+ $('inventory').replaceChildren(...[`${state.potions} × Healing potion`,`${state.cheese} × Cheese`,`${state.boxes.bronze} × Bronze box`,`${state.boxes.silver} × Silver box`,`${state.boxes.gold} × Gold box`,state.key?'1 × Exit key':'No exit key yet',...Object.entries(state.items).filter(([key,n])=>n>0||key!=="badge"||state.flags.badgeKnown).map(([key,n])=>`${n} × ${itemName[key]}`),`Attack: ${attackRange(state).join('–')}`,...(state.accessories||[]).map(name=>`${rarityOf(name)} ${name}`)].map(t=>{const el=document.createElement('span'),chip=itemIcon(t),label=document.createElement('b');if(chip)el.append(chip);label.textContent=t;el.append(label);return el;}));
  // One line per achievement so a long list stays readable and scrollable.
  $('achievements').replaceChildren(...(state.achievements.length?state.achievements.map(name=>{const entry=achievementFor(name),row=document.createElement('article'),title=document.createElement('strong'),line=document.createElement('p');
   title.textContent='◇ '+name;line.textContent=(entry?entry.description:'Logged by the dungeon.')+(entry?` (${entry.reward})`:'');row.append(title,line);return row;}):[Object.assign(document.createElement('p'),{textContent:'Nothing yet. Try doing something regrettable.'})]));
@@ -352,6 +352,8 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   rect(px+27,py+4,9,14,'#e8c14a');rect(px+12,py+30,40,4,'#4a453f');return;}
  if(type==='barrier'){rect(px+10,py+28,6,32,'#4a453f');rect(px+48,py+28,6,32,'#4a453f');rect(px+8,py+22,48,10,'#b0a184');
   for(let i=0;i<4;i++)rect(px+12+i*12,py+22,6,10,'#a8332e');rect(px+28,py+6,8,16,'#33373a');rect(px+30,py+8,4,4,'#4fc4d8');return;}
+ if(type==='vault'){rect(px+13,py+14,38,42,'#4a453f');rect(px+13,py+14,38,4,'#5f6355');rect(px+18,py+20,28,30,'#33373a');
+  rect(px+29,py+30,7,7,'#b0a184');rect(px+31,py+32,3,3,'#4a453f');rect(px+38,py+34,6,3,'#8b877c');rect(px+21,py+52,22,4,'#26292b');return;}
  if(type==='whetstone'){rect(px+13,py+41,38,12,'#6d6a62');rect(px+13,py+41,38,3,'#8b877c');rect(px+19,py+35,26,8,'#b0a184');rect(px+19,py+35,26,3,'#c8bb9c');rect(px+44,py+45,9,4,'#4a453f');return;}
  propSprite(px,py,type);}
 // Environment tiles: clean, dirty, cracked, bloodstained, grate, hazard stripe

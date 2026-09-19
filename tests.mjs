@@ -426,5 +426,57 @@ test('Handing the badge back to the ratmen buys goodwill',()=>{
  assert.equal(memberStanding(s,'rat'),'friendly','and the tunnels are yours to use');
  assert(s.npcs.rat.memory.returnedBadge);
 });
+test('Vex trades his electrical know-how for first pick of the cache',()=>{
+ const s=supplied();
+ act(s,'vex','Hear his plan');
+ assert.equal(s.quests.vexDeal,'agreed','the deal is on the record');
+ assert(s.npcs.vex.memory.vexDeal);
+ assert(s.log.at(-1).includes('Electrical Control Room'),'he explains where the feed runs');
+ assert(!s.flags.securityDown,'agreeing is not the same as doing it');
+ // The plan needs Vex, either travelling with you or standing in the room.
+ const alone=supplied();alone.quests.vexDeal='agreed';
+ setPlace(alone,'vex',1,8,5);                                   // he stayed in the camp
+ approach(alone,'panel');
+ interact(alone,'panel','Reroute the security feed',()=>0);
+ assert(!alone.flags.securityDown,'a plan you cannot hear is not a guarantee');
+ assert(alone.log.some(line=>line.includes('Investigation')),'without Vex it is a real check');
+});
+test('Cutting the security feed opens the gate without a badge',()=>{
+ const s=supplied();
+ act(s,'vex','Hear his plan');
+ assert(s.allies.vex>0,'agreeing means he comes with you');
+ approach(s,'panel');interact(s,'panel','Reroute the security feed');
+ assert(s.flags.securityDown&&s.flags.gateOpen,'the gate stops asking questions');
+ assert(s.log.some(line=>line.includes('Access Control')),'and says so');
+ const solo=supplied();
+ approach(solo,'panel');interact(solo,'panel','Reroute the security feed',()=>0.99);
+ assert(solo.flags.securityDown,'a clever crawler can still do it by hand');
+ assert(solo.log.some(line=>line.includes('Investigation')),'and it is a real check');
+ const clumsy=supplied();
+ approach(clumsy,'panel');interact(clumsy,'panel','Reroute the security feed',()=>0);
+ assert(!clumsy.flags.securityDown,'a failed reroute does not open anything');
+});
+test('The security cache pays out, and Vex remembers what you promised',()=>{
+ const honoured=supplied();
+ honoured.flags.gateOpen=true;approach(honoured,'vault');
+ assert(actions(honoured,'vault').includes('Crack it open'),'the cache can be opened once you are past the gate');
+ const purse=honoured.gold;interact(honoured,'vault','Crack it open');
+ assert.equal(honoured.gold,purse+6,'the cache holds coins');assert(honoured.gear.includes('Iron signet'),'and something worth arguing over');
+ assert(honoured.flags.vaultOpen);
+ act(honoured,'vex','Hear his plan');honoured.flags.vaultOpen=true;
+ assert(actions(honoured,'vex').includes('Let Vex take his pick'),'the deal comes due');
+ act(honoured,'vex','Let Vex take his pick');
+ assert.equal(honoured.quests.vexDeal,'settled');assert(!honoured.gear.includes('Iron signet'),'Vex takes his pick');
+ assert(honoured.npcs.vex.memory.honouredDeal);
+ assert.equal(checkpoint(honoured).quests.vexDeal,'settled','the settled deal survives a save');
+ const betrayed=supplied();
+ betrayed.flags.gateOpen=true;approach(betrayed,'vault');interact(betrayed,'vault','Crack it open');
+ act(betrayed,'vex','Hear his plan');betrayed.flags.vaultOpen=true;
+ const before=memberStanding(betrayed,'vex');
+ act(betrayed,'vex','Keep it all');
+ assert.equal(betrayed.quests.vexDeal,'betrayed');assert(betrayed.npcs.vex.memory.betrayed,'he remembers being kept out of his own plan');
+ assert.notEqual(memberStanding(betrayed,'vex'),before,'and his opinion of you moves');
+ assert(betrayed.gear.includes('Iron signet'),'you keep the pick');
+});
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));
