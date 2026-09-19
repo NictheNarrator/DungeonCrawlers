@@ -1,6 +1,7 @@
 import {conversationFor} from './conversation.mjs';
 import {portraitFor,PORTRAIT_SIZE} from './portraits.mjs';
-import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,itemOf,equipItem,unequipItem,rarityOf,SLOTS,FACTIONS,standingOf,memberStanding,questState,questCarried,relationshipOf,prologue,register,advanceClock,clockText,dialogueOptions,dialoguePrompt,chooseDialogue,journalUnlocked,knownPeople,knowsFaction,knowsSupplies,exitAt,EXITS} from './engine.mjs?v=npc1';
+import {PALETTE as P,shade} from './palette.mjs';
+import {fresh,rooms,props,move,nearby,roomProps,actions,interact,fight,usePotion,useBandage,useWhetstone,openRewardBox,isSafeRoom,BOX_TIERS,encode,decode,say,attackRange,combatActions,outcome,conditionText,chooseStat,xpForNext,classReady,classOptions,chooseClass,CLASSES,RACES,achievementFor,itemOf,equipItem,unequipItem,rarityOf,SLOTS,FACTIONS,standingOf,memberStanding,questState,questCarried,relationshipOf,prologue,register,advanceClock,clockText,dialogueOptions,dialoguePrompt,chooseDialogue,journalUnlocked,knownPeople,knowsFaction,knowsSupplies,exitAt,EXITS} from './engine.mjs?v=wp1';
 import {COMPANIONS,companionOf} from './companions.mjs';
 import {PEOPLE,NPCS,tradePrice,itemName,memoryText,stockText,withPlayer,profileKnown} from './npcs.mjs';
 import {bindHoldControls} from './controls.mjs';
@@ -432,6 +433,23 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
 // and sludge, layered deterministically so a room reads the same every visit.
 // Walls get damaged chunks and a subway band; the base palette stays dirty and
 // each accent means something.
+// The concourse floor: big tiles, a blue tile band every third column, a cream
+// platform lip along the far wall and hazard stripes at the platform edge. Drawn
+// from the palette so it can never drift from the rest of the game.
+function concourseFloor(x,y,a,b){const px=x*64,py=y*64;
+ // a bright tiled floor: pale squares, thin grout, and occasional blue tiles
+ const accent=(x%5===2)&&(y%3===1);
+ const base=accent?shade(P.blue,-8):b;
+ rect(px+1,py+1,62,62,base);
+ rect(px+1,py+1,62,3,shade(base,18));
+ rect(px+1,py+60,62,3,shade(base,-20));
+ rect(px+62,py+1,2,62,shade(base,-26));
+ rect(px+1,py+62,62,2,shade(base,-26));
+ // a cream platform lip along the far wall and hazard stripes at the edge
+ if(y===0)rect(px+1,py+13,62,4,P.sand);
+ if(y===8){rect(px+1,py+45,62,6,P.sand);for(let i=0;i<5;i++)rect(px+4+i*13,py+46,7,4,P.ink);}
+ if((x*5+y*3)%9===0)rect(px+10,py+38,10,3,shade(P.sand,-22));
+}
 function tileDetail(x,y,solid){const h=((x*73856093)^(y*19349663)^((state.room+1)*83492791))>>>0,px=x*64,py=y*64;
  if(solid){if(h%3===0)rect(px+38,py+30,18,16,'#606272');if(h%5===0)rect(px+22,py+34,20,2,'#eac999');if(h%7===0)rect(px+18,py+8,26,9,'#1d5193');return;}
  if(h%6===0){rect(px+12,py+18,6,2,'#0f2e63');rect(px+18,py+22,8,2,'#0f2e63');}
@@ -441,7 +459,7 @@ function tileDetail(x,y,solid){const h=((x*73856093)^(y*19349663)^((state.room+1
  if(state.room===3&&h%4===0)rect(px+8,py+44,44,8,'#105782');
  if(state.room===4&&h%8===0)rect(px+8,py+14,48,3,'#eac999');
  if(state.room===5&&h%5===0)rect(px+14,py+30,20,9,'#8c8e9e');}
-function draw(){const [a,b,wall]=palettes[state.room]||palettes[0];ctx.clearRect(0,0,832,576);rect(0,0,832,576,'#0b2a5f');for(let y=0;y<9;y++)for(let x=0;x<13;x++){const edge=x===0||x===12||y===0||y===8;const door=exitAt(state.room,x,y);rect(x*64+1,y*64+1,62,62,edge&&!door?'#5e6070':(x+y)%2?a:b);tileDetail(x,y,edge&&!door);if(edge&&!door){rect(x*64+2,y*64+4,60,11,wall);rect(x*64+3,y*64+20,58,3,'#07265b');rect(x*64+31,y*64+4,3,16,'#747686');}else{rect(x*64+6,y*64+58,52,2,'#11306544');if((x*7+y*11)%6===0)rect(x*64+13,y*64+21,8,3,'#fdefcb22');if(door){ctx.fillStyle='#fdefcb';ctx.font='24px monospace';ctx.fillText(x===0?'←':x===12?'→':y===0?'↑':'↓',x*64+21,y*64+39);}}}
+function draw(){const [a,b,wall]=palettes[state.room]||palettes[0];ctx.clearRect(0,0,832,576);rect(0,0,832,576,'#0b2a5f');for(let y=0;y<9;y++)for(let x=0;x<13;x++){const edge=x===0||x===12||y===0||y===8;const door=exitAt(state.room,x,y);if(state.room===0&&!edge)concourseFloor(x,y,a,b);else rect(x*64+1,y*64+1,62,62,edge&&!door?'#5e6070':(x+y)%2?a:b);tileDetail(x,y,edge&&!door);if(edge&&!door){rect(x*64+2,y*64+4,60,11,state.room===0?P.blue:wall);if(state.room===0)rect(x*64+2,y*64+6,60,3,P.cream);rect(x*64+3,y*64+20,58,3,'#07265b');rect(x*64+31,y*64+4,3,16,'#747686');}else{if(state.room!==0)rect(x*64+6,y*64+58,52,2,'#11306544');if((x*7+y*11)%6===0)rect(x*64+13,y*64+21,8,3,'#fdefcb22');if(door){ctx.fillStyle='#fdefcb';ctx.font='24px monospace';ctx.fillText(x===0?'←':x===12?'→':y===0?'↑':'↓',x*64+21,y*64+39);}}}
  for(const p of roomProps(state)){const near=nearby(state).some(n=>n.id===p.id);if(near)brackets(p.x*64+5,p.y*64+4,p.id===target?'#e6e2d6':MARKERS[markerOf(state,p.id)]);sprite(p.x,p.y,p.id,state.npcs[p.id]?.condition||'conscious');if((p.id==='chest'&&state.flags.chest)||(p.id==='crate'&&state.flags.crate)){rect(p.x*64+8,p.y*64+28,49,4,'#1b2420');}if(state.npcs[p.id]?.attitude==='friendly'&&state.npcs[p.id]?.condition==='conscious'){ctx.fillStyle='#d9ec9b';ctx.font='13px monospace';ctx.fillText('♥',p.x*64+28,p.y*64+5);}}
  for(const p of roomProps(state).filter(p=>PEOPLE.includes(p.id))){ctx.font='11px monospace';ctx.textAlign='center';ctx.fillStyle=({friendly:'#d6ef9b',neutral:'#e5dcc3',suspicious:'#e4ba75',hostile:'#e8988d'})[state.npcs[p.id].attitude];ctx.fillText(withPlayer(state).includes(p.id)?NPCS[p.id].name+' ✦':NPCS[p.id].name,p.x*64+32,p.y*64+3);ctx.textAlign='left';}
  ctx.strokeStyle='#cce59e55';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(visual.x*64+33,visual.y*64+53,24,8,0,0,Math.PI*2);ctx.stroke();sprite(visual.x,visual.y,'player',state.dead?'dead':'conscious');

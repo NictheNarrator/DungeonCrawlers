@@ -299,7 +299,7 @@ globalThis.localStorage={getItem:k=>stubStore.get(k)??null,setItem:(k,v)=>stubSt
 let stubTime=1e6;
 async function stubFrame(){stubTime+=200;const f=stubFrames.shift();if(f)f(stubTime);await Promise.resolve();}
 test('Every prop draws its own sprite and no sprite recurses into itself',async()=>{
- const appEngine=await import('./src/engine.mjs?v=npc1');
+ const appEngine=await import('./src/engine.mjs?v=wp1');
  const ids=[...new Set(appEngine.props.flat().map(p=>p.id))];
  const spare=appEngine.props[6];
  // One empty room, one occupant. A prop is drawn from the room's prop list and

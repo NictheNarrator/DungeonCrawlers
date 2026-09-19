@@ -5,7 +5,7 @@
 // is never masked by a stale copy, while the precache means the first launch
 // after losing a connection still works. Cache entries are keyed by the full
 // request, so the ?v= query strings in index.html are cached as written.
-const CACHE = 'dungeoncrawlers-v3';
+const CACHE = 'dungeoncrawlers-v4';
 const ASSETS = [
   './',
   './index.html',
