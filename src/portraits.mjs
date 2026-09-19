@@ -1,79 +1,79 @@
-// Dialogue portraits. One shared renderer, six sets of proportions, so the whole
-// cast is unmistakably drawn by the same hand: same crop, same light from the
-// upper left, same palette, same level of detail.
+// Dialogue portraits. One shared renderer and six sets of proportions, so the
+// whole cast is unmistakably drawn by the same hand: same crop, same light from
+// the upper left, same palette, same level of detail.
 //
 // A character can also point at an illustrated file (see art/portraits/README.md).
-// If that file exists it is used; if it does not, the drawn portrait below is
-// used instead. Nothing ever renders blank.
+// If that file exists it is used; if it does not, the drawn portrait is used
+// instead. Nothing ever renders blank.
 
 export const PORTRAIT_SIZE = { w: 96, h: 114 };
 
-// Every character below is an adult. Faces are deliberately different: different
-// skull width, jaw, chin, eye spacing, nose, mouth, hair and silhouette.
+// Everybody here is an adult, and nobody shares a face. Skull width, jaw, chin,
+// eye spacing and colour, nose, mouth, hair and silhouette all differ.
 const CAST = {
  mara:{
-  // late twenties to early thirties; frightened and refusing to show it.
-  skin:'#c9a487',shade:'#a37f63',blush:'#b07f62',
-  hair:{color:'#4a3428',style:'messy',length:'medium'},
-  face:{width:20,jaw:15,chin:7,cheek:4},
-  eyes:{color:'#3f5a4a',width:6,height:4,spacing:8,brow:3,tilt:-1},
-  nose:{length:5,width:4},mouth:{width:9,curve:0},
-  cloth:{base:'#6f7a4a',trim:'#b6c187',collar:'#3c4a63'},detail:'none',
+  // late twenties to early thirties: frightened, and refusing to show it.
+  skin:'#c9a487',shade:'#9d7a5f',
+  hair:{color:'#4a3428',style:'messy'},
+  face:{width:18,jaw:15,chin:8},
+  eyes:{color:'#3f5a4a',spacing:19,size:8,brow:'angled'},
+  nose:{length:10,width:4},mouth:{width:13,curve:0},
+  cloth:{base:'#6f7a4a',trim:'#b6c187',collar:'#3c4a63'},gear:'strap',
   expression:'guarded'
  },
  skrit:{
-  // a person first, a monster second: wary, wiry, hungry, one ear torn.
-  skin:'#7d8a74',shade:'#5f6b58',blush:'#6d7a63',
-  hair:{color:'#54604f',style:'tuft',length:'short'},
-  face:{width:16,jaw:12,chin:14,cheek:2,muzzle:9},
-  eyes:{color:'#a8332e',width:5,height:4,spacing:7,brow:2,tilt:1},
-  nose:{length:3,width:3},mouth:{width:8,curve:-1},
-  cloth:{base:'#5d7f7a',trim:'#b0a184',collar:'#4a453f'},detail:'rat',
+  // a person first and a monster second: wiry, wary, hungry.
+  skin:'#7d8a74',shade:'#5c6854',
+  hair:{color:'#4e5a4b',style:'tuft'},
+  face:{width:16,jaw:13,chin:9,muzzle:12},
+  eyes:{color:'#c4403a',spacing:17,size:7,brow:'flat'},
+  nose:{length:6,width:5},mouth:{width:12,curve:-1},
+  cloth:{base:'#5d7f7a',trim:'#b0a184',collar:'#4a453f'},gear:'fur',
   expression:'wary'
  },
  tobin:{
   // thin, patchy, mentally inventorying everything you are carrying.
-  skin:'#bd9878',shade:'#96765c',blush:'#a2755e',
-  hair:{color:'#5b4632',style:'thinning',length:'short'},
-  face:{width:18,jaw:13,chin:8,cheek:6},
-  eyes:{color:'#5a4a34',width:5,height:4,spacing:8,brow:3,tilt:0},
-  nose:{length:7,width:4},mouth:{width:7,curve:-1},
-  cloth:{base:'#6f7a4a',trim:'#8a5a34',collar:'#4a453f'},detail:'stubble',
+  skin:'#bd9878',shade:'#8f7058',
+  hair:{color:'#5b4632',style:'thinning'},
+  face:{width:17,jaw:14,chin:7},
+  eyes:{color:'#5a4a34',spacing:18,size:8,brow:'worried'},
+  nose:{length:12,width:4},mouth:{width:12,curve:-1},
+  cloth:{base:'#6f7a4a',trim:'#8a5a34',collar:'#4a453f'},gear:'pouches',
   expression:'nervous'
  },
  vex:{
   // attractive, composed, and entirely unreadable.
-  skin:'#c2a084',shade:'#9b7c62',blush:'#a87c62',
-  hair:{color:'#2f3238',style:'swept',length:'short'},
-  face:{width:21,jaw:16,chin:8,cheek:5},
-  eyes:{color:'#4fc4d8',width:6,height:4,spacing:9,brow:4,tilt:-1},
-  nose:{length:6,width:3},mouth:{width:9,curve:1},
-  cloth:{base:'#3c4a63',trim:'#6d6a62',collar:'#26292b'},detail:'scarf',
+  skin:'#c2a084',shade:'#95775e',
+  hair:{color:'#2f3238',style:'swept'},
+  face:{width:19,jaw:16,chin:8},
+  eyes:{color:'#4fc4d8',spacing:20,size:8,brow:'level'},
+  nose:{length:11,width:4},mouth:{width:13,curve:1},
+  cloth:{base:'#3c4a63',trim:'#6d6a62',collar:'#26292b'},gear:'highcollar',
   expression:'calm'
  },
  eli:{
   // an ordinary man pushed a long way past his comfort zone.
-  skin:'#c8a684',shade:'#a0805f',blush:'#ab7c60',
-  hair:{color:'#4a4038',style:'receding',length:'short'},
-  face:{width:19,jaw:14,chin:9,cheek:5},
-  eyes:{color:'#5c6470',width:5,height:4,spacing:8,brow:3,tilt:1},
-  nose:{length:6,width:4},mouth:{width:8,curve:-2},
-  cloth:{base:'#6d6a62',trim:'#3c4a63',collar:'#4a453f'},detail:'glasses',
+  skin:'#c8a684',shade:'#997b5c',
+  hair:{color:'#4a4038',style:'receding'},
+  face:{width:18,jaw:14,chin:9},
+  eyes:{color:'#5c6470',spacing:18,size:8,brow:'raised'},
+  nose:{length:11,width:5},mouth:{width:12,curve:-2},
+  cloth:{base:'#6d6a62',trim:'#3c4a63',collar:'#4a453f'},gear:'glasses',
   expression:'frightened'
  },
  june:{
   // striking in a different key to Mara: softer structure, warmer, hurt.
-  skin:'#d0a98b',shade:'#a98268',blush:'#bb8468',
-  hair:{color:'#7a4a2a',style:'loose',length:'long'},
-  face:{width:19,jaw:16,chin:6,cheek:6},
-  eyes:{color:'#6a5a3f',width:7,height:5,spacing:8,brow:3,tilt:0},
-  nose:{length:4,width:3},mouth:{width:10,curve:0},
-  cloth:{base:'#5d7f7a',trim:'#b0a184',collar:'#8a5a34'},detail:'bandage',
+  skin:'#d0a98b',shade:'#a17b62',
+  hair:{color:'#7a4a2a',style:'loose'},
+  face:{width:17,jaw:15,chin:6},
+  eyes:{color:'#6a5a3f',spacing:20,size:9,brow:'soft'},
+  nose:{length:9,width:4},mouth:{width:14,curve:0},
+  cloth:{base:'#5d7f7a',trim:'#b0a184',collar:'#8a5a34'},gear:'bandage',
   expression:'hurt'
  }
 };
 
-// The registry the game asks. `file` is where an illustrated portrait would live;
+// The registry the game asks. `file` is where an illustrated portrait lives;
 // `variants` is the seam for expression states later; `draw` is the fallback.
 export const PORTRAITS = Object.fromEntries(Object.keys(CAST).map(id=>[id,{
  file:`art/portraits/${id}.png`,
@@ -89,76 +89,116 @@ export function portraitIds(){return Object.keys(PORTRAITS);}
 
 function shade(hex,amount){const n=parseInt(hex.slice(1),16);
  const clamp=v=>Math.max(0,Math.min(255,Math.round(v)));
- const r=clamp((n>>16)+amount),g=clamp(((n>>8)&255)+amount),b=clamp((n&255)+amount);
- return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');}
+ return '#'+[clamp((n>>16)+amount),clamp(((n>>8)&255)+amount),clamp((n&255)+amount)]
+  .map(v=>v.toString(16).padStart(2,'0')).join('');}
 
 function drawPortrait(g,s){
- const {w,h}=PORTRAIT_SIZE,cx=w/2;
- const px=(x,y,ww,hh,c)=>{g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),Math.round(ww),Math.round(hh));};
- const fw=Math.round(s.face.width*1.5),fh=Math.round(fw*1.3),top=10;
- const hair=s.hair.color,skin=s.skin;
- // backdrop: a cold wall, darker at the edges, no scenery
- px(0,0,w,h,'#141d1e');px(0,0,w,46,'#1e2d2d');px(0,46,w,h-46,'#16221f');
- px(0,0,2,h,'#0d1414');px(w-2,0,2,h,'#0d1414');
- // hair mass sits behind the head, never over the face
- px(cx-fw-5,top-8,(fw+5)*2,fh+16,shade(hair,-18));
- if(s.hair.length!=='short'){px(cx-fw-7,top+4,11,fh+6,shade(hair,-24));px(cx+fw-4,top+4,11,fh+6,shade(hair,-24));}
- if(s.detail==='rat'){px(cx-fw-9,top-8,10,14,shade(skin,-8));px(cx+fw-1,top-8,10,14,shade(skin,-8));}
- // shoulders and collar, low in the frame so the head owns it
- const shoulderY=Math.min(h-20,top+fh+26);
- px(2,shoulderY,w-4,h-shoulderY,shade(s.cloth.base,-6));
- px(2,shoulderY,w-4,5,s.cloth.trim);
- px(cx-16,shoulderY-3,32,5,shade(s.cloth.base,12));
- px(cx-8,shoulderY,16,13,s.cloth.collar);
- // neck closes the gap between chin and shoulders
- px(cx-8,top+fh-4,16,shoulderY-(top+fh-4)+3,shade(skin,-18));
- // face: skull, jaw, chin
- px(cx-fw,top,fw*2,fh,skin);
- px(cx-fw,top,fw*2,4,shade(skin,16));
- px(cx-fw,top+fh-7,4,7,shade(skin,-12));px(cx+fw-4,top+fh-7,4,7,shade(skin,-12));
- px(cx-s.face.jaw,top+fh,s.face.jaw*2,5,shade(skin,-9));
- px(cx-s.face.chin/2,top+fh+5,s.face.chin,4,shade(skin,-15));
- if(s.detail!=='rat'){px(cx-fw-3,top+16,3,11,shade(skin,-15));px(cx+fw,top+16,3,11,shade(skin,-15));}
- if(s.face.muzzle){px(cx-7,top+fh*0.52,14,s.face.muzzle,shade(skin,12));px(cx-2,top+fh*0.52+s.face.muzzle-6,4,6,shade(skin,-32));}
- // brows carry the expression
- const e=s.eyes,eyeY=Math.round(top+fh*0.44);
- const drop=s.expression==='frightened'?-1:s.expression==='nervous'?1:s.expression==='wary'?1:0;
- const tilt=s.expression==='guarded'?1:0;
- px(cx-e.spacing/2-e.width/2-1,eyeY-7+drop-tilt,e.width+3,3,shade(hair,-6));
- px(cx+e.spacing/2-e.width/2-1,eyeY-7+drop+tilt,e.width+3,3,shade(hair,-6));
- // eye sockets, then whites, then irises
- px(cx-e.spacing/2-e.width/2-2,eyeY-2,e.width+4,e.height+4,shade(skin,-28));
- px(cx+e.spacing/2-e.width/2-2,eyeY-2,e.width+4,e.height+4,shade(skin,-28));
- px(cx-e.spacing/2-e.width/2,eyeY,e.width,e.height,'#e6e2d6');
- px(cx+e.spacing/2-e.width/2,eyeY,e.width,e.height,'#e6e2d6');
- px(cx-e.spacing/2-e.width/2+1,eyeY,e.width-2,e.height,e.color);
- px(cx+e.spacing/2-e.width/2+1,eyeY,e.width-2,e.height,e.color);
- px(cx-e.spacing/2-e.width/2+2,eyeY+1,2,2,'#1b1f21');
- px(cx+e.spacing/2-e.width/2+2,eyeY+1,2,2,'#1b1f21');
- // nose and mouth
- px(cx-1,eyeY+5,3,s.nose.length,shade(skin,-24));
- const mouthY=eyeY+7+s.nose.length,mw=s.mouth.width;
- px(cx-mw/2,mouthY,mw,2,shade(skin,-48));
- if(s.mouth.curve>0){px(cx-mw/2-2,mouthY-1,2,3,shade(skin,-42));px(cx+mw/2,mouthY-1,2,3,shade(skin,-42));}
- if(s.mouth.curve<0)px(cx-2,mouthY+2,5,2,shade(skin,-54));
- // fringe: only the hairline, and it never covers the eyes
- if(s.hair.style==='messy'){px(cx-fw,top-3,fw*2,6,hair);px(cx-fw,top+3,13,6,shade(hair,-10));px(cx+fw-15,top+2,15,4,shade(hair,10));}
- if(s.hair.style==='loose'){px(cx-fw-3,top-5,fw*2+6,7,hair);px(cx-fw-2,top+2,10,7,shade(hair,-8));px(cx+fw-8,top+1,11,6,hair);}
- if(s.hair.style==='swept'){px(cx-fw,top-4,fw*2,6,hair);px(cx-fw,top+2,16,5,shade(hair,-14));px(cx+fw-13,top,13,4,shade(hair,14));}
- if(s.hair.style==='thinning'){px(cx-fw+4,top-3,fw*2-8,5,shade(hair,-10));px(cx-fw+6,top+2,6,4,hair);px(cx+fw-12,top+2,6,4,hair);}
- if(s.hair.style==='receding'){px(cx-fw+3,top-3,fw*2-6,4,shade(hair,-12));px(cx-fw+1,top+1,7,5,hair);px(cx+fw-8,top+1,7,5,hair);}
- if(s.hair.style==='tuft'){px(cx-fw+3,top-4,12,7,hair);px(cx+fw-17,top-3,14,6,shade(hair,10));}
- // details
- if(s.detail==='glasses'){g.strokeStyle='#cfd6d2';g.lineWidth=1;
-  g.strokeRect(Math.round(cx-e.spacing/2-e.width/2-3),Math.round(eyeY-3),Math.round(e.width+6),Math.round(e.height+6));
-  g.strokeRect(Math.round(cx+e.spacing/2-e.width/2-3),Math.round(eyeY-3),Math.round(e.width+6),Math.round(e.height+6));
+ const W=PORTRAIT_SIZE.w,cx=W/2;
+ const px=(x,y,w,h,c)=>{if(w<=0||h<=0)return;g.fillStyle=c;g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));};
+ // a stepped rounded rectangle: the whole portrait is built from these
+ const soft=(x,y,w,h,r,c)=>{px(x+r,y,w-r*2,h,c);px(x,y+r,r,h-r*2,c);px(x+w-r,y+r,r,h-r*2,c);
+  px(x+1,y+1,w-2,r,c);px(x+1,y+h-r-1,w-2,r,c);};
+ const skin=s.skin,lit=shade(skin,16),dim=shade(skin,-22),deep=shade(skin,-42),hair=s.hair.color;
+ const fw=s.face.width,fh=Math.round(fw*1.32),top=11;
+ const eyeY=top+Math.round(fh*0.46),faceBottom=top+fh;
+
+ // backdrop: cold wall, one seam, dark at the edges, nothing to read
+ px(0,0,W,PORTRAIT_SIZE.h,'#131c1d');
+ px(0,0,W,40,'#1e2e2e');px(0,40,W,26,'#182726');px(0,66,W,PORTRAIT_SIZE.h-66,'#152220');
+ px(0,38,W,2,'#0f1a1a');px(0,0,W,2,'#243433');
+ px(0,0,3,PORTRAIT_SIZE.h,'#0c1313');px(W-3,0,3,PORTRAIT_SIZE.h,'#0c1313');
+
+ // hair mass, behind everything
+ if(s.hair.style==='loose')soft(cx-fw-6,top-6,(fw+6)*2,fh+30,6,shade(hair,-22));
+ else if(s.hair.style==='messy')soft(cx-fw-4,top-6,(fw+4)*2,fh+18,5,shade(hair,-18));
+ else soft(cx-fw-2,top-5,(fw+2)*2,fh+10,5,shade(hair,-20));
+
+ // shoulders: narrow at the neck, widening into the frame
+ const shoulderY=faceBottom+18;
+ for(let i=0;i<10;i++){const y=shoulderY+i*2,w=fw+16+i*5;px(cx-w/2,y,w,2,shade(s.cloth.base,-6));}
+ px(cx-fw-6,shoulderY,12+fw*2,3,s.cloth.trim);
+ // collar and whatever they carry
+ if(s.gear==='highcollar'){px(cx-16,shoulderY-6,32,8,s.cloth.collar);px(cx-5,shoulderY-6,10,10,shade(s.cloth.collar,-14));}
+ else if(s.gear==='scarf'){px(cx-16,shoulderY-4,32,7,'#8a5a34');px(cx-5,shoulderY-4,10,9,shade('#8a5a34',-18));}
+ else px(cx-13,shoulderY-3,26,6,s.cloth.collar);
+ if(s.gear==='strap'){px(cx-16,shoulderY+2,5,26,shade('#4a453f',6));px(cx-15,shoulderY+8,3,3,'#b0a184');}
+ if(s.gear==='pouches'){px(cx-20,shoulderY+4,9,10,'#8a5a34');px(cx+11,shoulderY+8,8,8,shade('#8a5a34',-14));px(cx-8,shoulderY+3,4,18,shade('#4a453f',4));}
+ if(s.gear==='fur'){for(let i=0;i<7;i++)px(cx-fw-8+i*6,shoulderY-4,5,5,shade(s.skin,4));}
+ if(s.gear==='bandage'){px(cx-18,shoulderY+1,8,14,'#e6e2d6');px(cx-18,shoulderY+6,8,2,shade('#e6e2d6',-40));}
+ if(s.gear==='glasses'){px(cx-20,shoulderY+6,7,7,'#3c4a63');}
+
+ // neck, with the jaw shadow on it
+ px(cx-6,faceBottom-6,12,shoulderY-faceBottom+8,dim);
+ px(cx-6,faceBottom-6,12,5,deep);
+
+ // ears (a ratman gets tall ones, tucked under the hair mass)
+ if(s.face.muzzle){px(cx-fw-9,top+2,7,13,shade(skin,-6));px(cx+fw+2,top+2,7,13,shade(skin,-10));
+  px(cx-fw-8,top+4,5,8,shade(skin,-26));px(cx+fw+3,top+4,5,8,shade(skin,-30));}
+ else {px(cx-fw-3,eyeY-2,4,11,dim);px(cx+fw-1,eyeY-2,4,11,dim);}
+
+ // face: skull, tapered jaw, chin
+ soft(cx-fw,top,fw*2,fh-9,5,skin);
+ soft(cx-fw+2,faceBottom-10,fw*2-4,10,3,shade(skin,-4));
+ px(cx-fw,top+3,fw*2,4,lit);
+ px(cx-fw-1,faceBottom-9,4,9,dim);px(cx+fw-3,faceBottom-9,4,9,dim);
+ px(cx-s.face.jaw,faceBottom-1,s.face.jaw*2,4,dim);
+ px(cx-s.face.chin/2,faceBottom+3,s.face.chin,4,deep);
+ if(s.face.muzzle){soft(cx-7,faceBottom-16,14,s.face.muzzle,5,shade(skin,10));
+  px(cx-2,faceBottom-8,4,7,deep);px(cx-3,faceBottom-3,6,3,shade(skin,-30));}
+
+ // brows: the expression lives here
+ const bx=fw-1,e=s.eyes,half=e.spacing/2;
+ const brow=(side)=>{const x=side<0?cx-half-e.size/2-2:cx+half-e.size/2;
+  const lift=s.expression==='frightened'?2:s.expression==='hurt'?1:0;
+  const inner=s.expression==='guarded'?1:s.expression==='wary'?1:0;
+  px(x,eyeY-8-lift+inner,e.size+4,3,hair);
+  px(x+(side<0?0:e.size),eyeY-7-lift,e.size/2-1,2,hair);};
+ brow(-1);brow(1);
+
+ // eyes: socket, white, iris, pupil, catchlight
+ const eye=(side)=>{const x=side<0?cx-half-e.size/2:cx+half-e.size/2;
+  px(x-1,eyeY-2,e.size+2,e.size*0.6+3,shade(skin,-30));
+  soft(x,eyeY,e.size,Math.round(e.size*0.55),2,'#e6e2d6');
+  px(x+Math.round(e.size*0.28),eyeY,Math.round(e.size*0.45),Math.round(e.size*0.55),e.color);
+  px(x+Math.round(e.size*0.38),eyeY+1,Math.round(e.size*0.24),Math.round(e.size*0.34),'#1b1f21');
+  px(x+Math.round(e.size*0.62),eyeY+1,1,1,'#ffffff');
+  px(x,eyeY-1,e.size,1,shade(skin,-46));};
+ eye(-1);eye(1);
+
+ // nose
+ px(cx-1,eyeY+3,2,s.nose.length,dim);
+ px(cx-Math.round(s.nose.width/2),eyeY+2+s.nose.length,s.nose.width,2,dim);
+ px(cx-1,eyeY+2+s.nose.length,2,1,lit);
+
+ // mouth
+ const mouthY=eyeY+5+s.nose.length,mw=s.mouth.width;
+ px(cx-mw/2,mouthY-1,mw,1,shade(skin,-34));
+ px(cx-mw/2,mouthY,mw,2,shade(skin,-58));
+ px(cx-mw/2+1,mouthY+2,mw-2,1,shade(skin,12));
+ if(s.mouth.curve>0){px(cx-mw/2-2,mouthY-2,2,3,shade(skin,-44));px(cx+mw/2,mouthY-2,2,3,shade(skin,-44));}
+ if(s.mouth.curve<0){px(cx-2,mouthY+2,5,2,shade(skin,-58));}
+ else px(cx-3,mouthY+2,mw-4,1,shade(skin,-38));
+
+ // fringe last, so the hairline sits over the forehead and never the eyes
+ if(s.hair.style==='messy'){px(cx-fw,top-2,fw*2,6,hair);px(cx-fw,top+3,12,7,shade(hair,-12));px(cx+fw-14,top+2,14,5,shade(hair,10));}
+ if(s.hair.style==='loose'){px(cx-fw-1,top-4,fw*2+2,6,hair);px(cx-fw-1,top+2,11,8,shade(hair,-10));px(cx+fw-10,top+1,11,7,hair);}
+ if(s.hair.style==='swept'){px(cx-fw,top-4,fw*2,6,hair);px(cx-fw,top+2,15,5,shade(hair,-16));px(cx+fw-12,top-1,12,4,shade(hair,14));}
+ if(s.hair.style==='thinning'){px(cx-fw+3,top-3,fw*2-6,5,shade(hair,-12));px(cx-fw+5,top+2,6,5,hair);px(cx+fw-11,top+2,6,5,hair);}
+ if(s.hair.style==='receding'){px(cx-fw+4,top-3,fw*2-8,4,shade(hair,-14));px(cx-fw+1,top+1,7,6,hair);px(cx+fw-8,top+1,7,6,hair);}
+ if(s.hair.style==='tuft'){px(cx-fw+2,top-4,11,7,hair);px(cx+fw-15,top-3,13,6,shade(hair,10));px(cx-3,top-5,7,4,hair);}
+
+ // glasses, if any, are the last thing on the face
+ if(s.gear==='glasses'){g.strokeStyle='#cfd6d2';g.lineWidth=1;
+  const y=Math.round(eyeY-3),hh=Math.round(e.size*0.8);
+  g.strokeRect(Math.round(cx-half-e.size/2-3),y,Math.round(e.size+6),hh+4);
+  g.strokeRect(Math.round(cx+half-e.size/2-3),y,Math.round(e.size+6),hh+4);
   px(cx-2,eyeY+1,4,1,'#cfd6d2');}
- if(s.detail==='stubble'){for(let i=0;i<16;i++)px(cx-s.face.jaw+1+i*2.6,top+fh+1+(i%2?2:0),1,2,shade(skin,-34));}
- if(s.detail==='scarf'){px(cx-16,shoulderY-4,32,8,'#8a5a34');px(cx-5,shoulderY-4,10,10,shade('#8a5a34',-18));}
- if(s.detail==='bandage'){px(cx+fw-10,top-1,8,20,'#e6e2d6');px(cx+fw-10,top+8,8,2,shade('#e6e2d6',-45));}
- // one light, from the upper left
- px(cx-fw,top,3,fh,shade(skin,20));
- px(cx+fw-3,top,3,fh,shade(skin,-26));
- px(cx-fw,top+capsule(s.expression),fw*2,2,shade(skin,10));
+ if(s.gear==='bandage'){px(cx+fw-6,top+2,7,22,'#e6e2d6');px(cx+fw-6,top+10,7,2,shade('#e6e2d6',-40));}
+
+ // one light, upper left: rim on the left cheek, shadow down the right
+ px(cx-fw,top+6,2,fh-12,lit);
+ px(cx-fw+3,eyeY+7,5,3,shade(skin,10));px(cx+fw-8,eyeY+7,5,3,shade(skin,-14));
+ px(cx+fw-2,top+6,2,fh-12,dim);
+ if(s.expression==='hurt')px(cx-fw+3,eyeY+9,5,2,shade(skin,-34));
+ if(s.expression==='nervous')px(cx-fw+4,eyeY+11,4,2,shade(skin,-30));
 }
-function capsule(expression){return expression==='hurt'?0:2;}
