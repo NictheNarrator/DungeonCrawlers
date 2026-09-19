@@ -1,9 +1,15 @@
 # Dungeon Crawler World — Art Direction
 
-`art/floor1-style-guide.png` is the authoritative reference. This file is the working
-summary of it: read both before drawing anything, and treat the image as final where
-they disagree. Every asset — tiles, walls, doors, props, loot, NPCs, creatures, icons,
-special locations — has to look like it belongs to the same game.
+`art/style/watercolor-pixel/` is the authoritative reference: the approved
+Watercolor Pixel pages (sprite sheet, transit objects, crew portraits, survivor
+camp objects, maintenance objects) plus a README listing the casting. This file is
+the working summary of them: read both before drawing anything, and treat the
+images as final where they disagree. Every asset — tiles, walls, doors, props,
+loot, NPCs, creatures, icons, special locations — has to look like it belongs to
+the same game.
+
+`art/floor1-style-guide.png` is the older, darker guide. Its Floor 1 layout
+thinking still stands; its palette and surface treatment are superseded.
 
 Floor themes change later. The visual language does not.
 
