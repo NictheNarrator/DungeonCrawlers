@@ -254,8 +254,16 @@ function propSprite(px,py,type){
   rect(px+12,py+26,40,8,P.sand);rect(px+18,py+28,26,4,shade(P.sand,-24));
   rect(px+13,py+45,7,9,P.ink);rect(px+44,py+45,7,9,P.ink);
   rect(px+30,py+30,10,4,P.brick);return;}
- if(type==='sofa'){rect(px+8,py+26,48,26,'#3279a4');rect(px+8,py+26,48,5,'#a9abb8');rect(px+14,py+32,16,14,'#7c9565');rect(px+34,py+32,16,14,'#7c9565');return;}
- if(type==='kettle'){rect(px+20,py+32,24,20,'#eac999');rect(px+20,py+32,24,4,'#f5c4bd');rect(px+44,py+36,7,10,'#eac999');rect(px+27,py+27,10,5,'#8c8e9e');return;}
+ // batch 7: safe room, surface and loose props
+ if(type==='sofa'){
+  rect(px+8,py+26,48,26,P.olive);rect(px+8,py+26,48,5,shade(P.olive,20));rect(px+8,py+46,48,6,shade(P.olive,-24));
+  rect(px+14,py+32,16,14,P.green);rect(px+34,py+32,16,14,P.green);
+  rect(px+14,py+32,16,3,shade(P.green,18));rect(px+34,py+32,16,3,shade(P.green,18));
+  rect(px+8,py+52,6,6,P.umber);rect(px+50,py+52,6,6,P.umber);return;}
+  if(type==='kettle'){
+  rect(px+20,py+32,24,20,shade(P.slate,-6));rect(px+20,py+32,24,4,shade(P.slate,20));
+  rect(px+43,py+36,8,9,shade(P.slate,-6));rect(px+26,py+27,12,6,shade(P.ink,14));
+  rect(px+22,py+42,20,3,P.cream);rect(px+30,py+24,4,4,P.sand);return;}
  if(type==='brazier'){const flame=tick%4===0?2:0;rect(px+18,py+34,28,26,'#cd7d32');rect(px+18,py+34,28,4,'#d7873c');rect(px+24,py+22-flame,16,12+flame,'#df8f44');rect(px+28,py+16-flame,8,8+flame,'#eac999');return;}
   if(type==='satchel'){
   rect(px+16,py+28,32,28,P.brown);rect(px+16,py+28,32,4,shade(P.brown,18));rect(px+16,py+52,32,4,shade(P.brown,-22));
@@ -267,7 +275,10 @@ function propSprite(px,py,type){
   rect(px+20,py+14,24,3,P.ink);rect(px+20,py+19,24,3,P.ink);rect(px+20,py+24,24,3,P.ink);
   rect(px+21,py+34,22,16,shade(P.blue,-16));rect(px+40,py+38,5,6,P.sand);
   rect(px+24,py+30,16,3,P.cream);return;}
- if(type==='plaque'){rect(px+12,py+24,40,22,'#eac999');rect(px+12,py+24,40,4,'#f5c4bd');rect(px+18,py+33,28,3,'#8c8e9e');rect(px+18,py+39,18,3,'#8c8e9e');return;}
+  if(type==='plaque'){
+  rect(px+12,py+24,40,22,P.sand);rect(px+12,py+24,40,4,shade(P.sand,20));rect(px+12,py+42,40,4,shade(P.sand,-28));
+  rect(px+18,py+31,28,3,shade(P.umber,10));rect(px+18,py+37,18,3,shade(P.umber,10));
+  rect(px+48,py+26,3,3,P.cream);rect(px+12,py+26,3,3,P.cream);return;}
   if(type==='sign'){
   rect(px+14,py+40,4,22,P.umber);rect(px+46,py+40,4,22,P.umber);
   rect(px+6,py+10,52,32,P.blue);rect(px+6,py+10,52,4,shade(P.blue,22));rect(px+6,py+38,52,4,shade(P.blue,-24));
@@ -279,16 +290,30 @@ function propSprite(px,py,type){
   rect(px+18,py+46,28,7,band);rect(px+18,py+46,4,7,shade(P.ink,14));
   if(type==='exitdoor'){rect(px+21,py+36,22,8,P.cream);rect(px+27,py+38,4,4,P.ink);rect(px+34,py+38,3,3,P.ink);}
   if(type==='breakdoor'){rect(px+30,py+8,4,10,P.sky);}return;}
- if(type==='stairwell'){const pulse=tick%2?'#4fc4d8':'#8fe3f0';rect(px+6,py+10,52,48,'#133267');for(let i=0;i<5;i++)rect(px+8+i*4,py+50-i*9,48-i*7,8,'#0f2e63');
-  rect(px+4,py+4,56,12,'#17366b');rect(px+8,py+8,48,4,pulse);rect(px+8,py+15,22,3,pulse);return;}
- if(type==='map'){rect(px+10,py+12,44,42,'#eac999');rect(px+10,py+12,44,4,'#f5c4bd');rect(px+15,py+22,16,3,'#1d5193');rect(px+15,py+29,24,3,'#1d5193');rect(px+15,py+36,12,3,'#1d5193');rect(px+40,py+30,9,9,'#4fc4d8');return;}
+  if(type==='stairwell'){const pulse=tick%2?P.sky:shade(P.sky,30);
+  rect(px+6,py+12,52,46,shade(P.ink,8));for(let i=0;i<5;i++)rect(px+8+i*4,py+50-i*9,48-i*7,8,shade(P.ink,16));
+  rect(px+2,py+2,60,14,shade(P.ink,20));rect(px+6,py+6,52,5,P.cream);
+  rect(px+8,py+13,22,3,pulse);rect(px+38,py+13,18,3,pulse);
+  rect(px+8,py+50,48,6,P.sand);return;}
+  if(type==='map'){
+  rect(px+10,py+12,44,42,P.cream);rect(px+10,py+12,44,4,shade(P.cream,10));rect(px+10,py+50,44,4,shade(P.cream,-24));
+  rect(px+15,py+20,16,4,P.blue);rect(px+15,py+28,26,4,P.blue);rect(px+15,py+36,14,4,P.blue);rect(px+33,py+36,10,4,P.brick);
+  rect(px+38,py+22,10,10,P.sky);rect(px+41,py+25,4,4,P.cream);
+  rect(px+14,py+44,8,3,shade(P.sand,-10));return;}
   if(type==='help'){
   rect(px+22,py+12,20,50,P.blue);rect(px+22,py+12,20,5,shade(P.blue,20));
   rect(px+25,py+18,14,12,P.cream);rect(px+27,py+21,10,3,P.ink);rect(px+27,py+26,6,3,P.ink);
   rect(px+40,py+24,8,10,shade(P.ink,14));rect(px+44,py+26,5,14,shade(P.ink,22));
   rect(px+25,py+38,14,12,shade(P.ink,10));rect(px+28,py+42,8,4,P.sand);return;}
- if(type==='wreck'){rect(px+4,py+30,56,20,'#cd7d32');rect(px+14,py+20,30,12,'#8c8e9e');rect(px+18,py+22,12,8,'#1d5193');rect(px+8,py+50,10,6,'#17366b');rect(px+46,py+50,10,6,'#17366b');return;}
- if(type==='awning'){rect(px+6,py+32,52,20,'#1d5193');rect(px+6,py+32,52,4,'#2f63a5');for(let i=0;i<4;i++)rect(px+10+i*12,py+38,6,12,'#eac999');return;}
+  if(type==='wreck'){
+  rect(px+4,py+30,56,20,P.orange);rect(px+4,py+30,56,4,shade(P.orange,20));rect(px+4,py+46,56,4,shade(P.orange,-30));
+  rect(px+14,py+20,30,12,shade(P.slate,-6));rect(px+18,py+22,12,8,P.sky);rect(px+32,py+22,10,8,shade(P.sky,-16));
+  rect(px+8,py+50,10,6,P.ink);rect(px+46,py+50,10,6,P.ink);
+  rect(px+10,py+34,10,5,shade(P.brick,10));rect(px+44,py+34,10,5,shade(P.brick,10));return;}
+  if(type==='awning'){
+  rect(px+6,py+32,52,20,P.blue);rect(px+6,py+32,52,4,shade(P.blue,22));rect(px+6,py+48,52,4,shade(P.blue,-26));
+  for(let i=0;i<4;i++)rect(px+10+i*12,py+38,7,12,P.cream);
+  rect(px+8,py+24,6,10,shade(P.slate,-14));rect(px+50,py+26,6,8,shade(P.slate,-14));return;}
   if(type==='debris'){
   rect(px+14,py+44,14,7,shade(P.slate,-16));rect(px+16,py+42,10,4,shade(P.slate,4));
   rect(px+32,py+40,16,10,shade(P.slate,-26));rect(px+34,py+38,12,4,shade(P.slate,-6));
@@ -453,14 +478,19 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   rect(px+14,py+26,36,20,P.sky);rect(px+19,py+30,26,12,shade(P.sky,22));rect(px+24,py+32,8,3,P.cream);
   rect(px+28,py+12,8,16,P.slate);rect(px+24,py+10,16,5,shade(P.slate,10));
   rect(px+6,py+50,52,6,P.cream);rect(px+10,py+52,20,3,shade(P.sand,-18));return;}
- if(type==='stairs'){for(let i=0;i<5;i++){rect(px+5+i*5,py+51-i*9,53-i*7,8,i%2?'#abb6a1':'#849483');}return;}
+  if(type==='stairs'){for(let i=0;i<5;i++){const tone=i%2?shade(P.slate,-4):shade(P.slate,-18);
+  rect(px+5+i*5,py+51-i*9,53-i*7,8,tone);rect(px+5+i*5,py+51-i*9,53-i*7,3,shade(tone,20));}
+  rect(px+4,py+8,56,4,P.sand);for(let i=0;i<4;i++)rect(px+30+i*12,py+8,7,4,P.brick);return;}
   if(type==='pipe'){
   rect(px+8,py+22,46,11,shade(P.slate,-6));rect(px+8,py+22,46,3,shade(P.slate,18));rect(px+8,py+30,46,3,shade(P.slate,-26));
   rect(px+40,py+22,12,26,shade(P.slate,-10));rect(px+40,py+22,12,3,shade(P.slate,14));
   rect(px+14,py+18,6,19,shade(P.slate,10));rect(px+37,py+38,18,6,shade(P.slate,6));
   rect(px+20,py+28,12,28,shade(P.slate,-14));rect(px+22,py+40,8,3,P.brick);
   rect(px+21,py+44,10,10,shade(P.slate,-24));rect(px+23,py+46,6,6,P.brick);return;}
- if(type==='note'){rect(px+19,py+21,28,33,'#cabd8d');for(let i=0;i<4;i++)rect(px+24,py+28+i*5,16,2,'#786c4c');return;}
+  if(type==='note'){
+  rect(px+19,py+21,28,33,P.cream);rect(px+19,py+21,28,3,shade(P.cream,12));
+  for(let i=0;i<4;i++)rect(px+24,py+28+i*5,16,2,shade(P.ink,26));
+  rect(px+38,py+44,6,6,P.brick);rect(px+22,py+48,10,3,shade(P.ink,30));return;}
 // Faction and structure props. Same rules as everything else: one silhouette per
 // object, top-left light, hard short shadow, accents used on purpose.
   if(type==='barricade'){
@@ -555,7 +585,10 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   rect(px+18,py+20,28,30,shade(P.slate,-28));
   rect(px+28,py+30,9,9,P.cream);rect(px+30,py+32,5,5,shade(P.ink,20));rect(px+39,py+33,6,3,P.sand);
   rect(px+16,py+22,3,26,shade(P.slate,-40));rect(px+46,py+24,3,3,P.brick);return;}
- if(type==='whetstone'){rect(px+13,py+41,38,12,'#8c8e9e');rect(px+13,py+41,38,3,'#989aaa');rect(px+19,py+35,26,8,'#eac999');rect(px+19,py+35,26,3,'#f5c4bd');rect(px+44,py+45,9,4,'#937862');return;}
+  if(type==='whetstone'){
+  rect(px+13,py+41,38,12,shade(P.slate,-16));rect(px+13,py+41,38,3,shade(P.slate,8));
+  rect(px+19,py+34,26,9,P.sand);rect(px+19,py+34,26,3,shade(P.sand,20));
+  rect(px+44,py+45,9,5,P.brown);rect(px+20,py+37,10,2,shade(P.sand,-26));return;}
  propSprite(px,py,type);}
 // Environment tiles: clean, dirty, cracked, bloodstained, grate, hazard stripe
 // and sludge, layered deterministically so a room reads the same every visit.
