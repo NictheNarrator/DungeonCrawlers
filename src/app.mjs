@@ -309,6 +309,11 @@ function sprite(x,y,type,condition='conscious'){const px=x*64,py=y*64+breathing(
   if(type==='vex'){rect(px+49,py+12,3,34,c.blade);rect(px+45,py+42,11,4,'#b0a184');}
   if(type.startsWith('stranger')){rect(px+24,py+18,14,3,'#a8332e');}
   return;}
+ if(type==='sumpmaw'){// a mound of a creature with a mouth where its face should be
+  rect(px+4,py+34,56,22,'#2f4a35');rect(px+4,py+34,56,5,'#4a6b3f');
+  rect(px+12,py+22,40,16,'#3d5a42');rect(px+12,py+22,40,4,'#5f8256');
+  rect(px+18,py+40,28,10,'#16221b');for(let i=0;i<5;i++)rect(px+19+i*6,py+40,4,5,'#e6e2d6');
+  rect(px+22,py+26,7,5,'#e8c14a');rect(px+39,py+26,7,5,'#e8c14a');rect(px+26,py+33,6,3,'#a8332e');rect(px+36,py+33,6,3,'#a8332e');return;}
  if(type==='rat'||type==='skrit'||type==='skulker'||type==='brute'){const fur=c.fur,coat=c.coat;
   if(type==='brute'){rect(px+15,py+28,8,20,fur);rect(px+43,py+28,8,20,fur);rect(px+18,py+8,8,8,fur);rect(px+40,py+8,8,8,fur);}
   rect(px+21,py+14,21,17,fur);rect(px+21,py+14,21,4,'#7d9a94');

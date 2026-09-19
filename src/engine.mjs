@@ -45,7 +45,7 @@ export const props=[
   {id:'nest',name:'Squatter nest',x:6,y:2},{id:'skulker',name:'Ratman skulker',x:10,y:5}],
 // 10 Food Storage — the hazard pit the ratmen will not go near, and a risky cache.
  [{id:'pit',name:'The Sump Maw',x:5,y:5,hazard:true},{id:'chest',name:'Abandoned chest',x:9,y:6},{id:'crate',name:'Cracked crate',x:3,y:3},
-  {id:'nest',name:'Scavenger nest',x:7,y:2},{id:'brute',name:'Ratman brute',x:4,y:5},{id:'june',name:'June, wounded straggler',x:8,y:6}],
+  {id:'nest',name:'Scavenger nest',x:7,y:2},{id:'brute',name:'Ratman brute',x:4,y:5},{id:'june',name:'June, wounded straggler',x:8,y:6},{id:'sumpmaw',name:'The Sump Maw',x:6,y:5}],
 // 11 Stairwell Down — the map's last landmark: down, into the dark.
  [{id:'stairs',name:'Exit stairs',x:6,y:3},{id:'plaque',name:'Departure plaque',x:4,y:5},{id:'cables',name:'Dead cable run',x:3,y:6}]
 ];
@@ -194,7 +194,7 @@ export function nearby(s){const found=roomProps(s).filter(p=>Math.abs(p.x-s.x)+M
  if(!s.registered&&s.room===SURFACE)found.push({id:'phone',name:'Your phone',x:s.x,y:s.y});return found;}
 function baseActions(s,id){if(id==='staffdoor'&&!s.dead&&!s.complete)return ['Inspect','Enter the break room'];if(s.dead||s.complete||s.combat)return [];if(PEOPLE.includes(id)||s.npcs[id]?.condition!=='conscious'&&s.npcs[id])return npcActions(s,id);
  if(id==='skrit')return ['Inspect','Talk','Help with the machine','Pickpocket','Leave him alone','Fight'];
- if(NPCS[id]?.archetype&&id!=='rat')return ['Inspect','Fight',...(s.cheese?['Offer cheese']:[])];
+ if(NPCS[id]?.archetype&&id!=='rat'&&id!=='sumpmaw')return ['Inspect','Fight',...(s.cheese?['Offer cheese']:[])];
  switch(id){
  case 'fountain':return ['Inspect','Heal'];case 'terminal':return ['Inspect'];
  case 'chest':return ['Inspect',...(s.flags.chest?[]:['Open']),...(questCarried(s)&&questOpen(s)?['Keep the supplies']:[])];case 'crate':return ['Inspect',...(s.flags.crate?[]:['Break'])];
@@ -208,6 +208,7 @@ function baseActions(s,id){if(id==='staffdoor'&&!s.dead&&!s.complete)return ['In
  case 'staffdoor':case 'breakdoor':return ['Inspect','Enter the break room'];case 'exitdoor':return ['Inspect','Head back out'];
  case 'map':return ['Inspect'];case 'sofa':case 'kettle':return ['Inspect','Rest for a while'];case 'machines':return ['Inspect'];
  case 'note':return ['Inspect','Read'];case 'locker':return ['Inspect',...(s.flags.locker?[]:['Open'])];
+ case 'sumpmaw':return ['Inspect','Fight',...(s.cheese?['Lure it away with food']:[]),'Trap it behind the door',...(s.npcs.brute.condition==='conscious'&&memberStanding(s,'rat')!=='hostile'?['Send the brute in']:[])];
  case 'gate':return ['Inspect',...(s.items.badge&&!s.flags.gateOpen?['Badge through the gate']:[])];case 'barrier':return ['Inspect'];
  case 'vault':return ['Inspect',...(s.flags.vaultOpen?[]:['Crack it open'])];
  case 'panel':return ['Inspect',...(s.flags.securityDown?[]:['Reroute the security feed'])];
@@ -313,7 +314,7 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
  if(id==='pipe'){let found=false;for(const who of Object.keys(s.companions)){const mate=companionOf(s,who);if(mate.quest.id!=='locket'||mate.quest.stage!=='searching')continue;mate.quest.stage='found';grantedItem(s,'Sable locket');found=true;say(s,'Wedged behind the pipe: a sable locket on a broken chain. Dell. Mara will want to know.');}if(!s.flags.secret){s.flags.secret=true;s.gold+=4;award(s,'Pipe dream');say(s,'A hidden cache contains 4 coins.');found=true;}if(s.flags.tobinCache&&!s.flags.tobinCacheTaken){s.flags.tobinCacheTaken=true;s.gold+=3;say(s,'Tobin’s tip reveals a second compartment: 3 extra coins. Information can be worth more than pockets.');found=true;}if(!found)say(s,'The cache is empty.');}
  if(id==='satchel'){s.flags.satchel=true;s.gold+=3;s.items.smokeBombs++;ownedTake(s,'satchel','3 coins and a smoke bomb',['gold','smokeBombs']);}
  if(id==='whetstone'){s.flags.whetstone=true;s.items.whetstones++;ownedTake(s,'whetstone','1 whetstone',['whetstones']);}
- if(NPCS[id]?.archetype&&id!=='rat'){if(action==='Fight')startCombat(s,id);
+ if(NPCS[id]?.archetype&&id!=='rat'&&id!=='sumpmaw'){if(action==='Fight')startCombat(s,id);
   else if(action==='Offer cheese'){if(!s.cheese){say(s,'You have no cheese. Try the crate in Food Storage.');return true;}
    s.cheese--;shiftMember(s,id,-2,'you paid the cheese tribute');s.npcs[id].attitude='friendly';
    say(s,`${NPCS[id].name} accepts the tribute. The Ratmen file you under “useful”.`);}
@@ -348,6 +349,21 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   if(action==='Threaten'){n.attitude='hostile';n.memory.threatened=true;partyApproval(s,-8,'you threatened a survivor');
    say(s,`You make it clear what happens if ${who} is difficult. ${who} becomes very cooperative and does not look at you again.`);return true;}
   if(action==='Fight'){partyApproval(s,-12,'you attacked a survivor');startCombat(s,id);return true;}}
+ // The Sump Maw: a scavenger squatting in the food store. It can be fought,
+ // fed, shut in, or handed to somebody with more appetite than sense.
+ if(id==='sumpmaw'){
+  if(action==='Lure it away with food'){s.cheese--;s.flags.mawLured=true;setPlace(s,'sumpmaw',9,9,5);
+   say(s,'You roll the cheese down the tunnel mouth. The Sump Maw follows it out of the store at a speed that suggests it has been waiting for exactly this, and the ratmen watch it go with their hands over their mouths.');
+   mawReward(s,'you fed the thing in their food store and moved it on');awardXp(s,60,'luring the Sump Maw away');return true;}
+  if(action==='Trap it behind the door'){const result=d20({actor:s,skill:'investigation',dc:13,modifiers:gearBonus(s,'checks'),rng});
+   if(!result.success){say(s,`Investigation ${result.total} against DC 13. Failure. The door mechanism fights you and the thing in the pit keeps eating.`);return true;}
+   s.flags.mawTrapped=true;say(s,`Investigation ${result.total} against DC 13. Success. You drop the maintenance door onto its runner and jam it. The store is quiet for the first time in days.`);
+   mawReward(s,'you shut the thing in their store away');awardXp(s,60,'trapping the Sump Maw');return true;}
+  if(action==='Send the brute in'){s.flags.mawSolved=true;s.npcs.sumpmaw.condition='dead';s.npcs.sumpmaw.hp=0;
+   s.npcs.brute.hp=6;s.npcs.brute.memory.foughtMaw=true;
+   say(s,'You point at the store and tell the brute it is a big rat. It thinks about this, decides you are right, and goes in. The noise lasts a while. It comes out missing most of an ear and holding what is left of the Sump Maw, and the ratmen look at you as though you have done something clever and unforgivable at the same time.');
+   mawReward(s,'you sent the brute in to deal with it');awardXp(s,80,'sending the brute at the Sump Maw');return true;}
+  if(action==='Fight'){startCombat(s,id);return true;}}
  if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in Records, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
  return true;
 }
@@ -453,6 +469,12 @@ function grantFactionGift(s,faction){s.factionGifts=s.factionGifts||{};if(s.fact
  if(faction==='survivors'){s.boxes.silver++;s.potions+=2;say(s,'The Survivors share what they have: two potions and a silver box.');}
  else{s.boxes.bronze++;s.items.smokeBombs+=2;s.gold+=5;say(s,'The Ratmen leave a tribute where you will find it: a bronze box, two smoke bombs and five coins.');}
  awardXp(s,30,`the ${FACTIONS[faction].name} trust you`);return true;}
+// Clearing the ratmen's store is worth more to them than any badge.
+function mawReward(s,reason){
+ s.npcs.rat.memory.helped=true;shiftMember(s,'rat',-2,reason);
+ if(s.flags.mawReward)return;
+ s.flags.mawReward=true;
+ say(s,'The custodian comes out to look at the empty store, then says the tunnels are yours - and this time it means the tunnels.');}
 export function shiftMember(s,id,steps,reason){if(!NPCS[id])return memberStanding(s,id);
  const from=STANDING.indexOf(memberStanding(s,id)),to=clamp(from+steps);
  if(to===from)return memberStanding(s,id);
@@ -741,7 +763,7 @@ function tickConditions(s,say){for(const id of ['player',...Object.keys(NPCS)]){
 // Secondary actions sit behind a disclosure in the dock so the common loop
 // stays three taps deep. The core is whatever is left.
 export const SECONDARY_ACTIONS=['Shove','Grapple','Switch to nonlethal','Switch to lethal','Smoke bomb','Tip the brazier','Flee','Switch target','Throw a rock','Cleave','Backstab','Snare','Rally','Terrify'];
-export const ARCHETYPE_RULES={coward:{speed:1,fleesAt:0.5},scrapper:{speed:2,rush:true,shoves:true},skulker:{speed:2,thrown:[2,4],cover:true,fleesAt:0.35},brute:{speed:1,grapple:true,shoves:true}};
+export const ARCHETYPE_RULES={maw:{speed:1,grapple:true},coward:{speed:1,fleesAt:0.5},scrapper:{speed:2,rush:true,shoves:true},skulker:{speed:2,thrown:[2,4],cover:true,fleesAt:0.35},brute:{speed:1,grapple:true,shoves:true}};
 function actorOf(d){return {name:d.name,level:1,abilities:d.abilities,skills:d.skills||[],saves:d.saves||[]};}
 function playerDC(s){return 10+modifier(s.abilities.strength)+(s.skills.includes('athletics')?proficiencyBonus(s.level):0);}
 export function hazardNear(s,id){const place=placeOf(s,id);return props[place.room].some(prop=>prop.hazard&&Math.abs(prop.x-place.x)+Math.abs(prop.y-place.y)<=1);}

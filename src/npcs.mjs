@@ -22,6 +22,9 @@ export const NPCS = {
  // hurt and hiding in the food store, where the ratmen keep their scraps.
  ,eli:{name:'Eli',role:'Barricaded clerk',hp:14,damage:[1,2],attitude:'neutral',stock:{gold:4,bandages:1},equipped:[],refuse:[],help:'Help him shift the barricade',home:2,routine:'shelter',route:[2],abilities:{strength:12,dexterity:11,constitution:13,intelligence:13,wisdom:14,charisma:10},skills:['investigation','history'],saves:['wisdom']}
  ,june:{name:'June',role:'Wounded straggler',hp:6,damage:[1,2],attitude:'neutral',stock:{gold:2,potions:1},equipped:[],refuse:['potions'],help:'A bandage would do it',home:10,routine:'shelter',route:[10],abilities:{strength:9,dexterity:13,constitution:8,intelligence:12,wisdom:13,charisma:12},skills:['medicine','perception'],saves:['constitution']}
+ // It wandered into the ratmen's food store and stayed, because that is where
+ // the food is. Not hostile by nature: hostile by appetite.
+ ,sumpmaw:{name:'The Sump Maw',archetype:'maw',pack:'ratmen',role:'Something that moved in',hp:22,damage:[3,5],attitude:'hostile',stock:{},equipped:[],refuse:[],onHit:'bleeding',xp:120,home:10,routine:'guard',route:[10],abilities:{strength:18,dexterity:6,constitution:17,intelligence:3,wisdom:8,charisma:2},skills:['athletics','perception'],saves:['constitution']}
 
 };
 export const itemName={gold:'coins',potions:'healing potion',key:'exit key',bandages:'bandage',repairKits:'repair kit',smokeBombs:'smoke bomb',whetstones:'whetstone',badge:'maintenance badge'};
