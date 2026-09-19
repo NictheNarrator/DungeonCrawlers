@@ -33,3 +33,6 @@ body.pre-dungeon #roomtitle,body.pre-dungeon #rooms{visibility:hidden}
 #target b{font-size:17px}
 #target>.marker-chip{width:20px;height:20px}
 nav span.active.safe{background:var(--safe-blue);box-shadow:0 0 8px #4b8fd055}
+/* The room strip is a trail of where you have been, not a floor plan. */
+nav span.unseen{display:none}
+@media(max-width:420px){.location>div{gap:6px}h1{font-size:15px}nav{gap:3px}nav span{width:4px;height:4px}nav span.active{width:12px}}
