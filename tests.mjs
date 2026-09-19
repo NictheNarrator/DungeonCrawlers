@@ -731,5 +731,45 @@ test('Every conversation partner has their own portrait, and they never mix',asy
  assert.equal(stubEls.get('talk-name').textContent,first,'branching does not swap the portrait');
  assert.equal(stubEls.get('talk-portrait').hidden,false,'the portrait is on screen');
 });
+test('Phase 1: the palette is sampled once and mirrored everywhere',async()=>{
+ const {PALETTE,TOKENS,ROOMS,ART,shade,floorPair}=await import('./src/palette.mjs');
+ const swatches=Object.values(PALETTE);
+ assert.equal(swatches.length,16,'the guide prints a sixteen-colour core palette');
+ assert.equal(new Set(swatches).size,16,'and no two swatches repeat');
+ for(const hex of swatches)assert(/^#[0-9a-f]{6}$/.test(hex),`${hex} is a real colour`);
+ assert.equal(ROOMS.length,rooms.length,'every room has a colour scheme');
+ for(const room of ROOMS){assert(swatches.includes(room.floor),`${room.name} draws its floor from the palette`);assert(swatches.includes(room.wall),`${room.name} draws its wall band from the palette`);}
+ // The renderer's literal table must use palette colours, not strays.
+ const app=readFileSync('src/app.mjs','utf8');
+ const table=app.match(/const palettes=(\[[\s\S]*?\]);/)[1];
+ const hexes=[...table.matchAll(/'#([0-9a-f]{6})'/g)].map(m=>'#'+m[1]);
+ assert.equal(hexes.length,rooms.length*3,'three colours per room');
+ for(const hex of hexes)assert(swatches.includes(hex)||swatches.map(c=>shade(c,-16)).includes(hex),`${hex} comes from the palette or one step off it`);
+ // The stylesheet mirrors the same swatches under the names the sheet already uses.
+ const css=readFileSync('style.css','utf8');
+ const root=css.slice(css.indexOf(':root{'),css.indexOf('}',css.indexOf(':root{')));
+ for(const [name,value] of Object.entries({...PALETTE,...TOKENS}))assert(root.includes(value),`style.css declares the ${name} swatch ${value}`);
+});
+test('Phase 1: scaling rules hold and nothing smooths the art',async()=>{
+ const {ART}=await import('./src/palette.mjs');
+ assert.equal(ART.cell,ART.base*ART.scale,'the world cell is the guide base at its display multiple');
+ assert.equal(ART.cell,64,'which is the cell the engine already draws');
+ assert(Number.isInteger(ART.portrait.display)&&ART.portrait.display>1,'portraits scale by a whole number');
+ const html=readFileSync('index.html','utf8');
+ const portrait=html.match(/id="talk-portrait" width="(\d+)" height="(\d+)"/);
+ assert(portrait,'the portrait canvas declares its size');
+ assert.equal(Number(portrait[1]),ART.portrait.w*ART.portrait.display,'the portrait canvas is exactly the drawn grid at its multiple');
+ assert.equal(Number(portrait[2]),ART.portrait.h*ART.portrait.display,'in both directions');
+ const app=readFileSync('src/app.mjs','utf8');
+ assert(!app.includes('imageSmoothingEnabled=true'),'nothing ever turns smoothing on');
+ const draws=(app.match(/drawImage\(/g)||[]).length;
+ const offs=(app.match(/imageSmoothingEnabled=false/g)||[]).length;
+ assert(offs>=draws,'every canvas that scales an image has smoothing off first');
+ assert(/Math\.round\(raw\*dpr\)\/dpr/.test(app),'the world zoom lands on a whole number of device pixels');
+ const css=readFileSync('style.css','utf8');
+ assert(/canvas\{[^}]*image-rendering:pixelated/.test(css),'canvases are displayed with nearest-neighbour');
+ assert(/\.item-chip\{[^}]*image-rendering:pixelated/.test(css),'item chips too');
+ assert(/\.marker-chip\{[^}]*image-rendering:pixelated/.test(css),'and map markers');
+});
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));
