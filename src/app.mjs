@@ -268,6 +268,8 @@ const look={
  player:{skin:'#b0a184',coat:'#6f7a4a',trim:'#b6c187',head:'#3c4a63'},
  mara:{skin:'#b0a184',coat:'#8a5a34',trim:'#b0a184',pack:'#3c4a63'},
  tobin:{skin:'#b0a184',coat:'#6f7a4a',trim:'#8a5a34',hat:'#8a5a34'},
+ eli:{skin:'#b0a184',coat:'#6d6a62',trim:'#3c4a63'},
+ june:{skin:'#b0a184',coat:'#5d7f7a',trim:'#8a5a34'},
  vex:{skin:'#b0a184',coat:'#3c4a63',trim:'#b0a184',blade:'#cfd6d2'},
 skrit:{fur:'#5d7f7a',skin:'#5d7f7a',coat:'#5d7f7a',trim:'#b0a184',bandage:'#e6e2d6'},
 rat:{fur:'#6d6a62',skin:'#6d6a62',coat:'#5d7f7a',trim:'#b0a184'},

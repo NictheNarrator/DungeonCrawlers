@@ -23,7 +23,7 @@ export const props=[
   {id:'tobin',name:'Tobin, scavenger',x:4,y:4},{id:'vex',name:'Vex, rival crawler',x:8,y:5}],
 // 2 Records / Security — logs, keys and regrets; Eli barricades himself in.
  [{id:'locker',name:'Emergency locker',x:8,y:5},{id:'desk',name:'Records desk',x:3,y:2},{id:'cabinet',name:'Filing cabinet',x:9,y:2},
-  {id:'note',name:'Folded memo',x:5,y:3},{id:'barricade',name:'Barricaded office',x:4,y:6},{id:'vault',name:'Security cache',x:7,y:2}],
+  {id:'note',name:'Folded memo',x:5,y:3},{id:'barricade',name:'Barricaded office',x:4,y:6},{id:'vault',name:'Security cache',x:7,y:2},{id:'eli',name:'Eli, barricaded clerk',x:6,y:5}],
 // 3 Ratmen Territory — their home, not a spawn point: nests, trophies, a fire.
  [{id:'rat',name:'Ratman scrapper',x:5,y:4},{id:'brazier',name:'Burning brazier',x:10,y:5,hazard:true},{id:'nest',name:'Ratman nest',x:9,y:2},
   {id:'scrap',name:'Scrap pile',x:6,y:5},{id:'skullpost',name:'Trophy post',x:7,y:2}],
@@ -45,7 +45,7 @@ export const props=[
   {id:'nest',name:'Squatter nest',x:6,y:2},{id:'skulker',name:'Ratman skulker',x:10,y:5}],
 // 10 Food Storage — the hazard pit the ratmen will not go near, and a risky cache.
  [{id:'pit',name:'The Sump Maw',x:5,y:5,hazard:true},{id:'chest',name:'Abandoned chest',x:9,y:6},{id:'crate',name:'Cracked crate',x:3,y:3},
-  {id:'nest',name:'Scavenger nest',x:7,y:2},{id:'brute',name:'Ratman brute',x:4,y:5}],
+  {id:'nest',name:'Scavenger nest',x:7,y:2},{id:'brute',name:'Ratman brute',x:4,y:5},{id:'june',name:'June, wounded straggler',x:8,y:6}],
 // 11 Stairwell Down — the map's last landmark: down, into the dark.
  [{id:'stairs',name:'Exit stairs',x:6,y:3},{id:'plaque',name:'Departure plaque',x:4,y:5},{id:'cables',name:'Dead cable run',x:3,y:6}]
 ];
@@ -211,6 +211,8 @@ function baseActions(s,id){if(id==='staffdoor'&&!s.dead&&!s.complete)return ['In
  case 'gate':return ['Inspect',...(s.items.badge&&!s.flags.gateOpen?['Badge through the gate']:[])];case 'barrier':return ['Inspect'];
  case 'vault':return ['Inspect',...(s.flags.vaultOpen?[]:['Crack it open'])];
  case 'panel':return ['Inspect',...(s.flags.securityDown?[]:['Reroute the security feed'])];
+ case 'eli':return ['Inspect','Talk',...(s.npcs.eli.memory.rescued?[]:['Clear the barricade']),'Threaten','Fight'];
+ case 'june':return ['Inspect','Talk',...(s.npcs.june.memory.rescued?[]:(s.npcs.june.memory.treated?['Help her out']:['Bandage her wound'])),'Threaten','Fight'];
  case 'rat':return ['Inspect','Talk','Offer cheese','Sneak past',...(s.items.badge?['Return the badge']:[]),'Fight'];
  case 'pipe':return ['Inspect','Search'];
  case 'satchel':return ['Inspect',...(s.flags.satchel?[]:['Open'])];
@@ -263,7 +265,7 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
   if(id==='breakdoor'&&action==='Enter the break room')return enterSafeRoom(s);
   if(id==='exitdoor'&&action==='Head back out')return leaveSafeRoom(s);
   if(id==='map'&&action==='Inspect'){if(!s.flags.foundStairwell){s.flags.foundStairwell=true;say(s,'A transit map, mostly nonsense, except for one symbol that is unmistakable: STAIRWELL, with an arrow pointing down. Somebody has circled it in marker.');}else say(s,'STAIRWELL, down. Still circled. Still down.');return true;}
-  if((id==='sofa'||id==='kettle')&&action==='Rest for a while'){advanceClock(s,30*60);s.hp=s.maxHp;say(s,'You sit for a while. The clock keeps moving without asking, and you feel better, which is its own kind of trap.');return true;}  if(id==='tickets'&&action==='Press the button'){s.flags.ticketPressed=(s.flags.ticketPressed||0)+1;say(s,'NOW SERVING: 8,421,991');award(s,'Patient Customer');return true;}
+  if((id==='sofa'||id==='kettle')&&action==='Rest for a while'){if((s.flags.maraAsked||s.npcs.june.memory.met)&&s.npcs.june.condition==='conscious'&&!s.npcs.june.memory.treated&&!s.npcs.june.memory.rescued){s.npcs.june.condition='dead';s.npcs.june.hp=0;s.npcs.june.memory.neglected=true;say(s,'Somewhere behind you, in the dark by the food store, June stops waiting to be found.');partyApproval(s,-12,'June died of her wound while you rested');}advanceClock(s,30*60);s.hp=s.maxHp;say(s,'You sit for a while. The clock keeps moving without asking, and you feel better, which is its own kind of trap.');return true;}  if(id==='tickets'&&action==='Press the button'){s.flags.ticketPressed=(s.flags.ticketPressed||0)+1;say(s,'NOW SERVING: 8,421,991');award(s,'Patient Customer');return true;}
   if(id==='bag'&&action==='Search the bag'){s.flags.bag=true;s.gold+=2;s.items.bandages++;say(s,'A handbag: two coins, a bandage, and a phone with 41 missed calls from the same number.');return true;}
   if(id==='bin'&&action==='Search the bin'){s.flags.bin=true;const found=s.gold+=1;s.items.smokeBombs++;say(s,'Under the cups: a coin and a smoke bomb somebody threw away. Their loss.');return true;}
   if(id==='vending'&&action==='Pry the panel'){const result=d20({actor:s,skill:'athletics',dc:12,rng});const line='Athletics '+result.total+' against DC 12. '+(result.success?'Success.':'Failure.');
@@ -326,6 +328,26 @@ export function interact(s,id,action,rng=Math.random){if(!nearby(s).some(p=>p.id
    say(s,'You hold the badge out. The custodian takes it back without thanking you, which from a ratman is close enough, and says the tunnels are yours to use.');return true;}
   if(action==='Fight')startCombat(s,'rat');
  }
+ // The two survivors Mara is looking for. Eli is walled in by his own
+ // barricade; June is hurt and out of places to hide.
+ if(id==='eli'||id==='june'){const n=s.npcs[id],who=NPCS[id].name;
+  if(action==='Talk'){n.memory.met=true;
+   say(s,id==='eli'?'Eli talks through the barricade without moving any of it. He came in for the keys and stayed because the corridor stopped sounding like a corridor. He asks after a woman called Mara.':'June has her back to the food-store wall and one hand pressed to her side. She was with Mara before the rats came through, and she cannot walk far.');return true;}
+  if(action==='Clear the barricade'){const result=d20({actor:s,skill:'athletics',dc:12,modifiers:gearBonus(s,'checks'),rng});
+   if(!result.success){say(s,`Athletics ${result.total} against DC 12. Failure. The barricade holds and Eli swears softly on the other side of it.`);return true;}
+   n.memory.rescued=true;s.flags.savedEli=true;setPlace(s,id,SAFE_ROOM,6,3);
+   say(s,`Athletics ${result.total} against DC 12. Success. You get the barricade apart. Eli takes the keys he came for and goes where you point: the blue room, and out of your way.`);
+   partyApproval(s,12,'you got Eli out of Records');awardXp(s,40,'saving Eli');return true;}
+  if(action==='Bandage her wound'){if(!s.items.bandages){say(s,'You have nothing to bandage her with.');return true;}
+   s.items.bandages--;n.hp=Math.min(NPCS.june.hp,n.hp+3);n.memory.treated=true;
+   say(s,'You get the bandage around her side and pull it tight. She breathes out for what looks like the first time today.');
+   partyApproval(s,8,'you patched June up');awardXp(s,25,'treating June');return true;}
+  if(action==='Help her out'){n.memory.rescued=true;s.flags.savedJune=true;setPlace(s,id,SAFE_ROOM,6,5);
+   say(s,'June leans on you as far as the corridor and then insists on walking the rest. She goes to the blue room, where the kettle is.');
+   partyApproval(s,15,'you brought June in');awardXp(s,40,'saving June');return true;}
+  if(action==='Threaten'){n.attitude='hostile';n.memory.threatened=true;partyApproval(s,-8,'you threatened a survivor');
+   say(s,`You make it clear what happens if ${who} is difficult. ${who} becomes very cooperative and does not look at you again.`);return true;}
+  if(action==='Fight'){partyApproval(s,-12,'you attacked a survivor');startCombat(s,id);return true;}}
  if(id==='stairs'){if(!s.key)say(s,'Locked. Take the free key from the locker in Records, or obtain Mara’s.');else{s.complete=true;say(s,'The exit opens. ANNEX: “You may leave. Your reputation has already gone ahead.”');}}
  return true;
 }

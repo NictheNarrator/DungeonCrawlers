@@ -18,6 +18,11 @@ export const NPCS = {
  rat:{name:'Ratman scrapper',archetype:'scrapper',pack:'ratmen',role:'Unpaid sanitation',hp:12,damage:[2,3],attitude:'neutral',stock:{gold:2},equipped:[],refuse:['gold'],onHit:'poisoned',xp:30,home:3,routine:'guard',route:[3],abilities:{strength:8,dexterity:14,constitution:10,intelligence:8,wisdom:12,charisma:6},skills:['stealth','perception'],saves:['dexterity']}
  ,skulker:{name:'Ratman skulker',archetype:'skulker',pack:'ratmen',role:'Thrown-object specialist',hp:10,damage:[1,2],thrown:[2,4],attitude:'neutral',stock:{gold:3,smokeBombs:1},equipped:[],refuse:['smokeBombs'],onHit:'bleeding',xp:35,home:9,routine:'guard',route:[9],abilities:{strength:8,dexterity:16,constitution:10,intelligence:11,wisdom:13,charisma:7},skills:['stealth','perception'],saves:['dexterity']}
  ,brute:{name:'Ratman brute',archetype:'brute',pack:'ratmen',role:'Slow and heavy',hp:24,damage:[5,7],attitude:'neutral',stock:{gold:4,potions:1},equipped:[],refuse:['potions'],onHit:'bleeding',xp:80,home:10,routine:'guard',route:[10],abilities:{strength:17,dexterity:9,constitution:16,intelligence:6,wisdom:9,charisma:5},skills:['athletics','intimidation'],saves:['strength','constitution']}
+ // The two Mara is looking for. Eli has barricaded himself into Records; June is
+ // hurt and hiding in the food store, where the ratmen keep their scraps.
+ ,eli:{name:'Eli',role:'Barricaded clerk',hp:14,damage:[1,2],attitude:'neutral',stock:{gold:4,bandages:1},equipped:[],refuse:[],help:'Help him shift the barricade',home:2,routine:'shelter',route:[2],abilities:{strength:12,dexterity:11,constitution:13,intelligence:13,wisdom:14,charisma:10},skills:['investigation','history'],saves:['wisdom']}
+ ,june:{name:'June',role:'Wounded straggler',hp:6,damage:[1,2],attitude:'neutral',stock:{gold:2,potions:1},equipped:[],refuse:['potions'],help:'A bandage would do it',home:10,routine:'shelter',route:[10],abilities:{strength:9,dexterity:13,constitution:8,intelligence:12,wisdom:13,charisma:12},skills:['medicine','perception'],saves:['constitution']}
+
 };
 export const itemName={gold:'coins',potions:'healing potion',key:'exit key',bandages:'bandage',repairKits:'repair kit',smokeBombs:'smoke bomb',whetstones:'whetstone',badge:'maintenance badge'};
 // Tobin lifted the badge off the ratmen. It is one object in one place: whoever
@@ -50,7 +55,7 @@ export function describeNPC(s,id){const n=s.npcs[id],d=NPCS[id];
  return `${d.name} · ${n.attitude} · ${n.condition} · ${n.hp}/${d.hp} HP. Damage ${d.damage.join('–')}. Carries: ${stockText(n)}. Remembers: ${memoryText(n)}.`;}
 export function npcActions(s,id){const n=s.npcs[id];if(n.condition==='dead')return ['Inspect','Loot'];if(n.condition==='unconscious')return ['Inspect','Loot','Wake up','Kill'];const owed=Object.keys(s.stolen||{}).some(key=>s.stolen[key]===id);
  const trade=n.attitude==='hostile'?[]:['Ask about goods','Trade','Offer a fair swap',...wantedGoods(s,id).filter(key=>held(s,key)).slice(0,3).map(key=>`Sell 1 ${itemName[key]}`)];
- return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),...badgeOffers(s,id),...vexOffers(s,id),'Threaten','Lie',...trade,'Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
+ return ['Inspect','Talk','Help','Befriend',...(RECRUIT[id]&&!isWith(s,id)?['Recruit']:[]),...badgeOffers(s,id),...vexOffers(s,id),...maraOffers(s,id),'Threaten','Lie',...trade,'Pickpocket','Rob openly',...(owed?['Hand it back']:[]),'Attack','Knock unconscious','Kill'];}
 // The badge on offer: he can be talked out of it, bought out of it, or relieved
 // of it. Everything else - robbery, a knockout, a killing - runs through the
 // ordinary loot and robbery paths, which already empty whatever he is carrying.
@@ -59,6 +64,8 @@ function badgeOffers(s,id){const n=s.npcs[id];
  return ['Ask about the badge',...(s.gold>=BADGE_PRICE?[`Buy the badge (${BADGE_PRICE} coins)`]:[]),'Lift the badge'];}
 // Vex wants first pick of the security cache, and he is the only one here who
 // understands the electrical room. Once the cache is open, honour it or don't.
+// Mara came down here with two other people and has not seen either since.
+function maraOffers(s,id){if(id!=="mara"||s.flags.maraAsked)return [];return ["Ask about the survivors"];}
 function vexOffers(s,id){if(id!=='vex')return [];const n=s.npcs[id],deal=s.quests.vexDeal;
  const offers=[];
  if(deal==='open')offers.push('Hear his plan');
@@ -109,6 +116,8 @@ export function actNPC(s,id,action,{say,award,startCombat,witness=()=>[],deed=()
  if(action==='Inspect'){const note=note(id);say(s,describeNPC(s,id)+(note?' '+note:''));return true;}
  if(action==='Loot'){const got=takeAll(s,n,id);m.looted=true;if(got!=='nothing'&&n.condition==='unconscious'){betray(n);m.robbed=true;n.attitude='hostile';}say(s,got==='nothing'?`${d.name} has nothing left. Possessions do not respawn.`:`You take ${got} from ${d.name}. ${n.condition==='unconscious'?'They remain alive and unconscious.':'They remain dead.'}`);return true;}
  // The maintenance badge: Tobin will not give up something that opens doors
+ if(action==='Ask about the survivors'){s.flags.maraAsked=true;n.memory.askedSurvivors=true;
+  say(s,'Mara counts them off on her fingers. Eli went into Records for the keys and never came back out, and June was hurt near the food store when the rats came through. “They matter more than the supplies. If you find either of them, they are still people.”');return true;}
  if(action==='Hear his plan'){s.quests.vexDeal='agreed';n.memory.vexDeal=true;
   s.allies[id]=Math.max(1,s.allies[id]||0);
   say(s,'Vex draws the loop on the back of a ticket: the security feed runs through the Electrical Control Room, and a feed is only an opinion. Cut it there and the gate stops asking questions. He wants first pick of whatever is in the security cache, and he says so before you agree.');return true;}

@@ -478,5 +478,43 @@ test('The security cache pays out, and Vex remembers what you promised',()=>{
  assert.notEqual(memberStanding(betrayed,'vex'),before,'and his opinion of you moves');
  assert(betrayed.gear.includes('Iron signet'),'you keep the pick');
 });
+test('Mara is looking for two survivors, and both can be brought in',()=>{
+ const s=supplied();
+ act(s,'mara','Ask about the survivors');
+ assert(s.flags.maraAsked,'she tells you about them once');
+ assert(s.log.at(-1).includes('Eli')&&s.log.at(-1).includes('June'),'and names them both');
+ assert.equal(placeOf(s,'eli').room,2,'Eli is walled into Records');assert.equal(placeOf(s,'june').room,10,'June is hurt by the food store');
+ const healer=supplied();approach(healer,'june');
+ assert(!actions(healer,'june').includes('Help her out'),'she cannot walk out untreated');
+ interact(healer,'june','Bandage her wound');
+ assert(healer.npcs.june.memory.treated,'the bandage is spent on her');
+ assert(actions(healer,'june').includes('Help her out'),'and then she can be walked out');
+ interact(healer,'june','Help her out');
+ assert.equal(placeOf(healer,'june').room,SAFE_ROOM,'June reaches the safe room');assert(healer.flags.savedJune);
+ const mason=supplied();approach(mason,'eli');interact(mason,'eli','Clear the barricade',()=>0.99);
+ assert(mason.npcs.eli.memory.rescued,'the barricade comes apart');assert.equal(placeOf(mason,'eli').room,SAFE_ROOM,'and Eli goes to the safe room');
+ assert(mason.flags.savedEli);
+ assert.equal(checkpoint(healer).flags.savedJune,true,'a rescue survives the save');
+ const failed=supplied();approach(failed,'eli');interact(failed,'eli','Clear the barricade',()=>0);
+ assert(!failed.npcs.eli.memory.rescued,'a failed shift leaves him where he is');assert.equal(placeOf(failed,'eli').room,2);
+});
+test('Neglecting June costs her her life, and Mara notices',()=>{
+ const s=supplied();act(s,'mara','Ask about the survivors');
+ approach(s,'kettle');interact(s,'kettle','Rest for a while');
+ assert.equal(s.npcs.june.condition,'dead','resting while she bleeds out finishes her');
+ assert(s.npcs.june.memory.neglected);
+ assert(s.log.some(line=>line.includes('June stops waiting to be found')),'and the game says so plainly');
+ const untouched=supplied();
+ approach(untouched,'kettle');interact(untouched,'kettle','Rest for a while');
+ assert.equal(untouched.npcs.june.condition,'conscious','a crawler who never heard of her is not to blame');
+});
+test('The survivors can be threatened, robbed and killed like anyone else',()=>{
+ const s=supplied();approach(s,'eli');
+ assert(actions(s,'eli').includes('Threaten'),'no plot armour: you can lean on him');
+ interact(s,'eli','Threaten');assert.equal(s.npcs.eli.attitude,'hostile');assert(s.npcs.eli.memory.threatened);
+ const killed=supplied();approach(killed,'eli');interact(killed,'eli','Fight',()=>0.5);win(killed);
+ assert.equal(killed.npcs.eli.condition,'dead','and he stays dead');
+ assert.equal(checkpoint(killed).npcs.eli.condition,'dead','through a save');
+});
 await Promise.all(pending);console.log(`\n${passed} checks passed.`);
 const reportIndex=process.argv.indexOf("--report");if(reportIndex>=0)writeFileSync(process.argv[reportIndex+1],JSON.stringify(report,null,2));
