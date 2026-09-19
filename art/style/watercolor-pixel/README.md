@@ -19,8 +19,11 @@ summary of them. Where the summary and an image disagree, the image wins.
 | `09-doors-and-architecture.png` | Doors and architecture: public doors and entrances, staff access, maintenance and security doors, safe room and special entrances, walls and structural pieces, stairs and thresholds, arches and openings, special set pieces, plus an architecture scene example. Maps onto the doorway table, the safe-room door and the stairwell. |
 | `10-loot-and-containers.png` | Loot and containers: crates, chests and special containers, bags and packs, small containers, loot piles, quest items, dead bodies and remains, and interaction and loot effects. Maps onto the loot, theft, trading and reward-box systems. |
 | `11-environments-and-set-pieces.png` | Environments and set pieces: floor tiles, walls and columns, stairs and elevation, fences and barriers, trees and nature, water and liquids, structures, torches, fire and atmosphere, props and set dressing, signs and decor. Floor 1 uses the transit and service pieces; the nature and water pieces are for later floors and the surface. |
+| `12-weapons-and-equipment.png` | Page 10, weapons and equipment: melee, ranged, ammunition, armour and gear, consumables, tools and utility, magical and special items, key items and quest gear, player-usable traps and hazards, and miscellaneous kit. Covers the item, equipment-slot and reward systems. |
+| `13-environmental-storytelling.png` | Page 11, environmental storytelling: blood and violence, graffiti and faction markings, ruins and damage, abandoned belongings, posters and signs, scattered papers, life signs and remains, tech debris, food and camp traces, and story-detail clutter. This is the decal and evidence layer that makes rooms look like they have a history. |
 
-More pages drop in here as `12-…`, `13-…` and so on.
+The set is complete: the master sheet, the portrait page, and eleven numbered
+object pages.
 
 ## Floor 1 asset pages, in order
 
@@ -34,8 +37,25 @@ More pages drop in here as `12-…`, `13-…` and so on.
 8. `09` doors and architecture
 9. `10` loot and containers
 10. `11` environments and set pieces
+11. `12` weapons and equipment
+12. `13` environmental storytelling
 
 `03` is the portrait page, which sits across all of them.
+
+## What the set does not include
+
+Three things are deliberately mine to design, and one is a decision:
+
+- **Original creatures.** The sheets give ratman, slime, dungeon eye and
+  shambled as samples. The Sump Maw and the Concourse Inspector are specific to
+  this floor and have no sprite; the food storage page gives their *signs*
+  (claw marks, a tunnel hole, eye-shine, half-eaten carcasses) to design from.
+- **Skrit's portrait.** He is a ratman, not on the portrait page; design him
+  from the ratman sprites so he belongs to the same set.
+- **Exact palette values.** The strips show the colours but print no hex codes,
+  so they get sampled off `04`, `05` and the master sheet.
+- **Portrait detail.** The reference portraits are far richer than anything
+  hand-drawn in code will match; see the note in the conversation.
 
 ## The rules these set
 
